@@ -114,6 +114,7 @@ export function GuidedOverview({
   const imageCount = project.assets.length;
   const upgrade = planCatalogModernUpgrade(project);
   const nextPending = pending[0];
+  const preparationComplete = pending.length === 0;
 
   return (
     <section className="guided-overview workspace-section" aria-labelledby={titleId}>
@@ -132,62 +133,84 @@ export function GuidedOverview({
         }
       />
 
-      <output className="guided-progress" aria-live="polite">
-        <div className="guided-progress__icon" aria-hidden>
-          {blockingCount !== null && blockingCount === 0 ? (
-            <CheckCircle size={26} />
-          ) : (
-            <ClipboardText size={26} />
-          )}
-        </div>
-        <div className="guided-progress__copy">
-          <strong id={titleId}>
-            {ready.length} de {requirements.length} requisitos listos
-          </strong>
-          <span>
-            {blockingCount === null
-              ? "Verificando la publicación…"
-              : blockingCount > 0
-                ? `${blockingCount} ${blockingCount === 1 ? "pendiente bloquea" : "pendientes bloquean"} producción.`
-                : "La tienda puede pasar a revisión de publicación."}
-          </span>
-          {nextPending ? (
+      <div className="guided-summary">
+        <output
+          className={`guided-progress${preparationComplete ? " guided-progress--ready" : ""}`}
+          aria-live="polite"
+        >
+          <div className="guided-progress__icon" aria-hidden>
+            {blockingCount !== null && blockingCount === 0 ? (
+              <CheckCircle size={26} />
+            ) : (
+              <ClipboardText size={26} />
+            )}
+          </div>
+          <div className="guided-progress__copy">
+            {preparationComplete ? (
+              <div className="guided-progress__ready" data-testid="ui-guided-ready">
+                <strong className="guided-progress__headline">
+                  {blockingCount === 0 ? "Todo listo para publicar" : "Preparación completa"}
+                </strong>
+                <span>La base está lista para revisar</span>
+              </div>
+            ) : null}
+            <strong id={titleId}>
+              {ready.length} de {requirements.length} requisitos listos
+            </strong>
+            <span>
+              {blockingCount === null
+                ? "Verificando la publicación…"
+                : blockingCount > 0
+                  ? `${blockingCount} ${blockingCount === 1 ? "pendiente bloquea" : "pendientes bloquean"} producción.`
+                  : "La tienda puede pasar a revisión de publicación."}
+            </span>
+            {nextPending ? (
+              <Button
+                variant="primary"
+                size="sm"
+                icon={ArrowRight}
+                data-testid="ui-guided-next"
+                onClick={() => onNavigate(destinationFor(nextPending.scope))}
+              >
+                Siguiente: {nextPending.label}
+              </Button>
+            ) : null}
+          </div>
+          {preparationComplete ? (
             <Button
               variant="primary"
-              size="sm"
-              icon={ArrowRight}
-              data-testid="ui-guided-next"
-              onClick={() => onNavigate(destinationFor(nextPending.scope))}
+              className="guided-progress__review"
+              onClick={() => onNavigate("export")}
             >
-              Siguiente: {nextPending.label}
+              Revisar publicación
             </Button>
           ) : null}
-        </div>
-        <div
-          className="guided-progress__meter"
-          role="progressbar"
-          aria-label="Progreso de preparación"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={baseReadiness.percent}
-          data-testid="ui-guided-progress"
-        >
-          <span style={{ width: `${baseReadiness.percent}%` }} />
-        </div>
-      </output>
+          <div
+            className="guided-progress__meter"
+            role="progressbar"
+            aria-label="Progreso de preparación"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={baseReadiness.percent}
+            data-testid="ui-guided-progress"
+          >
+            <span style={{ width: `${baseReadiness.percent}%` }} />
+          </div>
+        </output>
 
-      <div className="guided-stats">
-        <div>
-          <strong>{productCount}</strong>
-          <span>productos activos</span>
-        </div>
-        <div>
-          <strong>{project.categories.length}</strong>
-          <span>categorías</span>
-        </div>
-        <div>
-          <strong>{imageCount}</strong>
-          <span>recursos cargados</span>
+        <div className="guided-stats">
+          <div>
+            <strong>{productCount}</strong>
+            <span>productos activos</span>
+          </div>
+          <div>
+            <strong>{project.categories.length}</strong>
+            <span>categorías</span>
+          </div>
+          <div>
+            <strong>{imageCount}</strong>
+            <span>recursos cargados</span>
+          </div>
         </div>
       </div>
 
@@ -330,16 +353,6 @@ export function GuidedOverview({
         </section>
       ) : (
         <>
-          <div className="guided-ready" data-testid="ui-guided-ready">
-            <CheckCircle aria-hidden size={24} />
-            <div>
-              <strong>La base está lista para revisar</strong>
-              <p>Podés abrir el preview o pasar a la exportación de producción.</p>
-            </div>
-            <Button variant="primary" onClick={() => onNavigate("export")}>
-              Revisar publicación
-            </Button>
-          </div>
           {ready.length > 0 ? (
             <details className="guided-checklist__done" data-testid="ui-guided-done">
               <summary>Requisitos listos ({ready.length})</summary>

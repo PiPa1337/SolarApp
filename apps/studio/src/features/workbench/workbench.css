@@ -561,12 +561,18 @@
 .studio-workbench .export-options > article:has([data-testid="ui-export-production"]) {
   border-color: rgb(232 181 111 / 0.4);
 }
-.studio-workbench .guided-progress {
-  background: var(--surface-soft);
+.studio-workbench .guided-summary {
+  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 20px;
-  gap: 16px;
+  background: var(--surface-soft);
+}
+.studio-workbench .guided-progress {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 14px 16px 10px;
+  gap: 12px;
 }
 .studio-workbench .guided-progress__copy strong {
   font-size: 20px;
@@ -578,14 +584,19 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 0;
-  padding-block: 12px;
-  border-block: 1px solid var(--line);
+  margin: 0;
+  padding-block: 0;
+  border-block: 0;
+  border-block-start: 1px solid var(--line);
 }
 .studio-workbench .guided-stats > * {
   border: 0;
   background: transparent;
   box-shadow: none;
-  padding: 8px 12px;
+  padding: 10px 16px 11px;
+}
+.studio-workbench .guided-stats strong {
+  font-size: 22px;
 }
 .studio-workbench .guided-checklist li {
   background: transparent;
@@ -596,9 +607,33 @@
   display: none;
 }
 .studio-workbench .workbench-guided-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+  margin-top: 12px;
+}
+.studio-workbench .workbench-guided-actions button {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  gap: 4px 12px;
+  min-height: 82px;
+  padding: 14px 16px;
+  align-content: center;
+}
+.studio-workbench .workbench-guided-actions button :is(strong, span) {
+  grid-column: 1;
+}
+.studio-workbench .workbench-guided-actions button svg {
+  grid-column: 2;
+  grid-row: 1 / -1;
+  align-self: center;
+  margin-top: 0;
+}
+.studio-workbench .guided-checklist__done {
+  padding: 8px 12px 10px;
+}
+.studio-workbench .guided-checklist__done summary {
+  min-height: 34px;
 }
 .studio-workbench .studio-statusbar {
   color: var(--muted);
@@ -675,8 +710,8 @@
   text-shadow: none;
 }
 .studio-workbench .guided-progress {
-  grid-template-columns: 40px minmax(0, 1fr);
-  padding: 18px;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  padding: 14px 16px 10px;
 }
 .studio-workbench .guided-progress__meter {
   grid-column: 1 / -1;
@@ -689,6 +724,31 @@
 .studio-workbench .guided-progress__copy strong {
   font-size: 20px;
   line-height: 1.25;
+}
+.studio-workbench .guided-progress--ready .guided-progress__copy {
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 10px;
+  align-items: baseline;
+}
+.studio-workbench .guided-progress--ready .guided-progress__ready {
+  grid-column: 1 / -1;
+}
+.studio-workbench .guided-progress--ready .guided-progress__copy > strong {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.studio-workbench .guided-progress--ready .guided-progress__copy > span {
+  font-size: 12px;
+}
+.studio-workbench .guided-progress__review {
+  align-self: center;
+}
+
+@container (max-width: 760px) {
+  .studio-workbench .workbench-guided-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .studio-workbench .editor-pane .theme-presets {
   display: grid;

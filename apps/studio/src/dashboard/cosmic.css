@@ -2643,10 +2643,28 @@
 .guided-progress__copy span,
 .guided-stats span,
 .guided-actions span,
-.guided-ready p,
 .guided-checklist__text small {
   color: var(--muted);
   font-size: 13px;
+}
+
+.guided-progress__ready {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+}
+
+.guided-progress__headline {
+  color: var(--ink);
+}
+
+.guided-progress__review {
+  justify-self: end;
+}
+
+.guided-progress--ready .guided-progress__meter {
+  grid-column: 1 / -1;
 }
 
 .guided-progress__meter {
@@ -2721,8 +2739,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.guided-checklist,
-.guided-ready {
+.guided-checklist {
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--surface);
@@ -2788,22 +2805,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.guided-ready {
-  display: flex;
-  gap: var(--space-4);
-  align-items: center;
-  padding: 20px;
-  color: var(--accent);
-}
-
-.guided-ready > div {
-  flex: 1;
-}
-
-.guided-ready p {
-  margin: 4px 0 0;
 }
 
 .guided-actions {
@@ -2880,13 +2881,9 @@
     justify-self: start;
   }
 
-  .guided-ready {
-    align-items: start;
-    flex-wrap: wrap;
-  }
-
-  .guided-ready .button {
-    width: 100%;
+  .guided-progress__review {
+    grid-column: 1 / -1;
+    justify-self: stretch;
   }
 }
 
