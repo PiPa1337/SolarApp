@@ -148,9 +148,9 @@ export function GuidedOverview({
           <div className="guided-progress__copy">
             {preparationComplete ? (
               <div className="guided-progress__ready" data-testid="ui-guided-ready">
-                <strong className="guided-progress__headline">
+                <span className="guided-progress__headline">
                   {blockingCount === 0 ? "Todo listo para publicar" : "Preparación completa"}
-                </strong>
+                </span>
                 <span>La base está lista para revisar</span>
               </div>
             ) : null}

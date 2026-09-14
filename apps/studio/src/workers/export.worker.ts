@@ -337,22 +337,37 @@ self.onmessage = async (event: MessageEvent<ExportRequest>) => {
       const archive = await loadProjectArchive();
       const project = { ...request.project };
       const options = { mode: request.mode, ...request.options };
+      const reportProgress = (
+        task: "validate" | "social-crops" | "recovery" | "render",
+        status: "active" | "complete",
+      ) => self.postMessage({ id: request.id, kind: "export-progress", task, status });
+
+      reportProgress("validate", "active");
       auditReport(project);
-      self.postMessage({ id: request.id, kind: "export-stage", stage: "validate" });
-      const socialImageCrops =
-        request.mode === "production"
-          ? await generateSocialCrops(collectSocialCropRequests(project))
-          : undefined;
-      const recoveryFiles = request.options.includeRecovery
-        ? await buildRecoveryFiles(project, await loadExporter(), archive.createProjectArchiveBytes)
-        : undefined;
+      reportProgress("validate", "complete");
+      let socialImageCrops;
+      if (request.mode === "production") {
+        reportProgress("social-crops", "active");
+        socialImageCrops = await generateSocialCrops(collectSocialCropRequests(project));
+        reportProgress("social-crops", "complete");
+      }
+      let recoveryFiles;
+      if (request.options.includeRecovery) {
+        reportProgress("recovery", "active");
+        recoveryFiles = await buildRecoveryFiles(
+          project,
+          await loadExporter(),
+          archive.createProjectArchiveBytes,
+        );
+        reportProgress("recovery", "complete");
+      }
+      reportProgress("render", "active");
       const result = exportProject(project, {
         ...options,
         ...(socialImageCrops && socialImageCrops.size > 0 ? { socialImageCrops } : {}),
         ...(recoveryFiles ? { recoveryFiles } : {}),
       });
-      self.postMessage({ id: request.id, kind: "export-stage", stage: "render" });
-      self.postMessage({ id: request.id, kind: "export-stage", stage: "package" });
+      reportProgress("render", "complete");
       const optimization: OptimizationReport = result.optimization;
       const audit: AuditIssue[] = result.audit;
       self.postMessage({

@@ -2500,10 +2500,6 @@ function storefrontBoot(): void {
       currentPage = Math.max(1, next);
       render();
       pageStatus.focus({ preventScroll: true });
-      grid.scrollIntoView({
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-        block: "start",
-      });
     };
     grid.addEventListener("f", render);
     sort.addEventListener("change", render);

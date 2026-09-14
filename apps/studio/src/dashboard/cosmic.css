@@ -2657,6 +2657,7 @@
 
 .guided-progress__headline {
   color: var(--ink);
+  font-weight: 700;
 }
 
 .guided-progress__review {

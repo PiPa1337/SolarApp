@@ -1,3 +1,12 @@
+### Exportación con progreso real (2026-09-14)
+
+- Se agrega un popup modal que refleja las tareas reales del worker de exportación y el avance granular al escribir la carpeta, evitando abrir un sitio incompleto.
+
+### Preparar tienda más compacto y con jerarquía unificada (2026-09-14)
+
+- Se integra el estado de preparación, la revisión de publicación y las métricas en un único bloque para reducir repetición visual y altura ocupada.
+- Las acciones rápidas de Marca y textos, Cargar catálogo y Organizar imágenes se compactan y priorizan mejor el contenido en el panel de edición.
+
 ### Eliminación del aro residual de las transiciones (2026-09-12)
 
 - Se retira el pseudo-elemento CSS que dibujaba el círculo elíptico durante la entrada inicial y al abrir una tienda; se conservan el blackout y el campo gravitatorio.

@@ -40,6 +40,7 @@ describe("exportación de sitio a una carpeta elegida", () => {
 
   it("escribe rutas anidadas y binarios en la carpeta elegida", async () => {
     const { directory, files } = makeDirectory();
+    const progress: Array<{ current: number; total: number }> = [];
     const result = await writeSiteToDirectory(
       directory,
       new Map([
@@ -47,12 +48,18 @@ describe("exportación de sitio a una carpeta elegida", () => {
         ["assets/logo.bin", new Uint8Array([0, 1, 255])],
       ]),
       "production",
+      (next) => progress.push(next),
     );
 
     expect(result.filesWritten).toBe(2);
     expect(result.folder).toContain("producción");
     expect(files.get("index.html")).toBe("<h1>Solara</h1>");
     expect([...((files.get("assets/logo.bin") as Uint8Array) ?? [])]).toEqual([0, 1, 255]);
+    expect(progress).toEqual([
+      { current: 0, total: 2 },
+      { current: 1, total: 2 },
+      { current: 2, total: 2 },
+    ]);
   });
 
   it("rechaza rutas que intentan salir de la carpeta elegida", async () => {

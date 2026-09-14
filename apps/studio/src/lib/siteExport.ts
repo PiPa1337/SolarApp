@@ -21,6 +21,11 @@ interface DirectoryPickerWindow extends Window {
 
 export type ChosenExportDirectory = DirectoryLike;
 
+export interface SiteWriteProgress {
+  current: number;
+  total: number;
+}
+
 function getDirectoryPicker(): DirectoryPickerWindow["showDirectoryPicker"] {
   if (typeof window === "undefined") return undefined;
   const picker = (window as DirectoryPickerWindow).showDirectoryPicker;
@@ -70,6 +75,7 @@ export async function writeSiteToDirectory(
   directory: ChosenExportDirectory,
   files: ReadonlyMap<string, string | Uint8Array>,
   mode: ExportMode,
+  onProgress?: (progress: SiteWriteProgress) => void,
 ): Promise<{ folder: string; filesWritten: number }> {
   if (files.size === 0) throw new Error("La exportación no contiene archivos.");
 
@@ -83,7 +89,9 @@ export async function writeSiteToDirectory(
     entries.push({ segments, data });
   }
 
-  for (const { segments, data } of entries) {
+  onProgress?.({ current: 0, total: entries.length });
+
+  for (const [index, { segments, data }] of entries.entries()) {
     let target = directory;
     for (const segment of segments.slice(0, -1)) {
       target = await target.getDirectoryHandle(segment, { create: true });
@@ -92,6 +100,7 @@ export async function writeSiteToDirectory(
     const writable = await file.createWritable();
     await writable.write(data);
     await writable.close();
+    onProgress?.({ current: index + 1, total: entries.length });
   }
 
   return {

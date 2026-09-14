@@ -382,7 +382,7 @@ export function exportSiteInWorker(
     optimizationProfile?: "safe" | "strict";
     includeRecovery?: boolean;
   } = {},
-  onStage?: (stage: ExportStageId) => void,
+  onProgress?: (event: ExportProgressEvent) => void,
 ): Promise<{
   files: ReadonlyMap<string, string | Uint8Array>;
   audit: AuditIssue[];
@@ -392,7 +392,7 @@ export function exportSiteInWorker(
   return requestWorkerWithStages(
     getExportWorker(),
     { type: "site", project, mode, options },
-    onStage,
+    onProgress,
     recreateWorker(() => {
       resetExportWorker();
     }, getExportWorker),
@@ -431,18 +431,21 @@ export async function recoverProjectFromFolderInWorker(files: File[]): Promise<S
   );
 }
 
-export type ExportStageId = "validate" | "render" | "package";
+export type ExportTaskId = "validate" | "social-crops" | "recovery" | "render";
 
-export interface ExportStageMessage {
+export interface ExportProgressMessage {
   id: string;
-  kind: "export-stage";
-  stage: ExportStageId;
+  kind: "export-progress";
+  task: ExportTaskId;
+  status: "active" | "complete";
 }
+
+export type ExportProgressEvent = Pick<ExportProgressMessage, "task" | "status">;
 
 function requestWorkerWithStages<Request extends object, Result>(
   worker: Worker,
   request: Request,
-  onStage?: (stage: ExportStageId) => void,
+  onProgress?: (event: ExportProgressEvent) => void,
   recreate?: () => Worker,
 ): Promise<Result> {
   const id = crypto.randomUUID();
@@ -452,10 +455,12 @@ function requestWorkerWithStages<Request extends object, Result>(
         current.removeEventListener("message", handleMessage);
         current.removeEventListener("error", handleError);
       };
-      const handleMessage = (event: MessageEvent<WorkerResponse<Result> | ExportStageMessage>) => {
+      const handleMessage = (
+        event: MessageEvent<WorkerResponse<Result> | ExportProgressMessage>,
+      ) => {
         if (event.data.id !== id) return;
         if ("kind" in event.data) {
-          onStage?.(event.data.stage);
+          onProgress?.(event.data);
           return;
         }
         detach();

@@ -4,8 +4,9 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 interface SentExportMessage {
   id: string;
   ok?: boolean;
-  kind?: "export-stage";
-  stage?: string;
+  kind?: "export-progress";
+  task?: string;
+  status?: "active" | "complete";
   error?: string;
   result?: {
     files?: unknown;
@@ -51,7 +52,7 @@ beforeAll(async () => {
 });
 
 describe("export.worker", () => {
-  it("emite las etapas en orden y entrega files, audit, optimization y criticalCount", async () => {
+  it("emite tareas reales en orden y entrega files, audit, optimization y criticalCount", async () => {
     const messages = await send({
       id: "site-1",
       type: "site",
@@ -59,17 +60,18 @@ describe("export.worker", () => {
       mode: "draft",
       options: { publicAiContext: false, optimizationProfile: "safe" },
     });
-    await vi.waitFor(() => expect(messages).toHaveLength(4), { timeout: 120_000 });
-    expect(messages.slice(0, 3).map((message) => message.stage)).toEqual([
-      "validate",
-      "render",
-      "package",
+    await vi.waitFor(() => expect(messages).toHaveLength(5), { timeout: 120_000 });
+    expect(messages.slice(0, 4).map((message) => `${message.task}:${message.status}`)).toEqual([
+      "validate:active",
+      "validate:complete",
+      "render:active",
+      "render:complete",
     ]);
-    for (const message of messages.slice(0, 3)) {
-      expect(message).toMatchObject({ id: "site-1", kind: "export-stage" });
+    for (const message of messages.slice(0, 4)) {
+      expect(message).toMatchObject({ id: "site-1", kind: "export-progress" });
       expect(message.ok).toBeUndefined();
     }
-    const final = messages[3];
+    const final = messages.at(-1);
     expect(final).toBeDefined();
     const audit = final?.result?.audit ?? [];
     expect(final?.result?.files).toBeInstanceOf(Map);

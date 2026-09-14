@@ -15,6 +15,10 @@ import { publicWhatsAppPhone } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import {
+  ExportProgressDialog,
+  type ExportProgressTask,
+} from "../components/ExportProgressDialog";
 import { Button, InlineError, SectionHeader } from "../components/Ui";
 import {
   type CloudflareVerificationResult,
@@ -36,64 +40,73 @@ import {
   readProjectArchiveInWorker,
   recoverProjectFromFolderInWorker,
   recoverProjectFromUrlInWorker,
+  type ExportProgressEvent,
+  type ExportTaskId,
 } from "../lib/workers";
 import { WorkspaceGroups } from "./workbench/WorkspaceNav";
 
-const EXPORT_STAGES = [
-  { id: "validate", label: "Validando proyecto" },
-  { id: "render", label: "Renderizando páginas" },
-  { id: "package", label: "Empaquetando archivos" },
-] as const;
+const EXPORT_TASKS: ReadonlyArray<{ id: ExportTaskId | "write"; label: string }> = [
+  { id: "validate", label: "Validar proyecto" },
+  { id: "social-crops", label: "Generar recortes sociales" },
+  { id: "recovery", label: "Preparar bóveda de recuperación" },
+  { id: "render", label: "Generar archivos del sitio" },
+  { id: "write", label: "Escribir y verificar la carpeta" },
+];
 
-function ExportStages({ done }: { done: ReadonlySet<string> }) {
-  return (
-    <section
-      className="guided-checklist"
-      data-testid="ui-export-stages"
-      aria-label="Etapas de exportación"
-    >
-      <div className="guided-checklist__header">
-        <div>
-          <span className="guided-kicker">Exportación</span>
-          <h3>Etapas de generación</h3>
-        </div>
-        {done.size < EXPORT_STAGES.length ? (
-          <span className="guided-checklist__more">
-            El worker informa cada etapa a medida que la completa.
-          </span>
-        ) : null}
-      </div>
-      <ul>
-        {EXPORT_STAGES.map((stage) => {
-          const stageDone = done.has(stage.id);
-          return (
-            <li
-              key={stage.id}
-              data-testid="ui-export-stage"
-              data-stage={stage.id}
-              data-done={stageDone}
-            >
-              <span
-                className="guided-checklist__status"
-                style={stageDone ? { color: "var(--accent)" } : undefined}
-                aria-hidden
-              >
-                {stageDone ? (
-                  <CheckCircle size={18} weight="fill" />
-                ) : (
-                  <span className="spinner" aria-hidden />
-                )}
-              </span>
-              <span className="guided-checklist__text">
-                <strong>{stage.label}</strong>
-                <small>{stageDone ? "Completado" : "En curso…"}</small>
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
+type ExportProgressState = {
+  tasks: ExportProgressTask[];
+  percent: number;
+};
+
+function createExportProgress(mode: "draft" | "production"): ExportProgressState {
+  const tasks = EXPORT_TASKS.filter(
+    (task) => mode === "production" || (task.id !== "social-crops" && task.id !== "write"),
+  ).map((task) => ({ ...task, status: "pending" as const }));
+  return { tasks, percent: 0 };
+}
+
+function calculateExportPercent(tasks: readonly ExportProgressTask[]): number {
+  if (tasks.length === 0) return 0;
+  const completedUnits = tasks.reduce((total, task) => {
+    if (task.status === "complete") return total + 1;
+    if (task.status === "active" && task.id === "write" && task.total) {
+      return total + Math.min(1, (task.current ?? 0) / task.total);
+    }
+    return total;
+  }, 0);
+  return Math.round((completedUnits / tasks.length) * 100);
+}
+
+function updateExportTask(
+  state: ExportProgressState,
+  id: string,
+  update: Partial<ExportProgressTask>,
+): ExportProgressState {
+  const tasks = state.tasks.map((task) => (task.id === id ? { ...task, ...update } : task));
+  return { tasks, percent: calculateExportPercent(tasks) };
+}
+
+function applyWorkerProgress(
+  state: ExportProgressState,
+  event: ExportProgressEvent,
+): ExportProgressState {
+  return updateExportTask(state, event.task, { status: event.status });
+}
+
+function applyWriteProgress(
+  state: ExportProgressState,
+  current: number,
+  total: number,
+): ExportProgressState {
+  return updateExportTask(state, "write", {
+    status: current >= total ? "complete" : "active",
+    current,
+    total,
+  });
+}
+
+function activeExportTask(state: ExportProgressState): ExportProgressTask | undefined {
+  return state.tasks.find((task) => task.status === "active");
 }
 
 export function ExportPanel({
@@ -121,7 +134,7 @@ export function ExportPanel({
   const [publicAiContext, setPublicAiContext] = useState(true);
   const [optimization, setOptimization] = useState<OptimizationReport | null>(null);
   const [exportDone, setExportDone] = useState(false);
-  const [doneStages, setDoneStages] = useState<ReadonlySet<string>>(new Set());
+  const [exportProgress, setExportProgress] = useState<ExportProgressState | null>(null);
   const [confirmAction, setConfirmAction] = useState<
     "production" | "import" | "recovery" | "history" | ""
   >("");
@@ -182,13 +195,14 @@ export function ExportPanel({
     setError("");
     setNotice("");
     setExportDone(false);
-    setDoneStages(new Set());
     try {
       const exportDirectory = mode === "production" ? await chooseExportDirectory() : undefined;
       if (mode === "production" && !exportDirectory) {
         setNotice("Exportación cancelada. No se modificó ninguna carpeta.");
         return;
       }
+      setExportProgress(createExportProgress(mode));
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       const result = await exportSiteInWorker(
         project,
         mode,
@@ -197,26 +211,31 @@ export function ExportPanel({
           optimizationProfile: "safe",
           includeRecovery: true,
         },
-        (stage) => {
-          setDoneStages((current) => {
-            if (current.has(stage)) return current;
-            const next = new Set(current);
-            next.add(stage);
-            return next;
-          });
+        (event) => {
+          setExportProgress((current) =>
+            current ? applyWorkerProgress(current, event) : current,
+          );
         },
       );
       setOptimization(result.optimization);
       const savedSite = exportDirectory
-        ? await writeSiteToDirectory(exportDirectory, result.files, mode)
+        ? await writeSiteToDirectory(exportDirectory, result.files, mode, ({ current, total }) => {
+            setExportProgress((state) => (state ? applyWriteProgress(state, current, total) : state));
+          })
         : undefined;
+      setExportProgress((current) => {
+        if (!current) return current;
+        const tasks = current.tasks.map((task) => ({ ...task, status: "complete" as const }));
+        return { tasks, percent: 100 };
+      });
+      await new Promise<void>((resolve) => setTimeout(resolve, 350));
       recordHistory({
         mode,
         score: result.optimization.score,
         critical: result.criticalCount,
       });
       setExportDone(true);
-      setDoneStages(new Set(EXPORT_STAGES.map((stage) => stage.id)));
+      setExportProgress(null);
       setPostDone(new Set());
       setNotice(
         savedSite
@@ -226,6 +245,7 @@ export function ExportPanel({
             : "Exportación correcta. En modo navegador el sitio generado no se conserva en disco; usá el lanzador de SolaraCommerce para guardarlo y abrirlo.",
       );
     } catch (reason) {
+      setExportProgress(null);
       setError(reason instanceof Error ? reason.message : "No se pudo exportar la tienda.");
     } finally {
       setBusy("");
@@ -427,6 +447,21 @@ export function ExportPanel({
     },
   ];
 
+  const activeTask = exportProgress ? activeExportTask(exportProgress) : undefined;
+  const remainingTasks = exportProgress
+    ? exportProgress.tasks.filter((task) => task.status !== "complete").length
+    : 0;
+  const remainingLabel = exportProgress
+    ? `Faltan ${100 - exportProgress.percent}% · ${remainingTasks} ${remainingTasks === 1 ? "tarea" : "tareas"}`
+    : "";
+  const currentLabel = exportProgress?.percent === 100
+    ? "Exportación completa. Verificando el resultado…"
+    : activeTask
+      ? activeTask.id === "write" && activeTask.total !== undefined
+        ? `${activeTask.label}… ${activeTask.current ?? 0}/${activeTask.total} archivos`
+        : `${activeTask.label}…`
+      : "Preparando las tareas de exportación…";
+
   return (
     <section className="workspace-section">
       <SectionHeader
@@ -434,7 +469,16 @@ export function ExportPanel({
         description="El respaldo editable y el sitio público son archivos distintos."
       />
       {error ? <InlineError>{error}</InlineError> : null}
-      {busy ? (
+      {exportProgress ? (
+        <ExportProgressDialog
+          mode={busy === "production" ? "production" : "draft"}
+          percent={exportProgress.percent}
+          remainingLabel={remainingLabel}
+          currentLabel={currentLabel}
+          tasks={exportProgress.tasks}
+        />
+      ) : null}
+      {busy && !exportProgress ? (
         <output className="export-progress" aria-live="polite" data-testid="ui-export-progress">
           {busy === "draft"
             ? "Generando sitio borrador…"
@@ -500,11 +544,6 @@ export function ExportPanel({
             </>
           )}
         </output>
-      ) : null}
-      {busy === "draft" || busy === "production" ? (
-        <ExportStages done={doneStages} />
-      ) : exportDone ? (
-        <ExportStages done={doneStages} />
       ) : null}
       {exportDone ? (
         <section

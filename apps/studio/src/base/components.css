@@ -563,6 +563,75 @@
   margin-top: 12px;
 }
 
+/* --- ExportProgressDialog --- */
+
+.export-progress-dialog {
+  width: min(520px, calc(100vw - 32px));
+}
+
+.export-progress-dialog__body {
+  gap: 14px;
+}
+
+.export-progress-dialog__headline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.export-progress-dialog__headline strong {
+  color: var(--ink);
+  font-size: 28px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.export-progress-dialog__headline span {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.export-progress-dialog__current {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.export-progress-dialog__tasks {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-input);
+  background: var(--surface);
+  list-style: none;
+}
+
+.export-progress-dialog__tasks li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.export-progress-dialog__task-status {
+  display: grid;
+  flex: 0 0 18px;
+  place-items: center;
+  color: var(--muted);
+}
+
+.export-progress-dialog__tasks li[data-status="active"] .export-progress-dialog__task-status,
+.export-progress-dialog__tasks li[data-status="complete"] .export-progress-dialog__task-status {
+  color: var(--accent);
+}
+
 /* --- Toast --- */
 
 .toast-region {
