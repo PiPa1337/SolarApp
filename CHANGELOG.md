@@ -1,3 +1,68 @@
+### Variantes visuales en el canal MCP (2026-09-16)
+
+- El protocolo del agente permite crear y reemplazar variantes con opciones,
+  precios, stock y `imageId`, validando que cada imagen exista y pertenezca a la
+  galería del producto.
+- Se documenta el contrato para normalizaciones de catálogo sin editar
+  respaldos `.solara.json` directamente.
+
+### Contexto público de agentes obligatorio en producción (2026-09-16)
+
+- El export de producción de SolaraCommerce siempre genera `ai-context.json`,
+  `llms.txt` y `llms-full.txt`; Studio ya no presenta un toggle contradictorio
+  y la documentación distingue este contrato del borrador sin publicar.
+
+### URL pública temporal de Pao (2026-09-16)
+
+- Pao usa `https://pao-bi3.pages.dev/` como `baseUrl` temporal para canonical, Open Graph, sitemap y JSON-LD hasta comprar un dominio propio.
+
+### Ajustes no visuales de Pao y redes sociales del agente (2026-09-16)
+
+- La portada de Pao usa la colección de productos destacados y su enlace lleva a la colección completa, equilibrada entre blanquería, marroquinería y accesorios.
+- La identidad de Pao conserva el teléfono provisto y el protocolo del agente acepta URLs sociales para emitirlas en el JSON-LD.
+
+### Contrato de imágenes comparable con RM Descartables (2026-09-16)
+
+- Se documenta la receta compartida WebP/AVIF + fallback + variantes responsive y el baseline de 1254 px para fuentes desktop de producto.
+- El auditor informa cuando una tienda usa un primario no moderno o una fuente de producto menor al baseline, sin ocultar la limitación de resolución de origen.
+- Pao publica fuente WebP de 1254 px, variante de 768 px y fallback JPEG de 768 px para productos y categorías, con backup versionado de la versión anterior.
+- Pao v30 reemplaza las derivadas ampliadas por las 102 fuentes originales generadas de 1254×1254, conservando la correspondencia producto → imagen y el guardado transaccional.
+
+### Dashboard con grilla 3x3 (2026-09-16)
+
+- La vista grilla del dashboard muestra hasta 9 tiendas por página y limita la
+  distribución a un máximo de 3 columnas. Los nombres largos se muestran en
+  hasta dos líneas para conservar su legibilidad y el hover de la card izquierda
+  puede sobresalir sin quedar recortado.
+
+### Sombra configurable del hero mobile (2026-09-16)
+
+- El editor de Tema permite ajustar para todas las tiendas la intensidad, dirección, desplazamiento y desenfoque de la sombra del texto del hero mobile, manteniendo el color derivado del tema.
+
+### Documentación de políticas V2 (2026-09-16)
+
+- Se documenta que `catalog-modern-v2` integra envíos y cambios dentro de las
+  fichas de producto y no genera `/envios/` ni `/devoluciones/` independientes.
+- La auditoría distingue estas rutas deprecated de V2 de la compatibilidad
+  legacy V1 y deja de tratarlas como faltantes de las tiendas actuales.
+
+### Paleta Pao Blanquería más viva (2026-09-16)
+
+- Se refuerzan los tonos rosa, taupe, acento y oferta para evitar una percepción apagada, conservando el fondo marfil y el contraste WCAG AA.
+
+### Segunda saturación de Pao Blanquería (2026-09-16)
+
+- La paleta recibe otro incremento relativo del 30% en saturación HSL; el fondo y el rating ya estaban en el límite de saturación y se conservan.
+
+### Saturación renovada de Pao Blanquería (2026-09-16)
+
+- La paleta del preset aumenta aproximadamente un 30% su saturación HSL, conservando tono, luminosidad y contraste WCAG AA.
+
+### Retención de respaldos automáticos (2026-09-16)
+
+- `respaldos/` conserva como máximo los cinco históricos más recientes por tienda; la poda se ejecuta tras cada commit exitoso y al iniciar el servidor local.
+- La regla no afecta la versión actual ni las copias explícitas de `respaldos-manuales/`.
+
 ### Exportación con progreso real (2026-09-14)
 
 - Se agrega un popup modal que refleja las tareas reales del worker de exportación y el avance granular al escribir la carpeta, evitando abrir un sitio incompleto.

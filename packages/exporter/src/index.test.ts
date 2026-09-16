@@ -99,10 +99,10 @@ describe("exporter", () => {
 
     expect(css).toContain("--solara-text-shadow:#ffffff");
     expect(css).toContain(
-      "--solara-hero-text-shadow:1px 1px 0 color-mix(in srgb,var(--solara-text-shadow) 65%,transparent)",
+      "--solara-hero-text-shadow:1px 1px 0px color-mix(in srgb,var(--solara-text-shadow) 65%,transparent)",
     );
     expect(css).toContain(
-      "--solara-hero-text-shadow-v2:1px 1px 0 color-mix(in srgb,#202020 65%,transparent)",
+      "--solara-hero-text-shadow-v2:1px 1px 0px color-mix(in srgb,#202020 65%,transparent)",
     );
     expect(css).toContain(
       '[data-solara-store][data-page-type="home"] [data-solara-module="catalog-hero"] .catalog-hero-copy .catalog-eyebrow,',
@@ -118,6 +118,18 @@ describe("exporter", () => {
     const css = runtimeAsset(exportProject(project, { mode: "production" }).files, "css");
 
     expect(css).toContain("--solara-hero-text-shadow:none");
+  });
+
+  it("transporta la distancia, dirección, desenfoque e intensidad sin reemplazar el color del tema", () => {
+    const project = structuredClone(catalogModernV2Store);
+    Object.assign(project.theme, {
+      shadows: { text: { enabled: true, opacity: 0.4, offsetX: -8, offsetY: 14, blur: 6 } },
+    });
+    const css = runtimeAsset(exportProject(project, { mode: "production" }).files, "css");
+
+    expect(css).toContain(
+      "--solara-hero-text-shadow-v2:-8px 14px 6px color-mix(in srgb,#11110f 40%,transparent)",
+    );
   });
 
   it("transporta el copy global personalizado a preview y exportación", () => {
@@ -1424,15 +1436,16 @@ describe("exporter", () => {
     ).toBe(true);
   });
 
-  it("permite exportar sin contexto publico para agentes", () => {
+  it("genera siempre el contexto publico para agentes en produccion", () => {
     const result = exportProject(referenceStore, {
       mode: "production",
       publicAiContext: false,
     });
-    expect(result.files.has("ai-context.json")).toBe(false);
-    expect(result.files.has("llms.txt")).toBe(false);
-    expect(result.optimization.aiReadiness.publicContextAvailable).toBe(false);
-    expect(String(result.files.get("index.html"))).not.toContain('href="/ai-context.json"');
+    expect(result.files.has("ai-context.json")).toBe(true);
+    expect(result.files.has("llms.txt")).toBe(true);
+    expect(result.files.has("llms-full.txt")).toBe(true);
+    expect(result.optimization.aiReadiness.publicContextAvailable).toBe(true);
+    expect(String(result.files.get("index.html"))).toContain('href="/ai-context.json"');
   });
 
   it("la Home editable manda sobre el seo global en su ruta", () => {

@@ -31,6 +31,29 @@ selector porque sus módulos no comparten este contrato visual.
 El contenido permanece visible sin JavaScript. `prefers-reduced-motion` deja
 todos los elementos en su estado final y elimina las transiciones espaciales.
 
+## Políticas de entrega y cambios
+
+En `catalog-modern-v2`, `/envios/` y `/devoluciones/` no son páginas públicas
+independientes. Esta es una decisión de producto vigente, no una funcionalidad
+faltante:
+
+- `policies.shipping` y `policies.returns` siguen siendo datos configurables y
+  obligatorios para la calidad del contenido público;
+- el resumen y el detalle de cada política se muestran dentro de la ficha de
+  cada producto, junto con la información relevante para decidir la compra;
+- el footer V2 conserva únicamente los enlaces independientes a
+  `/privacidad/` y `/terminos/`;
+- si una navegación heredada contiene un enlace a `/envios/` o
+  `/devoluciones/`, el renderer V2 lo omite;
+- los detalles de entrega y cambios también alimentan las superficies públicas
+  de contexto y auditoría, pero no crean una URL indexable separada.
+
+Las páginas independientes de envíos y devoluciones sólo se mantienen para
+`catalog-modern-v1` por compatibilidad con tiendas legacy. No se deben agregar
+a una tienda V2, ni considerar su ausencia un bloqueo de publicación. Las
+rutas, textos y campos legacy se conservan hasta que exista una migración
+explícita; no se eliminan datos del proyecto.
+
 ## Gates actuales
 
 - Preview y exportación comparten renderer.

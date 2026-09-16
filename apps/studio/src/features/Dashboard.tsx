@@ -202,7 +202,7 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
               alt=""
               width={heroAsset.width}
               height={heroAsset.height}
-              // La página sólo monta 12 cards (5 en lista): la preview visible
+              // La página sólo monta 9 cards (5 en lista): la preview visible
               // debe estar disponible al entrar, no esperar a un scroll que no existe.
               loading="eager"
               decoding="async"

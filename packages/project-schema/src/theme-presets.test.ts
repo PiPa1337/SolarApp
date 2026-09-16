@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Theme } from "./index";
-import { applyPreset, THEME_PRESETS } from "./theme-presets";
+import { applyPreset, PAO_BLANQUERIA_COLORS, THEME_PRESETS } from "./theme-presets";
 
 const baseTheme: Theme = {
   colors: {
@@ -57,6 +57,36 @@ describe("theme presets", () => {
         expect(value, `${preset.id}.${key}`).toMatch(/^#[0-9a-fA-F]{3,6}$/);
       }
     }
+  });
+
+  it("la paleta Pao Blanquería conserva contraste WCAG AA", () => {
+    const palette = THEME_PRESETS.find((preset) => preset.id === "pao-blanqueria");
+    if (!palette?.tokens.colors) throw new Error("Falta la paleta Pao Blanquería.");
+    const colors = palette.tokens.colors;
+    expect(colors).toEqual(PAO_BLANQUERIA_COLORS);
+    const luminance = (color: string) => {
+      const channels = [1, 3, 5]
+        .map((offset) => Number.parseInt(color.slice(offset, offset + 2), 16) / 255)
+        .map((channel) =>
+          channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+        );
+      const [red = 0, green = 0, blue = 0] = channels;
+      return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+    };
+    const ratio = (foreground: string, background: string) => {
+      const first = luminance(foreground);
+      const second = luminance(background);
+      return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+    };
+
+    const { text, muted, background, accentText, accent, accentAlt } = colors;
+    if (!text || !muted || !background || !accentText || !accent || !accentAlt) {
+      throw new Error("La paleta Pao Blanquería no tiene todos sus colores.");
+    }
+    expect(ratio(text, background)).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(muted, background)).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(accentText, accent)).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(accentText, accentAlt)).toBeGreaterThanOrEqual(4.5);
   });
 
   it("applyPreset cambia los colores del tema", () => {

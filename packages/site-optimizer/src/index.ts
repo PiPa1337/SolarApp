@@ -86,6 +86,19 @@ export interface OptimizationOptions {
   publicAiContext?: boolean;
 }
 
+/**
+ * Baseline de entrega para fotos de producto cuadradas. RM Descartables usa
+ * exactamente este ancho en su fuente desktop; una fuente menor sigue siendo
+ * válida, pero no debe presentarse como gold standard.
+ */
+export const PRODUCT_IMAGE_GOLD_STANDARD_WIDTH = 1254;
+
+const OPTIMIZED_PRIMARY_IMAGE_MIME_TYPES = new Set(["image/avif", "image/webp"]);
+
+function dataUrlMimeType(source: string): string | undefined {
+  return /^data:([^;,]+)[;,]/i.exec(source)?.[1]?.toLowerCase();
+}
+
 const reservedSlugs = new Set([
   "assets",
   "categorias",
@@ -452,6 +465,7 @@ function auditProject(
   routes: readonly OptimizationRoute[],
 ): OptimizationFinding[] {
   const findings: OptimizationFinding[] = [];
+  const assetsById = new Map(project.assets.map((asset, index) => [asset.id, { asset, index }]));
   const allSlugs = new Map<string, string[]>();
   const addSlug = (slug: string, kind: string) => {
     const values = allSlugs.get(slug) ?? [];
@@ -539,6 +553,34 @@ function auditProject(
         entity: { type: "product", id: product.id, label: product.title },
       });
     }
+    product.imageIds.forEach((assetId) => {
+      const assetRecord = assetsById.get(assetId);
+      if (!assetRecord) return;
+      const { asset, index: assetIndex } = assetRecord;
+      const primaryMimeType = dataUrlMimeType(asset.source);
+      if (!primaryMimeType || !OPTIMIZED_PRIMARY_IMAGE_MIME_TYPES.has(primaryMimeType)) {
+        addFinding(findings, {
+          code: "performance.product-image-format",
+          severity: "warning",
+          area: "performance",
+          message: `${product.title} usa ${primaryMimeType ?? "un formato desconocido"} como fuente primaria; el estándar requiere WebP o AVIF y un fallback separado.`,
+          path: `assets.${assetIndex}.source`,
+          fixable: true,
+          entity: { type: "asset", id: asset.id, label: asset.name },
+        });
+      }
+      if (asset.width < PRODUCT_IMAGE_GOLD_STANDARD_WIDTH) {
+        addFinding(findings, {
+          code: "performance.product-image-resolution",
+          severity: "warning",
+          area: "performance",
+          message: `${product.title} entrega ${asset.width}px; el baseline de RM para producto desktop es ${PRODUCT_IMAGE_GOLD_STANDARD_WIDTH}px. El optimizador no debe inventar detalle mediante upscaling.`,
+          path: `assets.${assetIndex}.width`,
+          fixable: false,
+          entity: { type: "asset", id: asset.id, label: asset.name },
+        });
+      }
+    });
     product.variants.forEach((variant, variantIndex) => {
       if (variant.price <= 0) {
         addFinding(findings, {

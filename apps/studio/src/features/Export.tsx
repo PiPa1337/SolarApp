@@ -131,7 +131,6 @@ export function ExportPanel({
   const [auditReady, setAuditReady] = useState(false);
   const [auditError, setAuditError] = useState("");
   const [auditAttempt, setAuditAttempt] = useState(0);
-  const [publicAiContext, setPublicAiContext] = useState(true);
   const [optimization, setOptimization] = useState<OptimizationReport | null>(null);
   const [exportDone, setExportDone] = useState(false);
   const [exportProgress, setExportProgress] = useState<ExportProgressState | null>(null);
@@ -158,7 +157,7 @@ export function ExportPanel({
     let active = true;
     setAuditReady(false);
     setAuditError("");
-    void auditProjectInWorker(project, publicAiContext)
+    void auditProjectInWorker(project, true)
       .then(({ criticalCount, optimization }) => {
         if (active) {
           setCritical(criticalCount);
@@ -179,7 +178,7 @@ export function ExportPanel({
     return () => {
       active = false;
     };
-  }, [project, publicAiContext, auditAttempt]);
+  }, [project, auditAttempt]);
 
   const recordHistory = (entry: Omit<ExportHistoryEntry, "at">) => {
     setHistory(recordExport(project.slug, entry.mode, entry));
@@ -207,7 +206,7 @@ export function ExportPanel({
         project,
         mode,
         {
-          publicAiContext,
+          publicAiContext: true,
           optimizationProfile: "safe",
           includeRecovery: true,
         },
@@ -645,36 +644,27 @@ export function ExportPanel({
                   </article>
                 </div>
                 <details className="export-content-options">
-                  <summary>Opciones de contenido público</summary>
-                  <label className="export-ai-context">
-                    <input
-                      type="checkbox"
-                      data-testid="ui-export-ai-context"
-                      checked={publicAiContext}
-                      onChange={(event) => setPublicAiContext(event.target.checked)}
-                    />
-                    Publicar contexto público para agentes (`llms.txt` y `ai-context.json`)
-                  </label>
-                  {publicAiContext || externalHosts.length > 0 ? (
-                    <aside
-                      className="audit-panel export-public-exposure"
-                      data-testid="ui-export-public-exposure"
-                    >
-                      <h3>Exposición pública deliberada</h3>
-                      {publicAiContext ? (
-                        <p>
-                          Se publicarán contacto, políticas, SKUs, precios y productos activos para
-                          agentes.
-                        </p>
-                      ) : null}
-                      {externalHosts.length > 0 ? (
-                        <p>
-                          Hosts externos de medios: {externalHosts.join(", ")}. Se mostrarán como
-                          advertencias.
-                        </p>
-                      ) : null}
-                    </aside>
-                  ) : null}
+                  <summary>Contenido público de producción</summary>
+                  <p className="export-ai-context-status" data-testid="ui-export-ai-context-status">
+                    En cada exportación de producción se generan siempre `ai-context.json`, `llms.txt`
+                    y `llms-full.txt` con la información pública de la tienda.
+                  </p>
+                  <aside
+                    className="audit-panel export-public-exposure"
+                    data-testid="ui-export-public-exposure"
+                  >
+                    <h3>Exposición pública deliberada</h3>
+                    <p>
+                      Se publicarán contacto, políticas, SKU, precios y productos activos para
+                      agentes.
+                    </p>
+                    {externalHosts.length > 0 ? (
+                      <p>
+                        Hosts externos de medios: {externalHosts.join(", ")}. Se mostrarán como
+                        advertencias.
+                      </p>
+                    ) : null}
+                  </aside>
 
                   {optimization ? (
                     <output className="optimization-export-summary">
@@ -926,11 +916,10 @@ export function ExportPanel({
           confirmLabel="Exportar producción"
           body={
             <p>
-              Se generará el HTML final con sitemap, datos estructurados y feed de Merchant.
+              Se generará el HTML final con sitemap, datos estructurados, feed de Merchant y
+              contexto público para agentes (`ai-context.json`, `llms.txt` y `llms-full.txt`).
               {" Primero se abrirá el selector de carpetas para elegir dónde guardar el sitio."}
-              {publicAiContext
-                ? " El contexto público incluirá contacto, políticas, SKUs, precios y productos activos."
-                : ""}
+              {" El contexto incluirá contacto, políticas, SKU, precios y productos activos."}
               {externalHosts.length > 0 ? ` Hosts externos: ${externalHosts.join(", ")}.` : ""}
             </p>
           }

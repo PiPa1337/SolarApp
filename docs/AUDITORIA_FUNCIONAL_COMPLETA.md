@@ -9,6 +9,7 @@ Horizontes usados: **corto plazo = 1–2 semanas**; **mediano plazo = 2–8 sema
 - **Completa**: la función existe y la evidencia ejecutada o los tests actuales permiten considerarla operativa dentro del alcance auditado.
 - **Deficiente**: existe, pero tiene una limitación, deuda, desalineación de contrato, riesgo funcional o falta una validación importante.
 - **Faltante**: la capacidad esperada no está disponible en la superficie correspondiente.
+- **No aplica por diseño**: la ausencia está decidida para esa familia o superficie y no debe abrirse como hallazgo.
 - **P0**: riesgo de pérdida/corrupción de datos o bloqueo crítico.
 - **P1**: impacto alto en flujo principal, publicación o contrato funcional.
 - **P2**: impacto medio, deuda relevante o experiencia incompleta.
@@ -181,8 +182,8 @@ Los errores Biome observados originalmente en el editor de productos, su modelo 
 | AUD-075 | Exporter | Producto | Completa | 10 | P0 | exporter tests | Sin hallazgo | Mantener no-JS | Builder específico |
 | AUD-076 | Exporter | `/buscar/` | Completa | 9 | P1 | runtime/exporter tests | Sin hallazgo | E2E sin query | URLs con estado de filtros |
 | AUD-077 | Exporter | `/carrito/` | Completa | 9 | P1 | exporter/runtime tests | En V2 continúa al contacto embebido | Documentar flujo V2 | Configurar estrategia de checkout |
-| AUD-081 | Exporter | `/envios/` | Completa | 9 | P1 | exporter tests | Publicación depende de flags legales | Mostrar preview legal | Versionado de perfiles |
-| AUD-082 | Exporter | `/devoluciones/` | Completa | 9 | P1 | exporter tests | Igual que arriba | Preview legal | Versionado de perfiles |
+| AUD-081 | Exporter | `/envios/` independiente | No aplica por diseño en V2 | — | — | exporter test V2 + renderer | Ruta deprecated en V2; la información vive en la ficha de producto | No abrir como faltante de Pao/V2 | Mantener sólo compatibilidad V1 |
+| AUD-082 | Exporter | `/devoluciones/` independiente | No aplica por diseño en V2 | — | — | exporter test V2 + renderer | Ruta deprecated en V2; la información vive en la ficha de producto | No abrir como faltante de Pao/V2 | Mantener sólo compatibilidad V1 |
 | AUD-083 | Exporter | `/privacidad/` | Completa | 9 | P1 | exporter tests | Override/manual legal | Validación de contenido vacío | Plantillas legales versionadas |
 | AUD-084 | Exporter | `/terminos/` | Completa | 9 | P1 | exporter tests | Override/manual legal | Validación de contenido vacío | Plantillas legales versionadas |
 | AUD-085 | Exporter | `404.html` | Completa | 9 | P2 | exporter tests | Sin hallazgo | Test de enlaces | 404 configurable |
@@ -418,8 +419,10 @@ Mapeados a AUD-002, AUD-101…AUD-110:
 - El checkout vive dentro del carrito/drawer y termina en WhatsApp, sin ruta independiente → AUD-068/AUD-069/AUD-078
 - Contacto se resuelve dentro de Inicio con `/#contact-form` → AUD-049/AUD-080
 - `/compra/`, `/nosotros/` y `/contacto/` no se generan por decisión de producto; se documentan como exclusiones intencionales
-- `/envios/` → AUD-081
-- `/devoluciones/` → AUD-082
+- `/envios/` y `/devoluciones/` no se generan en `catalog-modern-v2`: sus
+  políticas se muestran dentro de cada ficha de producto. En
+  `catalog-modern-v1` siguen existiendo únicamente por compatibilidad legacy;
+  esta ausencia no es un hallazgo de exportación → AUD-081/AUD-082
 - `/privacidad/` → AUD-083
 - `/terminos/` → AUD-084
 - `/404.html` → AUD-085
@@ -476,13 +479,21 @@ Estas entradas no representan capacidades faltantes ni funcionalidades auditable
 - Tema único sin selector `auto/light/dark`.
 - Contacto integrado dentro de Inicio mediante `/#contact-form`.
 - Sin páginas independientes `/nosotros/`, `/contacto/` o `/compra/`.
+- Sin páginas independientes `/envios/` o `/devoluciones/` en V2: entrega y
+  cambios se muestran dentro de las fichas de producto y sus datos siguen
+  siendo configurables. Las rutas independientes sólo se conservan en V1 por
+  compatibilidad legacy.
 - Checkout basado en carrito/drawer con salida a WhatsApp.
 
 ## Compatibilidad, legado e infraestructura interna
 
 Estas áreas se documentan separadas porque existen por soporte técnico, migración o herramientas internas:
 
-- Módulos legacy editoriales conservados por compatibilidad.
+- Módulos legacy editoriales y las páginas independientes de envíos/cambios de
+  V1 conservados por compatibilidad.
+- `catalog-modern-v2` no debe generar, enlazar ni indexar `/envios/` o
+  `/devoluciones/`; el test del exporter verifica que no existan sus archivos
+  HTML. Privacidad y términos sí permanecen como páginas independientes.
 - Campos legacy tolerados por schema como `whatsapp.includeSku`.
 - Migraciones antiguas como `.solara.zip`.
 - Helpers internos de agentes, diagnósticos y validaciones manuales.
@@ -507,7 +518,7 @@ Estas áreas se documentan separadas porque existen por soporte técnico, migrac
 2. ~~Agregar `Exportar borrador` al diálogo.~~ **Resuelto.**
 3. ~~Corregir los errores de Biome.~~ **Resuelto:** `format:check` pasa sin errores; queda reducción incremental de warnings.
 4. ~~Agregar paridad automática entre protocolo y `AgentClient`.~~ **Resuelto:** test 34/34 contra `AgentProtocolJsonSchema.methods`.
-5. ~~Documentar en un único lugar la decisión de rutas V2 y hacer que el test la exprese.~~ **Resuelto por diseño:** no hay Compra/Nosotros/Contacto independientes.
+5. ~~Documentar en un único lugar la decisión de rutas V2 y hacer que el test la exprese.~~ **Resuelto por diseño:** no hay Compra/Nosotros/Contacto independientes y tampoco hay Envios/Devoluciones independientes en V2; las políticas se integran en la ficha de producto.
 6. ~~Marcar `includeSku` como deprecated/ignored para no prometer comportamiento inexistente.~~ **Resuelto:** sólo se tolera por compatibilidad de schema.
 7. ~~Hacer una pasada Playwright responsive fresca.~~ **Resuelto para AUD-144:** 7 viewports en Studio y cobertura responsive de Catalog Modern.
 
@@ -518,6 +529,7 @@ Estas áreas se documentan separadas porque existen por soporte técnico, migrac
 - La publicación real, DNS, Search Console y Merchant Center siguen siendo tareas manuales externas al runtime.
 - El checkout prepara un pedido y abre WhatsApp; no confirma venta, no cobra online y no administra stock remoto.
 - `whatsapp.includeSku` se tolera únicamente para compatibilidad de proyectos heredados; permanece fuera de UI, exporter y runtime activo hasta una migración explícita de schema.
+- `/envios/` y `/devoluciones/` independientes son rutas deprecated para V2; no deben volver a aparecer como requisito de las tiendas actuales. La compatibilidad V1 se mantiene hasta una migración explícita.
 
 ## 9. Roadmap corto — 1 a 2 semanas
 

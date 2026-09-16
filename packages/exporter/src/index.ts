@@ -34,6 +34,9 @@ import type {
 import {
   ARGENTINA_LEGAL_PROFILE,
   compactResponsiveSources,
+  DEFAULT_THEME_TEXT_SHADOW_BLUR,
+  DEFAULT_THEME_TEXT_SHADOW_OFFSET_X,
+  DEFAULT_THEME_TEXT_SHADOW_OFFSET_Y,
   DEFAULT_THEME_TEXT_SHADOW_OPACITY,
   deriveThemeTextShadowColor,
   formatLegalCountryCoverage,
@@ -145,6 +148,10 @@ export interface AuditReport {
 
 export interface ExportOptions {
   mode: ExportMode;
+  /**
+   * Compatibilidad con consumidores antiguos; producción siempre incluye el
+   * contexto público para agentes. En borrador no se publican esos archivos.
+   */
   publicAiContext?: boolean;
   optimizationProfile?: OptimizationOptions["profile"];
   /** Genera nombres de archivo semantico para assets (SEO para Google Images). */
@@ -957,14 +964,17 @@ function themeCss(
   const textShadowColorValue = deriveThemeTextShadowColor(colors);
   const v2TextShadowColorValue = deriveThemeTextShadowColor(colors, colors.background);
   const textShadowOpacity = t.shadows?.text?.opacity ?? DEFAULT_THEME_TEXT_SHADOW_OPACITY;
+  const textShadowOffsetX = t.shadows?.text?.offsetX ?? DEFAULT_THEME_TEXT_SHADOW_OFFSET_X;
+  const textShadowOffsetY = t.shadows?.text?.offsetY ?? DEFAULT_THEME_TEXT_SHADOW_OFFSET_Y;
+  const textShadowBlur = t.shadows?.text?.blur ?? DEFAULT_THEME_TEXT_SHADOW_BLUR;
   const heroTextShadow =
     t.shadows?.text?.enabled === false
       ? "none"
-      : `1px 1px 0 color-mix(in srgb, var(--solara-text-shadow) ${Math.round(textShadowOpacity * 100)}%, transparent)`;
+      : `${textShadowOffsetX}px ${textShadowOffsetY}px ${textShadowBlur}px color-mix(in srgb, var(--solara-text-shadow) ${Math.round(textShadowOpacity * 100)}%, transparent)`;
   const v2HeroTextShadow =
     t.shadows?.text?.enabled === false
       ? "none"
-      : `1px 1px 0 color-mix(in srgb, ${v2TextShadowColorValue} ${Math.round(textShadowOpacity * 100)}%, transparent)`;
+      : `${textShadowOffsetX}px ${textShadowOffsetY}px ${textShadowBlur}px color-mix(in srgb, ${v2TextShadowColorValue} ${Math.round(textShadowOpacity * 100)}%, transparent)`;
   // Fondo con imagen por tienda: el color sigue como base y la imagen repite
   // encima. En export `source` ya es la ruta pública; en preview es data URI.
   // La raíz [data-solara-store] pinta el color plano (y cada familia repite
@@ -3536,7 +3546,10 @@ function withExportContext<T>(phase: string, fn: () => T): T {
  */
 export function exportProject(projectInput: StoreProjectV1, options: ExportOptions): ExportResult {
   const project = parseProject(projectInput, "exportar");
-  const publicAiContext = options.publicAiContext ?? true;
+  // El contexto IA forma parte del contrato del export de producción. Se
+  // conserva la opción para consumidores antiguos y para borradores, pero no
+  // permite omitirlo del sitio público final.
+  const publicAiContext = options.mode === "production" ? true : (options.publicAiContext ?? true);
   const optimization = optimizeProject(project, {
     mode: options.mode,
     profile: options.optimizationProfile ?? "safe",
@@ -3586,10 +3599,11 @@ export function buildOptimizationReport(
   },
 ): OptimizationReport {
   const project = parseProject(projectInput, "auditar la optimizacion");
+  const publicAiContext = options.mode === "production" ? true : (options.publicAiContext ?? true);
   return optimizeProject(project, {
     mode: options.mode,
     profile: options.optimizationProfile ?? "safe",
-    publicAiContext: options.publicAiContext ?? true,
+    publicAiContext,
   });
 }
 

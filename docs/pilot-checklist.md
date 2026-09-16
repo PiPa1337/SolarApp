@@ -40,7 +40,10 @@
 - Usar exportación `production` con dominio HTTPS definitivo.
 - Resolver todos los errores críticos del panel SEO.
 - Comprobar títulos, descripciones, canonical, alt, precios y disponibilidad.
-- Revisar políticas de entrega, devoluciones, contacto y privacidad.
+- Revisar políticas de entrega, cambios/devoluciones, contacto y privacidad. En
+  `catalog-modern-v2`, verificar entrega y cambios dentro de las fichas de
+  producto; la ausencia de `/envios/` y `/devoluciones/` independientes es
+  intencional y no bloquea la publicación.
 - Ejecutar el release candidate completo, incluyendo la matriz de navegadores y
   Lighthouse, antes de publicar.
 

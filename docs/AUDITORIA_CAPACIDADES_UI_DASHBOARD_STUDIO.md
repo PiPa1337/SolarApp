@@ -565,7 +565,7 @@ La capacidad actual es de **tema único**. No existe hoy selector funcional clar
 | EXPORT-006 | `Abrir sitio` | Abrir sitio exportado | Callback disponible | Abre sitio |
 | EXPORT-007 | `Ir a SEO` | Navegar a SEO desde checklist | Siempre | Cambia tab |
 | EXPORT-008 | `Marcar` / `Listo` | Marcar paso manual del checklist post-export | Ítem sin acción automática | Actualiza estado local |
-| EXPORT-009 | `Publicar contexto público para agentes` | Incluir/excluir `llms.txt` y `ai-context.json` | Exportar | Cambia opción de exportación |
+| EXPORT-009 | `Contexto público para agentes` | Informar que producción siempre incluye `llms.txt`, `llms-full.txt` y `ai-context.json` | Exportar | Sólo lectura |
 | EXPORT-010 | Exposición pública deliberada | Mostrar qué datos/hosts externos se publicarán | AI context o hosts externos presentes | Sólo lectura |
 | EXPORT-011 | URL pública para verificar | Escribir dominio/URL de Cloudflare Pages | Verificador | Define objetivo |
 | EXPORT-012 | `Verificar URL` | Comprobar publicación y headers vía CORS | URL válida | Ejecuta verificación |

@@ -4,7 +4,7 @@ import type { StoredProject } from "./repository";
 export type DashboardStatusFilter = "all" | "active" | "archived";
 export type DashboardSort = "name" | "updated" | "products";
 
-export const DASHBOARD_GRID_PAGE_SIZE = 12;
+export const DASHBOARD_GRID_PAGE_SIZE = 9;
 export const DASHBOARD_LIST_PAGE_SIZE = 5;
 
 export interface DashboardPage<T> {

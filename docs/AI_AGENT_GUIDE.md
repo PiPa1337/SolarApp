@@ -142,7 +142,8 @@ El conjunto es cerrado: `store.create`, `store.updateIdentity`,
 `store.updateSeo`, `store.updatePage`, `store.updateWhatsapp`, `store.updateNavigation`,
 `store.updatePublicCopy`, `store.updatePolicies`, `store.updateLegalProfile`,
 `category.create`, `category.update`, `category.setStatus`, `category.delete`, `collection.create`,
-`collection.update`, `product.create`, `product.update`, `product.setStatus`,
+`collection.update`, `product.create`, `product.update`, `products.adjustPrices`,
+`products.reorder`, `product.setStatus`,
 `product.delete`, `store.archive`, `section.updateSettings`, `asset.attach`,
 `asset.remove`, `product.createBatch`, `theme.applyPreset` y
 `theme.updateTokens`.
@@ -151,6 +152,11 @@ El conjunto es cerrado: `store.create`, `store.updateIdentity`,
 tienda existente (dígitos internacionales sin `+` y `greeting`). El campo
 `includeSku` se conserva sólo por compatibilidad con operaciones antiguas y se
 ignora.
+
+`store.updateIdentity` también acepta `baseUrl` como URL absoluta de la tienda;
+al cambiarla, el siguiente commit regenera canonical, Open Graph, sitemap y
+JSON-LD con ese origen público.
+
 Sin él, `whatsapp.phone` queda vacío y el sitio se exporta sin enlaces de
 WhatsApp. `store.updateNavigation` ajusta el modo, la etiqueta del catálogo y
 los items curados; los hrefs internos se validan contra destinos existentes.
@@ -163,6 +169,37 @@ público sin archivarlo, usar `hidden`.
 confirmación literal `"ELIMINAR_PRODUCTO"`. Sólo acepta productos que ya estén
 en estado `archived`; las referencias derivadas de categorías y colecciones se
 recalculan durante la operación.
+
+Las operaciones `product.create` y `product.update` aceptan `variants` para
+crear o reemplazar el conjunto completo de variantes de una ficha. Cada variante
+usa `priceCents`, `compareAtPriceCents`, `available`, `stockStatus` y
+`optionValues`; `imageId` permite asociar una foto propia a la variante. Cuando
+se envía `imageId`, ese asset debe existir y también estar incluido en la
+galería `imageIds` del producto. El reemplazo conserva los IDs de las variantes
+existentes por posición y genera IDs nuevos sólo para las variantes agregadas.
+
+```json
+{
+  "type": "product.update",
+  "productId": "producto-sabanas",
+  "changes": {
+    "imageIds": ["asset-sabanas-01", "asset-sabanas-02"],
+    "variants": [
+      {
+        "title": "Diseño 01",
+        "sku": "PAO-SAB-D01-V01",
+        "priceCents": 4499900,
+        "optionValues": { "Diseño": "Diseño 01" },
+        "imageId": "asset-sabanas-01"
+      }
+    ]
+  }
+}
+```
+
+Esta extensión es deliberadamente tipada: no habilita parches arbitrarios ni
+edición directa del respaldo, y valida la correspondencia entre la imagen de la
+variante y la galería antes de crear o commitear el plan.
 
 `category.delete` elimina físicamente una categoría y exige la confirmación
 literal `"ELIMINAR_CATEGORIA"`. Sólo acepta categorías `hidden`, sin productos

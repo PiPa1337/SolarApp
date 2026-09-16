@@ -26,6 +26,7 @@ const MANIFEST_VERSION = 2;
 const DEFAULT_MAX_UPLOAD_BYTES = 1024 * 1024 * 1024;
 const DEFAULT_MAX_EXTRACTED_BYTES = 4 * 1024 * 1024 * 1024;
 const DEFAULT_MAX_FILES = 25_000;
+const DEFAULT_MAX_AUTOMATIC_BACKUPS = 5;
 // Una transacción más vieja que esto se considera de un cliente muerto:
 // libera el lock y deja de poder commitear.
 const TRANSACTION_TTL_MS = 30 * 60 * 1000;
@@ -328,6 +329,34 @@ async function sweepStaleTmp(directory, maxAgeMs) {
   );
 }
 
+async function pruneAutomaticBackups(directory, maxBackups, guardWrite, onFailure) {
+  let entries;
+  try {
+    entries = await readdir(directory, { withFileTypes: true });
+  } catch {
+    return 0;
+  }
+
+  const backups = entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".solara.json"))
+    .sort((left, right) => (left.name < right.name ? 1 : left.name > right.name ? -1 : 0));
+  const staleBackups = backups.slice(maxBackups);
+  let removed = 0;
+  await Promise.all(
+    staleBackups.map(async (entry) => {
+      const pathname = join(directory, entry.name);
+      try {
+        await guardWrite("remove-old-backup", pathname);
+        await rm(pathname, { force: true });
+        removed += 1;
+      } catch (error) {
+        onFailure?.(pathname, error);
+      }
+    }),
+  );
+  return removed;
+}
+
 export function createLocalProjectStorage(options = {}) {
   const defaultLayout = resolveLocalLayout({
     applicationRoot: options.applicationRoot ?? process.cwd(),
@@ -339,6 +368,10 @@ export function createLocalProjectStorage(options = {}) {
   const maxExtractedBytes = options.maxExtractedBytes ?? DEFAULT_MAX_EXTRACTED_BYTES;
   const maxFileBytes = options.maxFileBytes ?? DEFAULT_MAX_EXTRACTED_BYTES;
   const maxFiles = options.maxFiles ?? DEFAULT_MAX_FILES;
+  const maxAutomaticBackups = options.maxAutomaticBackups ?? DEFAULT_MAX_AUTOMATIC_BACKUPS;
+  if (!Number.isInteger(maxAutomaticBackups) || maxAutomaticBackups < 1) {
+    throw new Error("El límite de respaldos automáticos debe ser un entero positivo.");
+  }
   const protectedStoreIds = new Set([BASE_TEMPLATE_STORE_ID, ...(options.protectedStoreIds ?? [])]);
   // Sólo los tests inyectan fallos deterministas. Mantener el hook fuera del
   // handler HTTP permite comprobar que una interrupción no reemplaza el
@@ -867,6 +900,21 @@ export function createLocalProjectStorage(options = {}) {
           }
         }
       }
+
+      await pruneAutomaticBackups(
+        backupsRoot,
+        maxAutomaticBackups,
+        guardWrite,
+        (pathname, error) => {
+          if (!loggedCleanupFailures.has(pathname)) {
+            loggedCleanupFailures.add(pathname);
+            console.error(
+              `Solara: no se pudo quitar el respaldo automático antiguo (${pathname}):`,
+              error instanceof Error ? error.message : error,
+            );
+          }
+        },
+      );
       return {
         projectId: manifest.projectId,
         version: manifest.current.version,
@@ -1060,6 +1108,51 @@ export function createLocalProjectStorage(options = {}) {
     );
   }
 
+  async function cleanupAutomaticBackups() {
+    await ensureRoots();
+    let entries;
+    try {
+      entries = await readdir(projectsRoot, { withFileTypes: true });
+    } catch {
+      return 0;
+    }
+    let removed = 0;
+    await Promise.all(
+      entries
+        .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
+        .map(async (entry) => {
+          const storeRoot = join(projectsRoot, entry.name);
+          try {
+            await assertNoReparsePoints(projectsRoot, storeRoot);
+            const manifest = await readJson(join(storeRoot, "manifest.json"));
+            if (
+              manifest.format !== MANIFEST_FORMAT ||
+              manifest.manifestVersion !== MANIFEST_VERSION
+            ) {
+              return;
+            }
+            removed += await pruneAutomaticBackups(
+              join(storeRoot, "respaldos"),
+              maxAutomaticBackups,
+              guardWrite,
+              (pathname, error) => {
+                if (!loggedCleanupFailures.has(pathname)) {
+                  loggedCleanupFailures.add(pathname);
+                  console.error(
+                    `Solara: no se pudo quitar el respaldo automático antiguo (${pathname}):`,
+                    error instanceof Error ? error.message : error,
+                  );
+                }
+              },
+            );
+          } catch {
+            // Una tienda en recovery o una carpeta no compatible no se poda.
+          }
+        }),
+    );
+    return removed;
+  }
+
   return {
     applicationRoot,
     projectsRoot,
@@ -1078,5 +1171,6 @@ export function createLocalProjectStorage(options = {}) {
     manualBackup,
     abort,
     cleanupStaging,
+    cleanupAutomaticBackups,
   };
 }

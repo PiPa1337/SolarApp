@@ -24,6 +24,16 @@ import {
   VideoAssetSchema,
 } from "./media.js";
 import { PUBLIC_COPY_DEFAULTS } from "./public-copy-defaults.js";
+import {
+  DEFAULT_THEME_TEXT_SHADOW_BLUR,
+  DEFAULT_THEME_TEXT_SHADOW_OFFSET_X,
+  DEFAULT_THEME_TEXT_SHADOW_OFFSET_Y,
+  DEFAULT_THEME_TEXT_SHADOW_OPACITY,
+  THEME_TEXT_SHADOW_BLUR_MAX,
+  THEME_TEXT_SHADOW_BLUR_MIN,
+  THEME_TEXT_SHADOW_OFFSET_MAX,
+  THEME_TEXT_SHADOW_OFFSET_MIN,
+} from "./theme-text-shadow.js";
 
 export {
   compactResponsiveSources,
@@ -623,7 +633,25 @@ export const ThemeSpacingSchema = z.object({
 
 export const ThemeTextShadowSchema = z.object({
   enabled: z.boolean().default(true),
-  opacity: z.number().min(0).max(1).default(0.65),
+  opacity: z.number().min(0).max(1).default(DEFAULT_THEME_TEXT_SHADOW_OPACITY),
+  offsetX: z
+    .number()
+    .int()
+    .min(THEME_TEXT_SHADOW_OFFSET_MIN)
+    .max(THEME_TEXT_SHADOW_OFFSET_MAX)
+    .default(DEFAULT_THEME_TEXT_SHADOW_OFFSET_X),
+  offsetY: z
+    .number()
+    .int()
+    .min(THEME_TEXT_SHADOW_OFFSET_MIN)
+    .max(THEME_TEXT_SHADOW_OFFSET_MAX)
+    .default(DEFAULT_THEME_TEXT_SHADOW_OFFSET_Y),
+  blur: z
+    .number()
+    .int()
+    .min(THEME_TEXT_SHADOW_BLUR_MIN)
+    .max(THEME_TEXT_SHADOW_BLUR_MAX)
+    .default(DEFAULT_THEME_TEXT_SHADOW_BLUR),
 });
 
 export const ThemeShadowsSchema = z.object({
@@ -1465,8 +1493,20 @@ export function migrateProject(input: unknown): StoreProjectV2 {
   return parseProject(input);
 }
 
-export { applyPreset, THEME_PRESETS, type ThemePreset } from "./theme-presets.js";
 export {
+  applyPreset,
+  PAO_BLANQUERIA_COLORS,
+  THEME_PRESETS,
+  type ThemePreset,
+} from "./theme-presets.js";
+export {
+  DEFAULT_THEME_TEXT_SHADOW_BLUR,
+  DEFAULT_THEME_TEXT_SHADOW_OFFSET_X,
+  DEFAULT_THEME_TEXT_SHADOW_OFFSET_Y,
   DEFAULT_THEME_TEXT_SHADOW_OPACITY,
   deriveThemeTextShadowColor,
+  THEME_TEXT_SHADOW_BLUR_MAX,
+  THEME_TEXT_SHADOW_BLUR_MIN,
+  THEME_TEXT_SHADOW_OFFSET_MAX,
+  THEME_TEXT_SHADOW_OFFSET_MIN,
 } from "./theme-text-shadow.js";

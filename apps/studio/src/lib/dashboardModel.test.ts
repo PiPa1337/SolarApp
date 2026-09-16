@@ -174,15 +174,15 @@ describe("modelo del dashboard", () => {
     expect(partitionPinnedProjects(projects, ["alpha", "missing"]).pinned).toHaveLength(1);
   });
 
-  it("pagina la grilla en doce elementos y la lista en cinco sin perder el total", () => {
+  it("pagina la grilla en nueve elementos y la lista en cinco sin perder el total", () => {
     const items = Array.from({ length: 25 }, (_, index) => index + 1);
 
     expect(paginateDashboardItems(items, 1, DASHBOARD_GRID_PAGE_SIZE)).toMatchObject({
-      items: items.slice(0, 12),
+      items: items.slice(0, 9),
       page: 1,
       pageCount: 3,
       startIndex: 0,
-      endIndex: 12,
+      endIndex: 9,
     });
     expect(paginateDashboardItems(items, 2, DASHBOARD_LIST_PAGE_SIZE)).toMatchObject({
       items: items.slice(5, 10),

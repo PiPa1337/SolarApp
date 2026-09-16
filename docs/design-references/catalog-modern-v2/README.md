@@ -160,6 +160,10 @@ la serif queda reservada para el H1 y el título del resumen.
 
 - Envíos y cambios convierten únicamente los campos reales del proyecto en
   resumen, detalle, plazos y cobertura; no agregan promesas comerciales.
+- En V2 esas políticas se muestran dentro de las fichas de producto y no se
+  exportan como `/envios/` o `/devoluciones/` independientes. Privacidad y
+  términos sí conservan sus páginas públicas; V1 mantiene las rutas antiguas
+  por compatibilidad.
 - Privacidad y términos muestran sólo el texto configurado y un contacto
   genérico; no inventan prácticas legales, garantías ni jurisdicciones.
 - desktop combina una introducción de lectura acotada con hechos escaneables;

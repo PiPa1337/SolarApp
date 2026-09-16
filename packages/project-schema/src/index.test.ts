@@ -235,7 +235,13 @@ describe("StoreProjectV2Schema", () => {
 
     const parsed = StoreProjectV2Schema.parse(project);
     expect(parsed.schemaVersion).toBe(2);
-    expect(parsed.theme.shadows?.text).toEqual({ enabled: true, opacity: 0.85 });
+    expect(parsed.theme.shadows?.text).toEqual({
+      enabled: true,
+      opacity: 0.85,
+      offsetX: 1,
+      offsetY: 1,
+      blur: 0,
+    });
   });
 
   it("rechaza cronología imposible", () => {

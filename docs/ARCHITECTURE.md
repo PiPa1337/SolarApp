@@ -134,9 +134,11 @@ StoreProjectV2
 `buildPages` genera home, categorías paginadas, colecciones, productos, búsqueda,
 contacto, nosotros, carrito, compra y políticas. `buildFiles` produce el mapa de
 archivos del sitio (CSS, runtime, assets, `robots.txt`, sitemaps, JSON-LD,
-Merchant y contexto público opcional); Studio lo envía al servidor local, que
-escribe la carpeta `sitios/<versión>/`. Production bloquea errores críticos;
-draft mantiene `noindex` y permite revisar.
+Merchant y contexto público para agentes); cada exportación de producción
+incluye `ai-context.json`, `llms.txt` y `llms-full.txt`. Studio lo envía al
+servidor local, que escribe la carpeta `sitios/<versión>/`. Production bloquea
+errores críticos; draft mantiene `noindex` y permite revisar sin publicar esos
+archivos de contexto.
 
 `renderPreviewHtml` usa las mismas páginas y módulos con un transporte especial de
 assets para el iframe. No debe crearse un renderer alternativo dentro de Studio.
@@ -251,9 +253,12 @@ proyectos/<slug-inicial>--<id-corto>/
 
 `manifest.json` es el puntero autoritativo. El servidor usa staging bajo
 `.solara-runtime/storage`, hashes SHA-256, límites de tamaño/archivos del mapa
-del sitio, validación de rutas relativas y rename atómico del manifest. El
-sitio se escribe desde un mapa de archivos JSON sin descompresión, por lo que
-no existe superficie Zip Slip. El almacenamiento expone además:
+del sitio, validación de rutas relativas y rename atómico del manifest. Conserva
+como máximo cinco históricos automáticos en `respaldos/` por tienda, podándolos
+después del commit y al iniciar el servidor; la versión actual y los respaldos
+manuales quedan fuera de esa política. El sitio se escribe desde un mapa de
+archivos JSON sin descompresión, por lo que no existe superficie Zip Slip. El
+almacenamiento expone además:
 
 - `writeGuard` (sólo tests): simula fallos deterministas de escritura
   (disco lleno, permisos, reintento) sobre las ops `write-upload`,

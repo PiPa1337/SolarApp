@@ -1033,6 +1033,77 @@ describe("almacenamiento local de proyectos", () => {
     }
   });
 
+  it("conserva como máximo cinco respaldos automáticos y elimina los más antiguos", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-backup-retention-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      const receipts = [];
+      for (const index of Array.from({ length: 7 }, (_, value) => value)) {
+        const transaction = await storage.beginSave({
+          projectId,
+          name: `Prueba ${index}`,
+          slug: "prueba",
+          projectUpdatedAt: `2026-08-07T${String(10 + index).padStart(2, "0")}:00:00.000Z`,
+          expectedVersion: index === 0 ? null : index,
+        });
+        await upload(storage, transaction.transactionId, "project", projectJson(`Prueba ${index}`));
+        receipts.push(await storage.commit(transaction.transactionId));
+      }
+
+      const folder = (await storage.list()).projects[0].folder;
+      const backupRoot = join(root, "proyectos", folder, "respaldos");
+      const backups = (await readdir(backupRoot)).sort();
+      expect(backups).toHaveLength(5);
+      expect(backups).toEqual(
+        receipts
+          .slice(1, 6)
+          .map((receipt) => `${receipt.key}.solara.json`)
+          .sort(),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("poda el histórico existente al iniciar el almacenamiento administrado", async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-storage-backup-startup-"));
+    try {
+      const storage = createLocalProjectStorage({ applicationRoot: root });
+      const transaction = await storage.beginSave({
+        projectId,
+        name: "Prueba",
+        slug: "prueba",
+        projectUpdatedAt: "2026-08-07T10:00:00.000Z",
+        expectedVersion: null,
+      });
+      await upload(storage, transaction.transactionId, "project", projectJson());
+      await storage.commit(transaction.transactionId);
+
+      const folder = (await storage.list()).projects[0].folder;
+      const backupRoot = join(root, "proyectos", folder, "respaldos");
+      await Promise.all(
+        Array.from({ length: 8 }, (_, index) =>
+          writeFile(
+            join(
+              backupRoot,
+              `prueba-2026-08-07T${String(index).padStart(2, "0")}-00-00-000Z-v${String(index + 2).padStart(6, "0")}.solara.json`,
+            ),
+            "histórico",
+            "utf8",
+          ),
+        ),
+      );
+
+      await storage.cleanupAutomaticBackups();
+      const backups = (await readdir(backupRoot)).sort();
+      expect(backups).toHaveLength(5);
+      expect(backups.at(0)).toContain("v000005");
+      expect(backups.at(-1)).toContain("v000009");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("poda los sitios antiguos y conserva sólo el vigente tras un commit exitoso", async () => {
     const root = await mkdtemp(join(tmpdir(), "solara-storage-prune-"));
     try {

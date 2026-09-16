@@ -99,6 +99,94 @@ describe("control nativo del agente", () => {
   );
 
   it(
+    "conserva imageId y opciones al crear y actualizar variantes por MCP",
+    { timeout: 30_000 },
+    async () => {
+      const root = await mkdtemp(join(tmpdir(), "solara-agent-variant-image-"));
+      try {
+        const storage = createLocalProjectStorage({
+          applicationRoot: root,
+          projectsRoot: join(root, "proyectos"),
+          stagingRoot: join(root, ".solara-runtime", "transactions"),
+        });
+        const clean = buildCatalogModernProject({
+          seed: "clean",
+          id: "store-variant-image",
+          name: "Variantes con imagen",
+          slug: "variantes-con-imagen",
+        });
+        const imageId = clean.assets[0]?.id;
+        if (!imageId) throw new Error("La plantilla limpia no tiene un asset de prueba.");
+        const seed = await storage.beginSave({
+          projectId: clean.id,
+          name: clean.name,
+          slug: clean.slug,
+          projectUpdatedAt: clean.updatedAt,
+          expectedVersion: null,
+          actor: { kind: "test", id: "agent-variant-image-test" },
+          allowProtectedWrite: true,
+        });
+        await storage.upload(
+          seed.transactionId,
+          "project",
+          (async function* () {
+            yield new TextEncoder().encode(createProjectArchive(clean));
+          })(),
+        );
+        await storage.commit(seed.transactionId);
+
+        const controller = createAgentController({ storage, applicationRoot: root });
+        const plan = await controller.createPlan({
+          storeId: clean.id,
+          baseVersion: 1,
+          operations: [
+            {
+              type: "product.create",
+              productId: "product-variant-image",
+              slug: "producto-con-variante",
+              title: "Producto con variante",
+              imageIds: [imageId],
+              variants: [
+                {
+                  title: "Diseño 01",
+                  sku: "VAR-IMG-001",
+                  priceCents: 1000,
+                  optionValues: { Diseño: "Diseño 01" },
+                  imageId,
+                },
+              ],
+            },
+            {
+              type: "product.update",
+              productId: "product-variant-image",
+              changes: {
+                variants: [
+                  {
+                    title: "Diseño 02",
+                    sku: "VAR-IMG-002",
+                    priceCents: 1200,
+                    optionValues: { Diseño: "Diseño 02" },
+                    imageId,
+                  },
+                ],
+              },
+            },
+          ],
+        });
+        const planned = await controller.getPlan({ planId: plan.planId, includeProject: true });
+        expect(planned.project?.products[0]?.variants[0]).toMatchObject({
+          title: "Diseño 02",
+          sku: "VAR-IMG-002",
+          optionValues: { Diseño: "Diseño 02" },
+          imageId,
+        });
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it(
     "base-template aplica el phone a whatsapp y no hereda placeholders de contacto",
     { timeout: 30_000 },
     async () => {

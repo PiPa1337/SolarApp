@@ -29,6 +29,7 @@ async function start() {
     onShutdown: stopServer,
   });
   await handler.storage.cleanupStaging();
+  await handler.storage.cleanupAutomaticBackups();
 
   server = createServer((request, response) => {
     void (async () => {

@@ -98,6 +98,14 @@ function isPublicNavigationHref(project: StoreProjectV1, href: string | undefine
   );
 }
 
+function formatPublicWhatsAppPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("54")) {
+    return `+54 ${digits.slice(2, 5)} ${digits.slice(5, 8)}-${digits.slice(8)}`;
+  }
+  return phone;
+}
+
 function textBinding(
   id: string,
   label: string,
@@ -1990,6 +1998,7 @@ export const catalogFooter: ModuleDefinition<
     const rawWhatsapp = (context.project.whatsapp.phone ?? "").replace(/\D/g, "");
     const placeholderDigits = CATALOG_MODERN_PLACEHOLDER_PHONE.replace(/\D/g, "");
     const hasWhatsapp = rawWhatsapp.length >= 8 && rawWhatsapp !== placeholderDigits;
+    const whatsappDisplay = formatPublicWhatsAppPhone(context.project.whatsapp.phone ?? "");
     const whatsappAction = hasWhatsapp
       ? `<a class="catalog-footer-whatsapp" href="https://wa.me/${escapeAttribute(rawWhatsapp)}" target="_blank" rel="noopener noreferrer"><span>${escapeHtml(copy.contact.whatsappAction)}</span><span aria-hidden="true">→</span></a>`
       : "";
@@ -1998,7 +2007,7 @@ export const catalogFooter: ModuleDefinition<
         ? `<a href="mailto:${escapeAttribute(context.project.identity.email)}">${escapeHtml(context.project.identity.email)}</a>`
         : "",
       hasWhatsapp
-        ? `<a href="https://wa.me/${escapeAttribute(rawWhatsapp)}" target="_blank" rel="noopener noreferrer">${escapeHtml(context.project.whatsapp.phone)}</a>`
+        ? `<a href="https://wa.me/${escapeAttribute(rawWhatsapp)}" target="_blank" rel="noopener noreferrer">${escapeHtml(whatsappDisplay)}</a>`
         : "",
       context.project.identity.phone
         ? `<a href="tel:${escapeAttribute(context.project.identity.phone)}">${escapeHtml(context.project.identity.phone)}</a>`

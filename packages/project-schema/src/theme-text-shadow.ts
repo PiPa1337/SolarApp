@@ -2,6 +2,13 @@ import type { Theme } from "./index.js";
 
 /** Intensidad inicial visible, sin convertir el texto del hero en un contorno. */
 export const DEFAULT_THEME_TEXT_SHADOW_OPACITY = 0.65;
+export const DEFAULT_THEME_TEXT_SHADOW_OFFSET_X = 1;
+export const DEFAULT_THEME_TEXT_SHADOW_OFFSET_Y = 1;
+export const DEFAULT_THEME_TEXT_SHADOW_BLUR = 0;
+export const THEME_TEXT_SHADOW_OFFSET_MIN = -48;
+export const THEME_TEXT_SHADOW_OFFSET_MAX = 48;
+export const THEME_TEXT_SHADOW_BLUR_MIN = 0;
+export const THEME_TEXT_SHADOW_BLUR_MAX = 48;
 
 function parseThemeHex(value: string): [number, number, number] | null {
   const match = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value.trim());

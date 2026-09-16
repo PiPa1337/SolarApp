@@ -1547,6 +1547,21 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     ]);
   });
 
+  it("muestra el WhatsApp argentino con formato legible y conserva el href limpio", () => {
+    const project = structuredClone(catalogModernV2Store);
+    project.whatsapp.phone = "542804211660";
+    const footer = createModuleSection({
+      id: "section-modern-footer-phone-format-test" as StoreSection["id"],
+      slot: "footer",
+      moduleId: "catalog-footer",
+    });
+
+    const html = renderSections(project, [footer], { pageType: "home" });
+
+    expect(html).toContain(">+54 280 421-1660</a>");
+    expect(html).toContain('href="https://wa.me/542804211660"');
+  });
+
   it("mantiene visible la media LCP y usa zoom compositado sin clip-path", () => {
     const baseStyles = MODULE_STYLE_BLOCKS["catalog-modern"];
     const v2Styles = MODULE_STYLE_BLOCKS["catalog-modern-v2"];

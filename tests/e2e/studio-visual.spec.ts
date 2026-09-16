@@ -692,7 +692,7 @@ test("Exportar conserva separados la exposición pública y el verificador", asy
   await openProject(page);
   await page.getByRole("tab", { name: "Exportar", exact: true }).click();
 
-  await page.getByText("Opciones de contenido público", { exact: true }).click();
+  await page.getByText("Contenido público de producción", { exact: true }).click();
   const exposure = page.getByTestId("ui-export-public-exposure");
   const verifier = page.getByTestId("ui-cloudflare-verifier");
   await expect(exposure).toBeVisible();

@@ -105,8 +105,10 @@ servidor gestionado funciona como fallback para desarrollo y recuperación.
 ## Exportación estática
 
 `@solara/exporter` convierte un snapshot validado en HTML, CSS, runtime,
-assets, JSON-LD, sitemaps, Merchant y contexto opcional para agentes. Todas las
-rutas son archivos estáticos. No requiere endpoints del sitio en producción.
+assets, JSON-LD, sitemaps, Merchant y contexto público para agentes. Toda
+exportación de producción incluye `ai-context.json`, `llms.txt` y
+`llms-full.txt`; el borrador no publica esos archivos. Todas las rutas son
+archivos estáticos. No requiere endpoints del sitio en producción.
 
 ### Integraciones del storefront
 

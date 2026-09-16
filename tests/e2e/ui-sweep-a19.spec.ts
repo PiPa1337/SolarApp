@@ -8,7 +8,7 @@
  * - Borrador: aviso honesto en modo navegador; etapas que avanzan de a una
  *   con marcas visibles por etapa (auto-feedback).
  * - Producción: bloqueada con críticos + razón; funciona sin críticos.
- * - Re-auditar: el toggle de contexto público re-ejecuta la auditoría y los
+ * - Contexto público: producción lo muestra como contenido obligatorio y los
  *   contadores quedan coherentes con el bloqueo.
  * - Checklist posterior: toggles con estado persistente (data-done + aria-pressed).
  * - Descargar .solara.json: descarga real y botones deshabilitados durante.
@@ -315,24 +315,17 @@ test("el historial persiste al recargar y la producción exporta sin críticos",
   );
 });
 
-test("re-auditar: el toggle de contexto público desactiva la producción mientras audita y mantiene los contadores coherentes", async ({
+test("el contexto público forma parte de la producción y mantiene los contadores coherentes", async ({
   page,
 }) => {
   await openDemoStore(page);
-  await page.getByText("Opciones de contenido público", { exact: true }).click();
+  await page.getByText("Contenido público de producción", { exact: true }).click();
   await expect(page.locator(".optimization-export-summary")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("ui-export-ai-context-status")).toContainText(
+    "se generan siempre",
+  );
   await expect(page.getByTestId("ui-export-production")).toBeEnabled();
-
-  const checkbox = page.getByTestId("ui-export-ai-context");
-  await expect(checkbox).toBeChecked();
-
-  const flipsKey = await watchDisabledFlips(page, '[data-testid="ui-export-production"]');
-
-  await checkbox.uncheck();
-  await expect(checkbox).not.toBeChecked();
-
-  await expect.poll(() => readFlips(page, flipsKey), { timeout: 15_000 }).toContain("disabled");
-  await expect(page.getByTestId("ui-export-production")).toBeEnabled({ timeout: 30_000 });
+  await expect(page.getByTestId("ui-export-ai-context")).toHaveCount(0);
 
   const summary = page.locator(".optimization-export-summary");
   await expect(summary).toBeVisible({ timeout: 30_000 });

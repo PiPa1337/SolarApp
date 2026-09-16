@@ -90,11 +90,13 @@ plantilla para upgrades tipados.
   emite nada). Studio lo expone como una opción del editor de Tema, pero no lo
   asigna a tiendas nuevas. `size` solo admite caracteres seguros de
   `background-size`.
-  `theme.shadows.text` es opcional y guarda `{ enabled, opacity }`: aplica una
-  sombra de 1 px hacia la derecha y abajo sólo al texto del hero de Inicio en
-  mobile (hasta 767 px). El color se deriva automáticamente de la paleta y el
-  botón queda excluido; Studio y el canal nativo del agente exponen ambos
-  controles.
+  `theme.shadows.text` es opcional y guarda `{ enabled, opacity, offsetX,
+  offsetY, blur }`: aplica una sombra configurable sólo al texto del hero de
+  Inicio en mobile (hasta 767 px). `offsetX` y `offsetY` aceptan píxeles enteros
+  entre -48 y 48; `blur`, entre 0 y 48; y `opacity`, entre 0 y 1. El color se
+  deriva automáticamente de la paleta, el botón queda excluido y los defaults
+  mantienen la compatibilidad con proyectos anteriores. Studio expone todos
+  estos controles en el editor de Tema.
 - `navigation`: etiqueta de catálogo, enlaces curados y sus hijos (máximo un
   nivel adicional), además de búsqueda y carrito.
 - `siteShell`: configuración de announcement, header, footer y drawer de carrito.

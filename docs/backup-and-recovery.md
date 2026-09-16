@@ -26,8 +26,10 @@ proyectos/<slug--id>/
 
 `manifest.json` es el puntero autoritativo: hashes, versión y estado deben
 coincidir. El guardado usa staging, bloqueo por tienda y rename atómico; una
-interrupción no debe reemplazar el manifest anterior. Los respaldos y sitios
-confirmados no se borran automáticamente.
+interrupción no debe reemplazar el manifest anterior. `respaldos/` conserva como
+máximo los cinco históricos automáticos más recientes por tienda; la poda se
+ejecuta después de un commit exitoso y también al iniciar el servidor. La
+versión actual y `respaldos-manuales/` no forman parte de esa poda.
 
 La carpeta protegida `store-modo-sur-demo` se puede leer, previsualizar, exportar
 y clonar, pero no guardar, archivar, importar ni borrar. El storage devuelve

@@ -8,6 +8,31 @@ import {
 } from "./index";
 
 describe("contrato del agente", () => {
+  it("acepta variantes con imagen y reemplazo de variantes en un producto", () => {
+    const variant = {
+      title: "Diseño 01",
+      sku: "PAO-SAB-D01-V01",
+      priceCents: 4499900,
+      optionValues: { Diseño: "Diseño 01" },
+      imageId: "asset-sabanas-01",
+    };
+    const parsedCreate = AgentOperationSchema.parse({
+      type: "product.create",
+      slug: "juego-de-sabanas-diseno-01",
+      title: "Juego de sábanas — Diseño 01",
+      imageIds: [variant.imageId],
+      variants: [variant],
+    });
+    const parsedUpdate = AgentOperationSchema.parse({
+      type: "product.update",
+      productId: "producto-sabanas",
+      changes: { variants: [variant] },
+    });
+
+    expect(parsedCreate.variants?.[0]).toMatchObject({ imageId: variant.imageId });
+    expect(parsedUpdate.changes.variants?.[0]).toMatchObject({ imageId: variant.imageId });
+  });
+
   it("acepta el flujo tipado de tienda nueva", () => {
     const parsed = PlanCreateParamsSchema.parse({
       operations: [
@@ -38,6 +63,23 @@ describe("contrato del agente", () => {
   it("rechaza comandos arbitrarios y requests sin método", () => {
     expect(() => AgentOperationSchema.parse({ type: "project.patch", path: "x" })).toThrow();
     expect(() => AgentRequestSchema.parse({ id: 1 })).toThrow();
+  });
+
+  it("acepta URL pública e Instagram en la identidad de una tienda", () => {
+    const operation = AgentOperationSchema.parse({
+      type: "store.updateIdentity",
+      changes: {
+        baseUrl: "https://pao-bi3.pages.dev/",
+        instagramUrl: "https://www.instagram.com/blanqueria_y_marroquineria_pao/",
+      },
+    });
+    expect(operation.type).toBe("store.updateIdentity");
+    if (operation.type === "store.updateIdentity") {
+      expect(operation.changes.baseUrl).toBe("https://pao-bi3.pages.dev/");
+      expect(operation.changes.instagramUrl).toBe(
+        "https://www.instagram.com/blanqueria_y_marroquineria_pao/",
+      );
+    }
   });
 
   it("acepta store.updateWhatsapp con teléfono internacional en dígitos", () => {
@@ -88,6 +130,22 @@ describe("contrato del agente", () => {
         items: [{ id: "nav-1", label: "Sin href interno seguro", href: "javascript:alert(1)" }],
       }),
     ).toThrow();
+  });
+
+  it("acepta ajustes masivos de precios y reordenamiento completo", () => {
+    expect(
+      AgentOperationSchema.parse({
+        type: "products.adjustPrices",
+        productIds: ["product-a"],
+        adjustment: { type: "percentage", basisPoints: 990_000 },
+      }),
+    ).toMatchObject({ type: "products.adjustPrices" });
+    expect(
+      AgentOperationSchema.parse({
+        type: "products.reorder",
+        productIds: ["product-a", "product-b"],
+      }),
+    ).toMatchObject({ type: "products.reorder" });
   });
 
   it("publica límites y métodos de recuperación del protocolo", () => {

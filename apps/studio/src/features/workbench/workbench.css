@@ -952,7 +952,7 @@
   font-size: 13px;
   padding-block: 6px;
 }
-.studio-workbench .export-content-options .export-ai-context {
+.studio-workbench .export-content-options .export-ai-context-status {
   margin-block: 14px;
 }
 @container (max-width: 460px) {

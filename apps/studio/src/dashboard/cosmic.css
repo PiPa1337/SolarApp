@@ -518,13 +518,13 @@
 
 .dashboard-cosmic-store-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-content: start;
   gap: 8px;
   min-width: 0;
 }
 
-/* T2.10: grilla explícita de 1/2/3/4 columnas según el viewport. */
+/* T2.10: grilla explícita de 1/2/3 columnas según el viewport. */
 @media (max-width: 1440px) {
   .dashboard-cosmic-store-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -675,8 +675,10 @@
 }
 
 .dashboard-store-card__button strong {
+  display: -webkit-box;
   max-width: 100%;
   overflow: hidden;
+  overflow-wrap: anywhere;
   padding-inline: 8px;
   color: var(--cosmic-ink);
   font-size: 15px;
@@ -684,7 +686,8 @@
   line-height: 1.15;
   letter-spacing: -0.02em;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .dashboard-store-card__status {
@@ -2918,9 +2921,11 @@
 }
 
 .dashboard-cosmic__banners {
+  position: relative;
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
+  z-index: 25;
 }
 
 .app-root--dashboard-cosmic > .app-header--dashboard-cosmic {
@@ -4969,6 +4974,16 @@ tbody tr[data-selected="true"] {
   font-weight: 650;
 }
 
+.theme-text-shadow-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.theme-text-shadow-controls .field {
+  min-width: 0;
+}
+
 .theme-text-shadow-preview {
   display: grid;
   align-content: center;
@@ -5465,19 +5480,12 @@ tbody tr[data-selected="true"] {
   line-height: 1.4;
 }
 
-.export-ai-context {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
+.export-ai-context-status {
+  display: block;
   margin: 0 0 12px;
   color: var(--muted);
   font-size: 11px;
   line-height: 1.45;
-}
-
-.export-ai-context input {
-  flex: 0 0 auto;
-  margin-top: 1px;
 }
 
 .optimization-export-summary {
@@ -6064,6 +6072,13 @@ tbody tr[data-selected="true"] {
   overflow: hidden;
 }
 
+/* La inclinación de la card necesita poder sobresalir del borde izquierdo de
+ * la grilla sin quedar recortada por sus dos contenedores de resultados. */
+.dashboard-gargantua .dashboard-cosmic-results,
+.dashboard-gargantua .dashboard-cosmic-store-groups {
+  overflow: visible;
+}
+
 @media (max-height: 920px) and (min-width: 700px) {
   .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-cosmic-store-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -6373,8 +6388,9 @@ tbody tr[data-selected="true"] {
   }
 
   .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-cosmic-store-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 4px;
+    row-gap: 2px;
   }
 
   .dashboard-cosmic-results {
@@ -6383,11 +6399,11 @@ tbody tr[data-selected="true"] {
   }
 
   .dashboard-cosmic-store-groups {
-    gap: 10px;
+    gap: 5px;
   }
 
   .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-store-card__button {
-    min-height: 66px;
+    min-height: 54px;
     gap: 1px;
     padding: 4px 3px;
   }
@@ -7041,10 +7057,10 @@ tbody tr[data-selected="true"] {
 }
 
 @media (min-width: 1121px) and (max-width: 1300px) and (max-height: 760px) {
-  /* A 1280px la biblioteca conserva las 12 tiendas en tres filas, sin
-   * recortar el cuarto renglón ni convertirlo en un scroll interno. */
+  /* A 1280px la biblioteca conserva las 9 tiendas en tres filas, sin
+   * convertir la grilla en un scroll interno. */
   .dashboard-cosmic-results:not(.dashboard-cosmic-results--list) .dashboard-cosmic-store-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
   }
 }
@@ -7757,12 +7773,12 @@ tbody tr[data-selected="true"] {
 }
 
 @media (min-width: 1121px) and (max-width: 1300px) and (max-height: 760px) {
-  /* Las cuatro columnas de laptop bajo necesitan una card un poco más baja
-   * para que las tres filas y la paginación compartan el alto disponible. */
+  /* La matriz 3x3 de laptop bajo necesita una card un poco más baja para que
+   * las tres filas y la paginación compartan el alto disponible. */
   .dashboard-gargantua
     .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
     .dashboard-store-card__button {
-    --dashboard-card-height: 128px;
+    --dashboard-card-height: 125px;
     grid-template-rows: 33px 25px auto auto auto auto minmax(0, 1fr);
     row-gap: 2px;
     height: var(--dashboard-card-height);
@@ -7778,12 +7794,12 @@ tbody tr[data-selected="true"] {
 }
 
 @media (min-width: 1121px) {
-  /* Cuando la página contiene más de tres tiendas, cuatro columnas conservan
-   * la paginación dentro del mismo vidrio sin comprimir la portada ni el rail. */
+  /* Cuando la página contiene más de tres tiendas, el tope de tres columnas
+   * conserva la matriz 3x3 y la paginación dentro del mismo vidrio. */
   .dashboard-gargantua
     .dashboard-cosmic-results:not(.dashboard-cosmic-results--list)
     .dashboard-cosmic-store-grid:has(> .dashboard-store-card:nth-child(4)) {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

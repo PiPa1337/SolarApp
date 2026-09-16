@@ -28,6 +28,7 @@ export const ProductVariantInputSchema = z.object({
   available: z.boolean().default(true),
   stockStatus: z.enum(["in_stock", "out_of_stock", "preorder"]).default("in_stock"),
   optionValues: z.record(z.string(), z.string()).default({}),
+  imageId: SafeIdSchema.optional(),
 });
 
 export const AgentOperationSchema = z.discriminatedUnion("type", [
@@ -57,6 +58,11 @@ export const AgentOperationSchema = z.discriminatedUnion("type", [
       email: z.string().email().or(z.literal("")).optional(),
       phone: z.string().max(80).optional(),
       address: z.string().max(500).optional(),
+      baseUrl: z.string().url().optional(),
+      instagramUrl: z.string().url().or(z.literal("")).optional(),
+      facebookUrl: z.string().url().or(z.literal("")).optional(),
+      tiktokUrl: z.string().url().or(z.literal("")).optional(),
+      twitterHandle: z.string().regex(/^@?[a-zA-Z0-9_]{0,15}$/).optional(),
     }),
   }),
   z.object({
@@ -233,8 +239,24 @@ export const AgentOperationSchema = z.discriminatedUnion("type", [
       collectionIds: z.array(SafeIdSchema).optional(),
       tags: z.array(z.string().min(1).max(80)).optional(),
       imageIds: z.array(SafeIdSchema).optional(),
+      variants: z.array(ProductVariantInputSchema).min(1).optional(),
       priceCents: z.number().int().nonnegative().optional(),
     }),
+  }),
+  z.object({
+    type: z.literal("products.adjustPrices"),
+    productIds: z.array(SafeIdSchema).min(1).max(500),
+    adjustment: z.discriminatedUnion("type", [
+      z.object({ type: z.literal("amount"), cents: z.number().int() }),
+      z.object({
+        type: z.literal("percentage"),
+        basisPoints: z.number().int().min(-10_000).max(1_000_000),
+      }),
+    ]),
+  }),
+  z.object({
+    type: z.literal("products.reorder"),
+    productIds: z.array(SafeIdSchema).min(1).max(500),
   }),
   z.object({
     type: z.literal("product.delete"),
@@ -286,7 +308,14 @@ export const AgentOperationSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("theme.applyPreset"),
-    presetId: z.enum(["editorial", "minimal", "calido", "industrial", "botanico"]),
+    presetId: z.enum([
+      "editorial",
+      "minimal",
+      "calido",
+      "industrial",
+      "botanico",
+      "pao-blanqueria",
+    ]),
   }),
   z.object({
     type: z.literal("theme.updateTokens"),

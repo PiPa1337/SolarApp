@@ -49,9 +49,16 @@ segmentar capacidades. Elevar el límite no es la primera solución aceptable.
 - detalle de producto;
 - búsqueda;
 - carrito/checkout;
-- contacto, nosotros, envíos, cambios, privacidad y términos;
+- contacto, nosotros, envíos y cambios (rutas legacy V1), privacidad y términos;
 - sitemap, robots, índices de catálogo/búsqueda, Merchant y contexto para
   agentes.
+
+Nota de compatibilidad: esta lista de referencia conserva las rutas históricas
+de contacto, nosotros, envíos y cambios. En el contrato vigente V2, contacto y
+otras superficies se integran según la decisión de producto, y `/envios/` y
+`/devoluciones/` no se materializan como páginas independientes; sus políticas
+se muestran en las fichas de producto. V1 conserva las rutas antiguas sólo para
+compatibilidad.
 
 ## Riesgos iniciales
 

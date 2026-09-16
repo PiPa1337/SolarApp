@@ -70,6 +70,21 @@
   "$defs": {
     "id": { "type": "string", "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$", "maxLength": 96 },
     "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 120 },
+    "variantInput": {
+      "type": "object",
+      "required": ["title", "priceCents"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "sku": { "type": "string", "maxLength": 120 },
+        "priceCents": { "type": "integer", "minimum": 0 },
+        "compareAtPriceCents": { "type": "integer", "minimum": 0 },
+        "available": { "type": "boolean" },
+        "stockStatus": { "enum": ["in_stock", "out_of_stock", "preorder"] },
+        "optionValues": { "type": "object", "additionalProperties": { "type": "string" } },
+        "imageId": { "$ref": "#/$defs/id" }
+      },
+      "additionalProperties": false
+    },
     "operation": {
       "oneOf": [
         {
@@ -265,17 +280,57 @@
             "priceCents": { "type": "integer", "minimum": 0 },
             "categoryIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
             "collectionIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
-            "imageIds": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+            "imageIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+            "variants": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/variantInput" } }
           }
         },
         {
           "type": "object",
           "required": ["type", "productId", "changes"],
           "properties": {
-            "type": { "const": "product.update" },
-            "productId": { "$ref": "#/$defs/id" },
-            "changes": { "type": "object", "additionalProperties": false }
+          "type": { "const": "product.update" },
+          "productId": { "$ref": "#/$defs/id" },
+            "changes": {
+              "type": "object",
+              "properties": {
+                "slug": { "$ref": "#/$defs/slug" },
+                "title": { "type": "string", "maxLength": 200 },
+                "description": { "type": "string", "maxLength": 10000 },
+                "brand": { "type": "string", "maxLength": 120 },
+                "categoryIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+                "collectionIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+                "tags": { "type": "array", "items": { "type": "string" } },
+                "imageIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+                "variants": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/variantInput" } },
+                "priceCents": { "type": "integer", "minimum": 0 }
+              },
+              "additionalProperties": false
+            }
           }
+        },
+        {
+          "type": "object",
+          "required": ["type", "productIds", "adjustment"],
+          "properties": {
+            "type": { "const": "products.adjustPrices" },
+            "productIds": { "type": "array", "minItems": 1, "maxItems": 500, "items": { "$ref": "#/$defs/id" } },
+            "adjustment": {
+              "oneOf": [
+                { "type": "object", "required": ["type", "cents"], "properties": { "type": { "const": "amount" }, "cents": { "type": "integer" } }, "additionalProperties": false },
+                { "type": "object", "required": ["type", "basisPoints"], "properties": { "type": { "const": "percentage" }, "basisPoints": { "type": "integer", "minimum": -10000, "maximum": 1000000 } }, "additionalProperties": false }
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["type", "productIds"],
+          "properties": {
+            "type": { "const": "products.reorder" },
+            "productIds": { "type": "array", "minItems": 1, "maxItems": 500, "items": { "$ref": "#/$defs/id" } }
+          },
+          "additionalProperties": false
         },
         {
           "type": "object",
@@ -362,7 +417,7 @@
           "required": ["type", "presetId"],
           "properties": {
             "type": { "const": "theme.applyPreset" },
-            "presetId": { "enum": ["editorial", "minimal", "calido", "industrial", "botanico"] }
+            "presetId": { "enum": ["editorial", "minimal", "calido", "industrial", "botanico", "pao-blanqueria"] }
           }
         },
         {

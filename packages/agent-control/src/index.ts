@@ -872,6 +872,8 @@ export class AgentController {
         "collection.update",
         "product.create",
         "product.update",
+        "products.adjustPrices",
+        "products.reorder",
         "product.delete",
         "product.setStatus",
         "store.archive",
@@ -2398,6 +2400,24 @@ export class AgentController {
         { at },
       ).project;
     };
+    const validateVariantImages = (
+      productId: string,
+      imageIds: string[],
+      variants: Array<{ imageId?: string | undefined }>,
+    ): void => {
+      for (const variant of variants) {
+        if (variant.imageId === undefined) continue;
+        if (!project.assets.some((asset) => asset.id === variant.imageId)) {
+          fail("ASSET_NOT_FOUND", `No existe la imagen de variante ${variant.imageId}.`);
+        }
+        if (!imageIds.includes(variant.imageId)) {
+          fail(
+            "PLAN_INVALID",
+            `La imagen de variante ${variant.imageId} debe estar también en la galería de ${productId}.`,
+          );
+        }
+      }
+    };
     for (const rawOperation of rawOperations) {
       const operation = AgentOperationSchema.parse(rawOperation);
       const at = this.now().toISOString();
@@ -2631,6 +2651,11 @@ export class AgentController {
               optionValues: {},
             },
           ];
+          validateVariantImages(
+            operation.productId ?? "producto-nuevo",
+            operation.imageIds,
+            rawVariants,
+          );
           const product: Product = ProductSchema.parse({
             id: productId,
             slug: operation.slug,
@@ -2653,6 +2678,7 @@ export class AgentController {
                 : { compareAtPrice: variant.compareAtPriceCents }),
               available: variant.available,
               stockStatus: variant.stockStatus,
+              ...(variant.imageId === undefined ? {} : { imageId: variant.imageId }),
             })),
             createdAt: at,
             updatedAt: at,
@@ -2662,8 +2688,40 @@ export class AgentController {
         }
         case "product.update":
           {
-            const { priceCents, ...productChanges } = operation.changes;
-            if (Object.keys(productChanges).length > 0 || priceCents !== undefined) {
+            const { priceCents, variants, ...productChanges } = operation.changes;
+            const existingVariants = project.products.find(
+              (candidate) => candidate.id === operation.productId,
+            )?.variants ?? [];
+            if (variants !== undefined) {
+              const existingProduct = project.products.find(
+                (candidate) => candidate.id === operation.productId,
+              );
+              validateVariantImages(
+                operation.productId,
+                operation.changes.imageIds ?? existingProduct?.imageIds ?? [],
+                variants,
+              );
+            }
+            const mappedVariants = variants?.map((variant, index) => ({
+              id:
+                existingVariants[index]?.id ??
+                makeId(`variant-agent-${operation.productId}-${index}`),
+              title: variant.title,
+              sku: variant.sku,
+              optionValues: variant.optionValues,
+              price: variant.priceCents,
+              ...(variant.compareAtPriceCents === undefined
+                ? {}
+                : { compareAtPrice: variant.compareAtPriceCents }),
+              available: variant.available,
+              stockStatus: variant.stockStatus,
+              ...(variant.imageId === undefined ? {} : { imageId: variant.imageId }),
+            }));
+            if (
+              Object.keys(productChanges).length > 0 ||
+              priceCents !== undefined ||
+              mappedVariants !== undefined
+            ) {
               applyRegistered(
                 {
                   type: "product.update",
@@ -2671,6 +2729,7 @@ export class AgentController {
                   changes: {
                     ...productChanges,
                     ...(priceCents === undefined ? {} : { price: priceCents }),
+                    ...(mappedVariants === undefined ? {} : { variants: mappedVariants }),
                   } as never,
                 },
                 at,
@@ -2678,6 +2737,32 @@ export class AgentController {
             }
           }
           break;
+        case "products.adjustPrices":
+          project = reduceProject(project, {
+            type: "products.adjustPrices",
+            productIds: operation.productIds as Product["id"][],
+            adjustment: operation.adjustment,
+            at,
+          });
+          break;
+        case "products.reorder": {
+          const currentProductIds = project.products.map((product) => product.id as string);
+          if (
+            operation.productIds.length !== currentProductIds.length ||
+            new Set(operation.productIds).size !== operation.productIds.length ||
+            operation.productIds.some((productId) => !currentProductIds.includes(productId))
+          ) {
+            fail(
+              "PLAN_INVALID",
+              "products.reorder debe incluir cada producto exactamente una vez.",
+            );
+          }
+          applyRegistered(
+            { type: "products.reorder", productIds: operation.productIds },
+            at,
+          );
+          break;
+        }
         case "product.setStatus":
           project = reduceProject(project, {
             type: "products.setStatus",

@@ -46,8 +46,11 @@ Ante cualquier diferencia, restaurar la copia de rollback y registrar la causa.
 ## Recuperación y backups
 
 Los respaldos editables `.solara.json`, `respaldos/`, `respaldos-manuales/` y los
-sitios válidos versionados pertenecen al historial de cada tienda y no deben
-eliminarse como parte de una limpieza rutinaria.
+sitios válidos versionados pertenecen al historial de cada tienda. La limpieza
+rutinaria del servicio conserva como máximo cinco respaldos automáticos en
+`respaldos/` por tienda; no elimina la versión actual ni los respaldos manuales.
+Las copias automáticas más antiguas sólo se eliminan después de un commit
+confirmado o durante la poda inicial del servidor.
 
 Para una copia manual completa, cerrar o detener escrituras y copiar
 `proyectos/` explícitamente. Ver también

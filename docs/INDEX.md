@@ -10,6 +10,7 @@ Los documentos históricos/auditorías cerradas viven en `docs/archive/`.
 | `architecture-decisions.md` | ADRs y razones de decisiones estructurales | Entender por qué existe una decisión vigente |
 | `PROJECT_MAP.md` | Mapa archivo → funcionalidad | Localizar dónde editar |
 | `DATA_MODEL.md` | Contrato StoreProjectV2 y migraciones | Tocar schema o persistencia |
+| `MEDIA_OPTIMIZATION.md` | Receta WebP/responsive y baseline de resolución | Optimizar o auditar imágenes |
 | `TESTING.md` | Gates, budgets y convenciones de test | Correr o agregar tests |
 | `TECHNICAL_DEBT.md` | Deuda abierta/resuelta con evidencia | Antes de reportar un bug conocido |
 | `INTEGRATIONS.md` | Servidor local, hash sha256 y compatibilidad legacy ZIP | Tocar persistencia o endpoints |

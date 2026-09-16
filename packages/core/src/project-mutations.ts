@@ -37,7 +37,7 @@ export type TypedIdentityChanges = Partial<
     | "tiktokUrl"
     | "twitterHandle"
   >
->;
+> & { baseUrl?: StoreProjectV1["baseUrl"] };
 
 export type TypedProductChanges = Partial<
   Pick<
@@ -155,6 +155,10 @@ export type ProjectMutation =
       type: "product.update";
       productId: string;
       changes: TypedProductChanges;
+    }
+  | {
+      type: "products.reorder";
+      productIds: string[];
     }
   | {
       type: "category.update";
@@ -341,9 +345,11 @@ function updateIdentity(
   changes: TypedIdentityChanges,
   at: string,
 ): StoreProjectV1 {
+  const { baseUrl, ...identityChanges } = changes;
   return StoreProjectV2Schema.parse({
     ...project,
-    identity: { ...project.identity, ...changes },
+    ...(baseUrl === undefined ? {} : { baseUrl }),
+    identity: { ...project.identity, ...identityChanges },
     updatedAt: at,
   });
 }
@@ -388,6 +394,27 @@ function updateProduct(
     updatedAt: at,
   };
   return StoreProjectV2Schema.parse(synchronizeEntityIndexes(next));
+}
+
+function reorderProducts(project: StoreProjectV1, productIds: string[], at: string): StoreProjectV1 {
+  const currentIds = project.products.map((product) => product.id as string);
+  if (
+    productIds.length !== currentIds.length ||
+    new Set(productIds).size !== productIds.length ||
+    productIds.some((productId) => !currentIds.includes(productId))
+  ) {
+    throw new Error("El reordenamiento debe incluir cada producto exactamente una vez.");
+  }
+  const productsById = new Map<string, Product>(
+    project.products.map((product) => [product.id as string, product]),
+  );
+  return StoreProjectV2Schema.parse(
+    synchronizeEntityIndexes({
+      ...project,
+      products: productIds.map((productId) => productsById.get(productId) as Product),
+      updatedAt: at,
+    }),
+  );
 }
 
 function updateCategory(
@@ -548,6 +575,10 @@ export function createMutationRegistry(): Record<string, MutationHandler> {
     "product.update": (project, mutation, at) => {
       const m = mutation as { productId: string; changes: TypedProductChanges };
       return updateProduct(project, m.productId, m.changes, at);
+    },
+    "products.reorder": (project, mutation, at) => {
+      const m = mutation as { productIds: string[] };
+      return reorderProducts(project, m.productIds, at);
     },
     "category.update": (project, mutation, at) => {
       const m = mutation as { categoryId: string; changes: TypedCategoryChanges };

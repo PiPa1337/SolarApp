@@ -13,6 +13,22 @@ import {
 
 const MCP_VERSION = "2024-11-05";
 
+const mcpVariantInputSchema = {
+  type: "object",
+  required: ["title", "priceCents"],
+  properties: {
+    title: { type: "string", minLength: 1, maxLength: 160 },
+    sku: { type: "string", maxLength: 120 },
+    priceCents: { type: "integer", minimum: 0 },
+    compareAtPriceCents: { type: "integer", minimum: 0 },
+    available: { type: "boolean" },
+    stockStatus: { enum: ["in_stock", "out_of_stock", "preorder"] },
+    optionValues: { type: "object", additionalProperties: { type: "string" } },
+    imageId: { type: "string" },
+  },
+  additionalProperties: false,
+};
+
 export const AGENT_MCP_TOOL_DEFINITIONS = [
   {
     name: "solara_health",
@@ -219,6 +235,13 @@ export const AGENT_MCP_TOOL_DEFINITIONS = [
                   },
                 ],
               },
+              variants: { type: "array", minItems: 1, items: mcpVariantInputSchema },
+              changes: {
+                type: "object",
+                properties: {
+                  variants: { type: "array", minItems: 1, items: mcpVariantInputSchema },
+                },
+              },
             },
           },
         },
@@ -252,7 +275,22 @@ export const AGENT_MCP_TOOL_DEFINITIONS = [
         storeId: { type: "string" },
         baseVersion: { type: ["integer", "null"] },
         idempotencyKey: { type: "string" },
-        operations: { type: "array", maxItems: 500, items: { type: "object" } },
+        operations: {
+          type: "array",
+          maxItems: 500,
+          items: {
+            type: "object",
+            properties: {
+              variants: { type: "array", minItems: 1, items: mcpVariantInputSchema },
+              changes: {
+                type: "object",
+                properties: {
+                  variants: { type: "array", minItems: 1, items: mcpVariantInputSchema },
+                },
+              },
+            },
+          },
+        },
       },
     },
     method: "plans.createAndCommit",

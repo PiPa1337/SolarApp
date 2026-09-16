@@ -16,6 +16,7 @@ test.afterAll(async () => stopStudioServer(server));
 
 async function seedLibrary(page: Page, count = 120) {
   const names = [
+    "Blanquería y Marroquinería",
     "Luna Norte",
     "Stylo Lashes",
     "RM Descartables",
@@ -163,10 +164,33 @@ for (const [width, height] of [
       0,
     );
     await expect(page.locator(".dashboard-cosmic-store-groups .dashboard-store-card")).toHaveCount(
-      12,
+      9,
     );
+    const longCardTitle = page
+      .locator(".dashboard-cosmic-store-groups .dashboard-store-card strong")
+      .filter({ hasText: "Blanquería y Marroquinería" });
+    await expect(longCardTitle).toHaveText("Blanquería y Marroquinería");
+    if (width <= 390) {
+      const titleHeight = await longCardTitle.evaluate((element) => {
+        const styles = getComputedStyle(element);
+        return {
+          height: element.getBoundingClientRect().height,
+          lineHeight: Number.parseFloat(styles.lineHeight),
+        };
+      });
+      expect(titleHeight.height).toBeGreaterThan(titleHeight.lineHeight + 1);
+    }
+    const gridColumns = await page
+      .locator(".dashboard-cosmic-store-groups .dashboard-cosmic-store-grid")
+      .evaluateAll((grids) =>
+        grids.map(
+          (grid) =>
+            getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length,
+        ),
+      );
+    expect(gridColumns.every((columns) => columns <= 3)).toBe(true);
     await expect(page.locator(".dashboard-cosmic-side > .dashboard-store-card")).toHaveCount(0);
-    await expect(page.locator(".dashboard-store-card__hero img")).toHaveCount(12);
+    await expect(page.locator(".dashboard-store-card__hero img")).toHaveCount(9);
     await expect
       .poll(() =>
         page
@@ -243,6 +267,29 @@ test("cards y detalle comparten línea superior y margen para hover", async ({ p
     .locator(".dashboard-cosmic-results")
     .evaluate((element) => element.getBoundingClientRect().top);
   expect(hoveredTop).toBeGreaterThanOrEqual(resultsTop + 10);
+});
+
+test("el hover de la card izquierda no se recorta contra su contenedor", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(url);
+  await expect(page.getByRole("heading", { name: "Tus tiendas", exact: true })).toBeVisible();
+  await seedLibrary(page, 12);
+
+  const card = page.locator(".dashboard-cosmic-store-groups .dashboard-store-card").first();
+  await expect(card).toBeVisible();
+  await card.hover({ position: { x: 1, y: 24 } });
+
+  const overflow = await page.evaluate(() => {
+    const results = document.querySelector<HTMLElement>(".dashboard-cosmic-results");
+    const groups = document.querySelector<HTMLElement>(".dashboard-cosmic-store-groups");
+    if (!results || !groups) throw new Error("No se encontraron los contenedores de la grilla");
+    return {
+      results: getComputedStyle(results).overflow,
+      groups: getComputedStyle(groups).overflow,
+    };
+  });
+
+  expect(overflow).toEqual({ results: "visible", groups: "visible" });
 });
 
 test("Gargantua continúa detrás del navbar superior", async ({ page }) => {

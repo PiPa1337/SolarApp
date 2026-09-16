@@ -16,6 +16,12 @@ componer páginas con secciones intercambiables, administrar catálogos de hasta
 6. Exportar un sitio de borrador o producción.
 7. Publicar el contenido en un hosting estático.
 
+La entrega y los cambios/devoluciones se configuran como políticas del proyecto.
+En las tiendas `catalog-modern-v2` se muestran dentro de las fichas de producto,
+no como páginas independientes `/envios/` y `/devoluciones/`. Privacidad y
+términos sí conservan sus páginas públicas propias. Las rutas independientes de
+envíos y devoluciones sólo permanecen en V1 por compatibilidad legacy.
+
 ## Compra
 
 El cliente selecciona variantes, agrega productos al carrito, completa sus datos y

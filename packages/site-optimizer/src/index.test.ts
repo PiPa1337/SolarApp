@@ -43,6 +43,58 @@ describe("site optimizer", () => {
     expect(report.aiReadiness.publicContextAvailable).toBe(false);
   });
 
+  it("detecta una fuente de producto menor al baseline de RM", () => {
+    const project = structuredClone(catalogModernStore);
+    const product = project.products.find((item) => item.status === "active");
+    if (!product) throw new Error("Fixture sin productos activos");
+    const assetId = product.imageIds[0];
+    const assetIndex = project.assets.findIndex((asset) => asset.id === assetId);
+    if (assetIndex < 0) throw new Error("Fixture sin imagen de producto");
+    const asset = project.assets[assetIndex];
+    if (!asset) throw new Error("Fixture sin asset de producto");
+    project.assets[assetIndex] = {
+      ...asset,
+      width: 768,
+      responsiveSources: [{ width: 480, source: asset.source }, { width: 768, source: asset.source }],
+    };
+
+    const report = optimizeProject(project, { mode: "production", publicAiContext: false });
+
+    expect(report.findings).toContainEqual(
+      expect.objectContaining({
+        code: "performance.product-image-resolution",
+        severity: "warning",
+        entity: expect.objectContaining({ type: "asset", id: asset.id }),
+      }),
+    );
+  });
+
+  it("detecta PNG como fuente primaria de producto aunque tenga srcset", () => {
+    const project = structuredClone(catalogModernStore);
+    const product = project.products.find((item) => item.status === "active");
+    if (!product) throw new Error("Fixture sin productos activos");
+    const assetIndex = project.assets.findIndex((asset) => asset.id === product.imageIds[0]);
+    if (assetIndex < 0) throw new Error("Fixture sin imagen de producto");
+    const asset = project.assets[assetIndex];
+    if (!asset) throw new Error("Fixture sin asset de producto");
+    project.assets[assetIndex] = {
+      ...asset,
+      mimeType: "image/png",
+      source: "data:image/png;base64,cG5n",
+      responsiveSources: [{ width: 768, source: "data:image/png;base64,cG5n" }],
+    };
+
+    const report = optimizeProject(project, { mode: "production", publicAiContext: false });
+
+    expect(report.findings).toContainEqual(
+      expect.objectContaining({
+        code: "performance.product-image-format",
+        severity: "warning",
+        entity: expect.objectContaining({ type: "asset", id: asset.id }),
+      }),
+    );
+  });
+
   it("genera contexto publico sin datos privados ni recursos data URL", () => {
     const context = buildAiContext(catalogModernStore);
     const parsed = JSON.parse(context) as {

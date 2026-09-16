@@ -20,6 +20,20 @@ export interface ThemePreset {
   };
 }
 
+/** Paleta de marca de Pao, compartida por Studio y el canal del agente. */
+export const PAO_BLANQUERIA_COLORS = {
+  background: "#fffcf8",
+  surface: "#f0c9bf",
+  text: "#8e5e45",
+  muted: "#8e5e45",
+  accent: "#d95c52",
+  accentText: "#2a120e",
+  accentAlt: "#e19a8b",
+  border: "#e19a8b",
+  sale: "#b6271f",
+  rating: "#785500",
+} as const satisfies Theme["colors"];
+
 export const THEME_PRESETS: readonly ThemePreset[] = [
   {
     id: "editorial",
@@ -52,6 +66,14 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
       radius: 4,
       shadows: { card: "none", elevated: "none", overlay: "0 12px 40px rgba(44,40,37,.08)" },
       borders: { width: "1px", style: "solid" },
+    },
+  },
+  {
+    id: "pao-blanqueria",
+    label: "Pao Blanquería",
+    description: "Rosa viejo, taupe cálido y crema marfil con contraste accesible.",
+    tokens: {
+      colors: PAO_BLANQUERIA_COLORS,
     },
   },
   {

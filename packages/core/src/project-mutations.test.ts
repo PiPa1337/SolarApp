@@ -242,6 +242,12 @@ describe("ProjectMutationRegistry", () => {
     }).project;
     expect(identity.identity.brandName).toBe("Marca Canvas");
 
+    const identityWithPublicUrl = applyMutation(catalogModernStore, registry, {
+      type: "identity.update",
+      changes: { baseUrl: "https://pao-bi3.pages.dev/" },
+    }).project;
+    expect(identityWithPublicUrl.baseUrl).toBe("https://pao-bi3.pages.dev/");
+
     const productResult = applyMutation(identity, registry, {
       type: "product.update",
       productId: product.id,
@@ -308,6 +314,32 @@ describe("ProjectMutationRegistry", () => {
         { at: "2026-08-25T12:00:00.000Z" },
       ),
     ).toThrow("entero seguro");
+  });
+
+  it("reordena productos y sincroniza los índices derivados de categorías", () => {
+    const project = structuredClone(catalogModernStore);
+    const first = project.products[0];
+    const last = project.products.at(-1);
+    if (!first || !last) throw new Error("fixture sin productos");
+    const reordered = applyMutation(
+      project,
+      createMutationRegistry(),
+      { type: "products.reorder", productIds: [last.id, ...project.products.slice(0, -1).map((item) => item.id)] },
+      undefined,
+      { at: "2026-08-25T12:00:00.000Z" },
+    ).project;
+    expect(reordered.products[0]?.id).toBe(last.id);
+    const category = reordered.categories.find((item) => item.id === last.categoryIds[0]);
+    expect(category?.productIds[0]).toBe(last.id);
+    expect(() =>
+      applyMutation(
+        project,
+        createMutationRegistry(),
+        { type: "products.reorder", productIds: [first.id] },
+        undefined,
+        { at: "2026-08-25T12:00:00.000Z" },
+      ),
+    ).toThrow("cada producto exactamente una vez");
   });
 
   it("reordena repeaters por ID estable y aplica tokens de tema validados", () => {

@@ -26,10 +26,14 @@ privados.
 
 ## Exposiciones deliberadas
 
-`publicAiContext` permanece activado por defecto por compatibilidad. Antes de
-exportar se advierte que publica contacto, políticas, SKUs, precios y productos
-activos. Los medios HTTP/HTTPS externos se mantienen por compatibilidad, pero
-cada host aparece como advertencia y puede recibir solicitudes de visitantes.
+El contexto público para agentes forma parte obligatoria de cada exportación de
+producción y genera `ai-context.json`, `llms.txt` y `llms-full.txt`. Antes de
+exportar se informa que publica contacto, políticas, SKUs, precios y productos
+activos. La opción interna `publicAiContext` se conserva por compatibilidad con
+consumidores antiguos, pero producción ignora un valor `false`; los borradores
+no publican esos archivos. Los medios HTTP/HTTPS externos se mantienen por
+compatibilidad, pero cada host aparece como advertencia y puede recibir
+solicitudes de visitantes.
 
 ## Live Canvas y procesos auxiliares
 

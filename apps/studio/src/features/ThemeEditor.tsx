@@ -7,10 +7,18 @@ import {
   Wrench,
 } from "@phosphor-icons/react";
 import {
+  DEFAULT_THEME_TEXT_SHADOW_BLUR,
+  DEFAULT_THEME_TEXT_SHADOW_OFFSET_X,
+  DEFAULT_THEME_TEXT_SHADOW_OFFSET_Y,
   DEFAULT_THEME_TEXT_SHADOW_OPACITY,
   deriveThemeTextShadowColor,
   type ImageAsset,
+  PAO_BLANQUERIA_COLORS,
   type StoreProjectV1,
+  THEME_TEXT_SHADOW_BLUR_MAX,
+  THEME_TEXT_SHADOW_BLUR_MIN,
+  THEME_TEXT_SHADOW_OFFSET_MAX,
+  THEME_TEXT_SHADOW_OFFSET_MIN,
   type Theme,
 } from "@solara/project-schema";
 import { useEffect, useRef, useState } from "react";
@@ -182,6 +190,12 @@ const THEME_PRESETS: Array<{
       sale: "#d94a55",
       rating: "#d99a12",
     },
+  },
+  {
+    id: "pao-blanqueria",
+    name: "Pao Blanquería",
+    description: "Rosa viejo, taupe cálido y crema marfil con contraste accesible.",
+    colors: PAO_BLANQUERIA_COLORS,
   },
   {
     id: "jardin-salvia",
@@ -579,6 +593,7 @@ const CONTRAST_THRESHOLD = 4.5;
 
 type ThemeBackground = NonNullable<Theme["background"]>;
 type ThemeTextShadow = NonNullable<NonNullable<Theme["shadows"]>["text"]>;
+type ThemeTextShadowLengthKey = "offsetX" | "offsetY" | "blur";
 
 const BACKGROUND_REPEAT_OPTIONS: Array<ThemeBackground["repeat"]> = [
   "repeat",
@@ -638,10 +653,21 @@ export function ThemeEditor({
    */
   const [containerDraft, setContainerDraft] = useState<string | null>(null);
   const [containerError, setContainerError] = useState<boolean>(false);
+  const [textShadowLengthDrafts, setTextShadowLengthDrafts] = useState<
+    Partial<Record<ThemeTextShadowLengthKey, string>>
+  >({});
+  const [textShadowLengthErrors, setTextShadowLengthErrors] = useState<
+    Partial<Record<ThemeTextShadowLengthKey, boolean>>
+  >({});
 
   const textShadowEnabled = project.theme.shadows?.text?.enabled ?? true;
   const textShadowOpacity =
     project.theme.shadows?.text?.opacity ?? DEFAULT_THEME_TEXT_SHADOW_OPACITY;
+  const textShadowOffsetX =
+    project.theme.shadows?.text?.offsetX ?? DEFAULT_THEME_TEXT_SHADOW_OFFSET_X;
+  const textShadowOffsetY =
+    project.theme.shadows?.text?.offsetY ?? DEFAULT_THEME_TEXT_SHADOW_OFFSET_Y;
+  const textShadowBlur = project.theme.shadows?.text?.blur ?? DEFAULT_THEME_TEXT_SHADOW_BLUR;
   const isCatalogModernV2 = project.commerceTemplates.designFamily === "catalog-modern-v2";
   const heroPreviewTextColor = isCatalogModernV2
     ? project.theme.colors.background
@@ -650,7 +676,7 @@ export function ThemeEditor({
     ? deriveThemeTextShadowColor(project.theme.colors, project.theme.colors.background)
     : deriveThemeTextShadowColor(project.theme.colors);
   const previewTextShadow = textShadowEnabled
-    ? `1px 1px 0 color-mix(in srgb, ${textShadowColor} ${Math.round(textShadowOpacity * 100)}%, transparent)`
+    ? `${textShadowOffsetX}px ${textShadowOffsetY}px ${textShadowBlur}px color-mix(in srgb, ${textShadowColor} ${Math.round(textShadowOpacity * 100)}%, transparent)`
     : "none";
 
   /* biome-ignore lint/correctness/useExhaustiveDependencies: al cambiar los colores confirmados (commit, preset o reset) los borradores de texto deben volver a partir de esos valores. */
@@ -663,6 +689,12 @@ export function ThemeEditor({
     setContainerDraft(null);
     setContainerError(false);
   }, []);
+
+  /* biome-ignore lint/correctness/useExhaustiveDependencies: al cambiar de tienda, los borradores de la sombra deben volver a partir de los valores persistidos. */
+  useEffect(() => {
+    setTextShadowLengthDrafts({});
+    setTextShadowLengthErrors({});
+  }, [project.id]);
 
   const updateTheme = (theme: Theme, assets: StoreProjectV1["assets"] = project.assets) =>
     onChange({ ...project, assets, theme, updatedAt: new Date().toISOString() });
@@ -710,6 +742,8 @@ export function ThemeEditor({
       return;
     }
     if (group === "textShadow") {
+      setTextShadowLengthDrafts({});
+      setTextShadowLengthErrors({});
       const currentShadows = project.theme.shadows;
       if (!currentShadows) return;
       const shadows = { ...currentShadows };
@@ -771,10 +805,38 @@ export function ThemeEditor({
         text: {
           enabled: textShadowEnabled,
           opacity: textShadowOpacity,
+          offsetX: textShadowOffsetX,
+          offsetY: textShadowOffsetY,
+          blur: textShadowBlur,
           ...changes,
         },
       },
     });
+
+  const commitTextShadowLength = (
+    key: ThemeTextShadowLengthKey,
+    raw: string,
+    min: number,
+    max: number,
+  ) => {
+    const trimmed = raw.trim();
+    const numeric = Number(trimmed);
+    if (trimmed === "" || !/^-?\d+$/.test(trimmed) || !Number.isSafeInteger(numeric)) {
+      setTextShadowLengthDrafts((current) => ({ ...current, [key]: raw }));
+      setTextShadowLengthErrors((current) => ({ ...current, [key]: true }));
+      return;
+    }
+    if (numeric < min || numeric > max) {
+      setTextShadowLengthDrafts((current) => ({ ...current, [key]: raw }));
+      setTextShadowLengthErrors((current) => ({ ...current, [key]: true }));
+      return;
+    }
+    setTextShadowLengthDrafts((current) => ({ ...current, [key]: String(numeric) }));
+    setTextShadowLengthErrors((current) => ({ ...current, [key]: false }));
+    if (key === "offsetX" && numeric !== textShadowOffsetX) updateTextShadow({ offsetX: numeric });
+    if (key === "offsetY" && numeric !== textShadowOffsetY) updateTextShadow({ offsetY: numeric });
+    if (key === "blur" && numeric !== textShadowBlur) updateTextShadow({ blur: numeric });
+  };
 
   const setBackgroundImage = (assetId: string) => {
     const nextTheme = { ...project.theme };
@@ -1203,8 +1265,10 @@ export function ThemeEditor({
                     <TextT aria-hidden size={19} /> Sombra del hero mobile
                   </legend>
                   <p className="theme-text-shadow-meta">
-                    Sólo aparece hasta 767 px, 1 px a la derecha y abajo. El color se deriva
-                    automáticamente del token de mayor contraste de la paleta y no afecta el botón.
+                    Sólo aparece hasta 767 px. Ajustá la distancia horizontal/vertical, el
+                    desenfoque y la intensidad; el color se deriva automáticamente del token de
+                    mayor contraste de la paleta y no afecta el botón. Valores positivos desplazan
+                    la sombra hacia la derecha/abajo y negativos hacia la izquierda/arriba.
                   </p>
                   <label className="theme-text-shadow-toggle">
                     <input
@@ -1215,6 +1279,89 @@ export function ThemeEditor({
                     />
                     <span>Activar sombra en el texto del hero</span>
                   </label>
+                  <div className="theme-text-shadow-controls">
+                    <Field
+                      label={`Horizontal ${textShadowOffsetX}px`}
+                      {...(textShadowLengthErrors.offsetX
+                        ? {
+                            error: `Usá un entero entre ${THEME_TEXT_SHADOW_OFFSET_MIN} y ${THEME_TEXT_SHADOW_OFFSET_MAX}.`,
+                          }
+                        : {})}
+                    >
+                      <input
+                        type="number"
+                        min={THEME_TEXT_SHADOW_OFFSET_MIN}
+                        max={THEME_TEXT_SHADOW_OFFSET_MAX}
+                        step={1}
+                        value={textShadowLengthDrafts.offsetX ?? String(textShadowOffsetX)}
+                        disabled={!textShadowEnabled}
+                        aria-label="Desplazamiento horizontal de la sombra del hero mobile"
+                        data-testid="ui-text-shadow-offset-x"
+                        onChange={(event) =>
+                          commitTextShadowLength(
+                            "offsetX",
+                            event.target.value,
+                            THEME_TEXT_SHADOW_OFFSET_MIN,
+                            THEME_TEXT_SHADOW_OFFSET_MAX,
+                          )
+                        }
+                      />
+                    </Field>
+                    <Field
+                      label={`Vertical ${textShadowOffsetY}px`}
+                      {...(textShadowLengthErrors.offsetY
+                        ? {
+                            error: `Usá un entero entre ${THEME_TEXT_SHADOW_OFFSET_MIN} y ${THEME_TEXT_SHADOW_OFFSET_MAX}.`,
+                          }
+                        : {})}
+                    >
+                      <input
+                        type="number"
+                        min={THEME_TEXT_SHADOW_OFFSET_MIN}
+                        max={THEME_TEXT_SHADOW_OFFSET_MAX}
+                        step={1}
+                        value={textShadowLengthDrafts.offsetY ?? String(textShadowOffsetY)}
+                        disabled={!textShadowEnabled}
+                        aria-label="Desplazamiento vertical de la sombra del hero mobile"
+                        data-testid="ui-text-shadow-offset-y"
+                        onChange={(event) =>
+                          commitTextShadowLength(
+                            "offsetY",
+                            event.target.value,
+                            THEME_TEXT_SHADOW_OFFSET_MIN,
+                            THEME_TEXT_SHADOW_OFFSET_MAX,
+                          )
+                        }
+                      />
+                    </Field>
+                    <Field
+                      label={`Desenfoque ${textShadowBlur}px`}
+                      {...(textShadowLengthErrors.blur
+                        ? {
+                            error: `Usá un entero entre ${THEME_TEXT_SHADOW_BLUR_MIN} y ${THEME_TEXT_SHADOW_BLUR_MAX}.`,
+                          }
+                        : {})}
+                    >
+                      <input
+                        type="number"
+                        min={THEME_TEXT_SHADOW_BLUR_MIN}
+                        max={THEME_TEXT_SHADOW_BLUR_MAX}
+                        step={1}
+                        value={textShadowLengthDrafts.blur ?? String(textShadowBlur)}
+                        disabled={!textShadowEnabled}
+                        aria-label="Desenfoque de la sombra del hero mobile"
+                        data-testid="ui-text-shadow-blur"
+                        onChange={(event) =>
+                          commitTextShadowLength(
+                            "blur",
+                            event.target.value,
+                            THEME_TEXT_SHADOW_BLUR_MIN,
+                            THEME_TEXT_SHADOW_BLUR_MAX,
+                          )
+                        }
+                      />
+                    </Field>
+                  </div>
                   <Field label={`Intensidad ${Math.round(textShadowOpacity * 100)}%`}>
                     <input
                       type="range"
