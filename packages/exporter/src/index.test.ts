@@ -120,15 +120,25 @@ describe("exporter", () => {
     expect(css).toContain("--solara-hero-text-shadow:none");
   });
 
-  it("transporta la distancia, dirección, desenfoque e intensidad sin reemplazar el color del tema", () => {
+  it("transporta las cuatro direcciones, desenfoque e intensidad sin reemplazar el color del tema", () => {
     const project = structuredClone(catalogModernV2Store);
     Object.assign(project.theme, {
-      shadows: { text: { enabled: true, opacity: 0.4, offsetX: -8, offsetY: 14, blur: 6 } },
+      shadows: {
+        text: {
+          enabled: true,
+          opacity: 0.4,
+          offsetTop: 8,
+          offsetRight: 4,
+          offsetBottom: 14,
+          offsetLeft: 6,
+          blur: 6,
+        },
+      },
     });
     const css = runtimeAsset(exportProject(project, { mode: "production" }).files, "css");
 
     expect(css).toContain(
-      "--solara-hero-text-shadow-v2:-8px 14px 6px color-mix(in srgb,#11110f 40%,transparent)",
+      "--solara-hero-text-shadow-v2:0px -8px 6px color-mix(in srgb,#11110f 40%,transparent),4px 0px 6px color-mix(in srgb,#11110f 40%,transparent),0px 14px 6px color-mix(in srgb,#11110f 40%,transparent),-6px 0px 6px color-mix(in srgb,#11110f 40%,transparent)",
     );
   });
 

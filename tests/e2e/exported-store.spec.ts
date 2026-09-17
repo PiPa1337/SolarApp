@@ -116,7 +116,8 @@ test("mantiene producto, precio y descripcion sin JavaScript", async ({ browser 
   await expect(page.getByRole("heading", { level: 1, name: "Manta Bruma" })).toBeVisible();
   await expect(page.locator("body")).toContainText(/Algod/);
   await expect(page.locator("body")).toContainText("$ 78.500,00");
-  await expect(page.locator('a[href*="?variant=variant-manta-piedra"]')).toBeVisible();
+  await expect(page.locator('select[name="variant"]')).toBeVisible();
+  await expect(page.locator('select[name="variant"] option[value="variant-manta-piedra"]')).toHaveCount(1);
   await context.close();
 });
 

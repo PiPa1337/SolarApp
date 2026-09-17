@@ -690,7 +690,7 @@ test("el inspector del fondo reemplaza el dashboard y aplica presets en vivo", a
   await expect(
     page.locator(".app-root--dashboard-cosmic .dashboard-gravity-field"),
   ).not.toHaveAttribute("data-telemetry-state", /.+/);
-  await expect(panel.locator('input[type="range"]')).toHaveCount(20);
+  await expect(panel.locator('input[type="range"]')).toHaveCount(21);
   await expect(panel.locator('[data-testid^="gravity-custom-preset-"]')).toHaveCount(3);
   await expect(panel.locator('[data-testid^="gravity-taa-quality-"]')).toHaveCount(6);
   const field = page.locator(".app-root--dashboard-cosmic .dashboard-gravity-field");
@@ -765,11 +765,13 @@ test("el inspector del fondo reemplaza el dashboard y aplica presets en vivo", a
   await expect(panel.getByTestId("gravity-setting-renderScaleMultiplier")).toHaveValue("1");
   await expect(panel.getByTestId("gravity-setting-maxFps")).toHaveValue("60");
   await expect(panel.getByTestId("gravity-setting-diskLayers")).toHaveValue("3");
+  await expect(panel.getByTestId("gravity-setting-animationSpeed")).toHaveValue("1");
   await expect(panel.getByTestId("gravity-setting-turbulence")).toHaveValue("1");
   const expectedBounds = {
     renderScaleMultiplier: ["0.1", "2.5"],
     maxFps: ["1", "120"],
     diskLayers: ["1", "6"],
+    animationSpeed: ["0.25", "2"],
     materialSpeed: ["0.1", "4"],
     pointerResponse: ["0.1", "4"],
     starDensity: ["0.1", "10"],
@@ -793,11 +795,24 @@ test("el inspector del fondo reemplaza el dashboard y aplica presets en vivo", a
     await expect(panel.getByTestId(`gravity-setting-${setting}`)).toHaveAttribute("max", max);
   }
 
+  await panel.getByTestId("gravity-setting-animationSpeed").fill("0.5");
+  await expect
+    .poll(() =>
+      page
+        .locator("main.dashboard-gargantua")
+        .evaluate((element) =>
+          getComputedStyle(element)
+            .getPropertyValue("--dashboard-gargantua-transition-duration")
+            .trim(),
+        ),
+    )
+    .toBe("6000ms");
   await panel.getByTestId("gravity-setting-filamentDetail").fill("2.25");
   await panel.locator(".dashboard-gargantua-settings__preset").first().click();
   await expect(panel.getByTestId("gravity-setting-renderScaleMultiplier")).toHaveValue("0.1");
   await expect(panel.getByTestId("gravity-setting-maxFps")).toHaveValue("30");
   await expect(panel.getByTestId("gravity-setting-diskLayers")).toHaveValue("1");
+  await expect(panel.getByTestId("gravity-setting-animationSpeed")).toHaveValue("0.5");
   await expect(panel.getByTestId("gravity-setting-materialSpeed")).toHaveValue("0.1");
   await expect(panel.getByTestId("gravity-setting-contrast")).toHaveValue("0.1");
   await expect(panel.getByTestId("gravity-setting-filamentDetail")).toHaveValue("2.25");
@@ -811,6 +826,7 @@ test("el inspector del fondo reemplaza el dashboard y aplica presets en vivo", a
   await expect(panel.getByTestId("gravity-setting-renderScaleMultiplier")).toHaveValue("2.5");
   await expect(panel.getByTestId("gravity-setting-maxFps")).toHaveValue("120");
   await expect(panel.getByTestId("gravity-setting-diskLayers")).toHaveValue("6");
+  await expect(panel.getByTestId("gravity-setting-animationSpeed")).toHaveValue("0.5");
   await expect(panel.getByTestId("gravity-setting-materialSpeed")).toHaveValue("4");
   await expect(panel.getByTestId("gravity-setting-contrast")).toHaveValue("2.8");
   await expect(panel.getByTestId("gravity-setting-filamentDetail")).toHaveValue("2.25");

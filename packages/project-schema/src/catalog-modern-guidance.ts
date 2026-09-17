@@ -78,12 +78,17 @@ const CATALOG_MODERN_SENTINEL_VALUES: ReadonlySet<string> = new Set([
 ]);
 
 export function isCatalogModernSentinelValue(value: string): boolean {
-  const normalized = value.trim().toLocaleLowerCase("es-AR");
+  const normalized = value
+    .trim()
+    .toLocaleLowerCase("es-AR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
   if (!normalized) return false;
   if (CATALOG_MODERN_SENTINEL_VALUES.has(normalized)) return true;
   return (
     /^producto \d+$/.test(normalized) ||
     /^descripcion del producto \d+\.$/.test(normalized) ||
+    /^descripcion de la categoria \d+\.$/.test(normalized) ||
     /^categoria \d+$/.test(normalized) ||
     /^producto de .+ pensado para ofrecer calidad, practicidad y una excelente experiencia de compra\.$/i.test(value.trim()) ||
     /^.+: una propuesta pensada para mostrar calidad, practicidad y una experiencia simple de compra\. adaptá este texto con la información real de tu negocio\.$/i.test(value.trim()) ||
@@ -136,7 +141,10 @@ function setting(project: StoreProjectV2, sectionId: string, key: string): strin
 }
 
 function isCleanTemplate(project: StoreProjectV2): boolean {
-  return project.origin?.templateId === "catalog-modern" && project.origin.seed === "clean";
+  return (
+    project.origin?.templateId === "catalog-modern" &&
+    ["clean", "placeholder", "duplicate"].includes(project.origin.seed)
+  );
 }
 
 /** El exporter bloquea las imagenes de plantilla por nombre o por alt. */

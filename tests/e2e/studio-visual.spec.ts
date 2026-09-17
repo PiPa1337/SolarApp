@@ -103,7 +103,13 @@ test("las portadas conservan su encuadre y el hover anima la card", async ({ pag
   await expect
     .poll(() => heroImage.evaluate((image) => (image as HTMLImageElement).naturalWidth))
     .toBeGreaterThan(0);
-  await expect(heroImage).toHaveCSS("object-fit", "contain");
+  const socialFrameRatio = await card
+    .locator(".dashboard-store-card__button")
+    .evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).getPropertyValue("--dashboard-store-hero-ratio")),
+    );
+  expect(socialFrameRatio).toBeCloseTo(1200 / 630, 5);
+  await expect(heroImage).toHaveCSS("object-fit", "cover");
   await expect(heroImage).toHaveCSS("transform", "none");
 
   const beforeHover = await card.evaluate((element) => getComputedStyle(element).transform);

@@ -810,7 +810,7 @@ describe("variante única oculta en fichas (auditoría 2)", () => {
     moduleId: "product-detail",
   });
 
-  it("oculta label, select y pills de variante en el detalle moderno mono-variante", () => {
+  it("oculta label y select de variante en el detalle moderno mono-variante", () => {
     const project = structuredClone(catalogModernStore);
     const product = project.products.find(
       (candidate) => candidate.slug === "remera-esencial-de-algodon",
@@ -825,7 +825,7 @@ describe("variante única oculta en fichas (auditoría 2)", () => {
     });
     expect(html).toMatch(/<label for="catalog-variant-section-mono-modern"[^>]* hidden>/);
     expect(html).toContain("data-variant-select required hidden>");
-    expect(html).toMatch(/class="catalog-variant-options"[^>]* hidden>/);
+    expect(html).not.toContain("catalog-variant-options");
   });
 
   it("muestra el selector en el detalle moderno multi-variante", () => {
@@ -839,7 +839,7 @@ describe("variante única oculta en fichas (auditoría 2)", () => {
     });
     expect(html).not.toMatch(/<label for="catalog-variant-section-mono-modern"[^>]*hidden/);
     expect(html).not.toContain("data-variant-select required hidden");
-    expect(html).not.toMatch(/class="catalog-variant-options"[^>]*hidden/);
+    expect(html).not.toContain("catalog-variant-options");
   });
 
   it("oculta label y select de variante en el detalle legacy mono-variante", () => {
@@ -1118,7 +1118,7 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     expect(checkoutHtml).toContain("data-solara-cart-open");
   });
 
-  it("marca la pill del valor del primer variante disponible aunque otro variante del mismo valor esté agotado", () => {
+  it("agrupa todas las variantes en el selector nativo y elimina controles duplicados", () => {
     const project = structuredClone(catalogModernStore);
     const product = project.products.find(
       (candidate) => candidate.slug === "remera-esencial-de-algodon",
@@ -1154,14 +1154,13 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
       pageType: "product",
       product,
     });
-    const optionsMarkup = html.slice(html.indexOf('class="catalog-variant-options"'));
-    const tallePills = optionsMarkup.match(/<button[^>]*data-option-key="Talle"[^>]*>/g) ?? [];
-    const sPill = tallePills.find((pill) => pill.includes('data-option-value="S"'));
-    const mPill = tallePills.find((pill) => pill.includes('data-option-value="M"'));
-
-    expect(sPill).toContain('aria-pressed="true"');
-    expect(sPill).toContain(`data-variant-id="${first.id}"`);
-    expect(mPill).toContain('aria-pressed="false"');
+    expect(html).toContain('id="catalog-variant-section-modern-detail-test"');
+    expect(html).toContain(">Negro / S ·");
+    expect(html).toContain(">Blanco / S ·");
+    expect(html).toContain(">Negro / M ·");
+    expect(html).not.toContain("catalog-variant-options");
+    expect(html).not.toContain("catalog-option-pill");
+    expect(html).not.toContain("catalog-variant-links");
   });
 
   it("incluye reglas de impresión para drawer, backdrops y menú móvil", () => {
@@ -1575,6 +1574,9 @@ describe("catalog-modern sin JavaScript y gating de búsqueda", () => {
     expect(v2Styles).toContain(".catalog-hero-line-inner");
     expect(v2Styles).toContain("line-height: 1.1;");
     expect(v2Styles).toContain("text-shadow: none;");
+    expect(v2Styles).toContain(
+      '.cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-line {\n      overflow: visible;\n    }',
+    );
     expect(baseStyles).toContain(
       "min-height: calc(100svh - 96px); margin-top: .75rem; border-radius: 0;",
     );

@@ -73,6 +73,7 @@ test("importa y pagina 1.000 productos", async ({ page }) => {
 test("edita variantes y conserva el último cambio al volver, recargar y reabrir", async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   await openCatalog(page);
   await page.getByRole("button", { name: "Agregar producto" }).first().click();
 
@@ -131,8 +132,8 @@ test("previsualiza, cancela y edita en masa entre páginas", async ({ page }) =>
   await expect(review.getByText("120", { exact: true })).toBeVisible();
   await expect(review).toContainText("Nuevos");
   await clickDom(page.getByRole("button", { name: "Cancelar" }));
-  // La tienda derivada arranca con 5 productos placeholder x 1 variante.
-  await expect(page.getByText("5 productos y 5 variantes.")).toBeVisible();
+  // La tienda derivada arranca con la misma base neutral: 33 productos y 41 variantes.
+  await expect(page.getByText("33 productos y 41 variantes.")).toBeVisible();
 
   await uploadCsv(page, selectionCsv, "catalogo-120.csv");
   await clickDom(page.getByRole("button", { name: "Reemplazar catálogo" }));

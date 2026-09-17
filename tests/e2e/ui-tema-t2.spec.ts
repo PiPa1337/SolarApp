@@ -254,15 +254,19 @@ test("sombra del hero mobile: control nativo, preview y exclusión del botón", 
 
   const toggle = page.getByTestId("ui-text-shadow-enabled");
   const opacity = page.getByTestId("ui-text-shadow-opacity");
-  const offsetX = page.getByTestId("ui-text-shadow-offset-x");
-  const offsetY = page.getByTestId("ui-text-shadow-offset-y");
+  const offsetTop = page.getByTestId("ui-text-shadow-offset-top");
+  const offsetRight = page.getByTestId("ui-text-shadow-offset-right");
+  const offsetBottom = page.getByTestId("ui-text-shadow-offset-bottom");
+  const offsetLeft = page.getByTestId("ui-text-shadow-offset-left");
   const blur = page.getByTestId("ui-text-shadow-blur");
   const preview = page.getByTestId("ui-text-shadow-preview");
 
   await expect(toggle).toBeChecked();
   await expect(opacity).toHaveValue("0.65");
-  await expect(offsetX).toHaveValue("1");
-  await expect(offsetY).toHaveValue("1");
+  await expect(offsetTop).toHaveValue("0");
+  await expect(offsetRight).toHaveValue("1");
+  await expect(offsetBottom).toHaveValue("1");
+  await expect(offsetLeft).toHaveValue("0");
   await expect(blur).toHaveValue("0");
   await expect
     .poll(() => preview.evaluate((element) => element.style.textShadow))
@@ -300,20 +304,26 @@ test("sombra del hero mobile: control nativo, preview y exclusión del botón", 
 
   await opacity.fill("0.85");
   await expect(opacity).toHaveValue("0.85");
-  await offsetX.fill("-8");
-  await offsetY.fill("14");
+  await offsetTop.fill("8");
+  await offsetRight.fill("4");
+  await offsetBottom.fill("14");
+  await offsetLeft.fill("6");
   await blur.fill("6");
-  await expect(offsetX).toHaveValue("-8");
-  await expect(offsetY).toHaveValue("14");
+  await expect(offsetTop).toHaveValue("8");
+  await expect(offsetRight).toHaveValue("4");
+  await expect(offsetBottom).toHaveValue("14");
+  await expect(offsetLeft).toHaveValue("6");
   await expect(blur).toHaveValue("6");
   await expect
     .poll(() => preview.evaluate((element) => element.style.textShadow))
-    .toContain("-8px 14px 6px");
+    .toContain("0px -8px 6px");
 
   await toggle.uncheck();
   await expect(opacity).toBeDisabled();
-  await expect(offsetX).toBeDisabled();
-  await expect(offsetY).toBeDisabled();
+  await expect(offsetTop).toBeDisabled();
+  await expect(offsetRight).toBeDisabled();
+  await expect(offsetBottom).toBeDisabled();
+  await expect(offsetLeft).toBeDisabled();
   await expect(blur).toBeDisabled();
   await expect(preview).toHaveCSS("text-shadow", "none");
 
@@ -321,5 +331,5 @@ test("sombra del hero mobile: control nativo, preview y exclusión del botón", 
   await expect(opacity).toBeEnabled();
   await expect
     .poll(() => preview.evaluate((element) => element.style.textShadow))
-    .toContain("-8px 14px 6px");
+    .toContain("0px -8px 6px");
 });

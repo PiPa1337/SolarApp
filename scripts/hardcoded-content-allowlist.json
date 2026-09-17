@@ -108,6 +108,12 @@
     "reason": "Nombre de la tienda base placeholder que se genera para nuevas tiendas."
   },
   {
+    "path": "packages/project-schema/src/modern-base-template.ts",
+    "literal": "Predeterminado",
+    "category": "technical-contract",
+    "reason": "Nombre visible reservado para la plantilla protegida; no se hereda como identidad de una tienda clonada."
+  },
+  {
     "path": "scripts/nightwatch-probe-managed.mjs",
     "literal": "Predeterminado",
     "category": "fixture",

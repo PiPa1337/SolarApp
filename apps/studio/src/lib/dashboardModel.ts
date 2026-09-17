@@ -31,6 +31,10 @@ export interface ProjectMetrics {
   assets: number;
 }
 
+export type VariantBillingMode = "with-variants" | "products-only";
+
+export const DEFAULT_VARIANT_BILLING_MODE: VariantBillingMode = "with-variants";
+
 export interface PinnedPartition<T> {
   pinned: T[];
   rest: T[];
@@ -191,7 +195,10 @@ export function partitionPinnedProjects<T extends { id: string }>(
   return { pinned, rest };
 }
 
-export function getProjectMetrics(project: StoredProject["project"]): ProjectMetrics {
+export function getProjectMetrics(
+  project: StoredProject["project"],
+  variantBillingMode: VariantBillingMode = DEFAULT_VARIANT_BILLING_MODE,
+): ProjectMetrics {
   const activeProducts = project.products.filter((product) => product.status === "active");
   const variantExtras = activeProducts.reduce(
     (total, product) => total + Math.max(0, product.variants.length - 1),
@@ -199,7 +206,10 @@ export function getProjectMetrics(project: StoredProject["project"]): ProjectMet
   );
   return {
     activeProducts: activeProducts.length,
-    billableProducts: activeProducts.length + variantExtras,
+    billableProducts:
+      variantBillingMode === "with-variants"
+        ? activeProducts.length + variantExtras
+        : activeProducts.length,
     variantExtras,
     categories: project.categories.length,
     collections: project.collections.length,
@@ -241,6 +251,7 @@ export const MONTHLY_PRICING = {
 
 const PRICING_STORAGE_KEY = "solara-pricing-config";
 const DISCOUNT_STORAGE_KEY = "solara-store-discounts";
+const VARIANT_BILLING_STORAGE_KEY = "solara-store-variant-billing";
 
 function readPricingConfigSafe(): PricingConfig {
   if (typeof window === "undefined" || typeof localStorage === "undefined") return DEFAULT_PRICING;
@@ -319,6 +330,35 @@ export function saveStoreDiscount(storeId: string, discountPercent: number): voi
   localStorage.setItem(DISCOUNT_STORAGE_KEY, JSON.stringify(all));
 }
 
+function loadVariantBillingModes(): Record<string, VariantBillingMode> {
+  if (typeof window === "undefined" || typeof localStorage === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(VARIANT_BILLING_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    const out: Record<string, VariantBillingMode> = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (value === "with-variants" || value === "products-only") out[key] = value;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+export function loadVariantBillingMode(storeId: string): VariantBillingMode {
+  return loadVariantBillingModes()[storeId] ?? DEFAULT_VARIANT_BILLING_MODE;
+}
+
+export function saveVariantBillingMode(storeId: string, mode: VariantBillingMode): void {
+  if (typeof window === "undefined" || typeof localStorage === "undefined") return;
+  const all = loadVariantBillingModes();
+  if (mode === DEFAULT_VARIANT_BILLING_MODE) delete all[storeId];
+  else all[storeId] = mode;
+  localStorage.setItem(VARIANT_BILLING_STORAGE_KEY, JSON.stringify(all));
+}
+
 function pricingToTiers(config: PricingConfig): Array<{ upTo: number; price: number }> {
   return [
     { upTo: 100, price: config.tier1Price },
@@ -356,8 +396,9 @@ export function calculateMonthlyCost(
   project: StoredProject["project"],
   storeId?: string,
   config?: PricingConfig,
+  variantBillingMode: VariantBillingMode = DEFAULT_VARIANT_BILLING_MODE,
 ): number {
-  const metrics = getProjectMetrics(project);
+  const metrics = getProjectMetrics(project, variantBillingMode);
   const effectiveConfig = config ?? loadPricingConfig();
   const baseCost = calculateMonthlyCostForCount(metrics.billableProducts, effectiveConfig);
   if (!storeId) return baseCost;

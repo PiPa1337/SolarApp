@@ -244,6 +244,23 @@ describe("StoreProjectV2Schema", () => {
     });
   });
 
+  it("acepta distancias independientes para las cuatro direcciones de la sombra", () => {
+    const project = invalidProject((value) => {
+      Object.assign(value.theme, {
+        shadows: {
+          text: { offsetTop: 8, offsetRight: 4, offsetBottom: 14, offsetLeft: 6 },
+        },
+      });
+    });
+
+    expect(StoreProjectV2Schema.parse(project).theme.shadows?.text).toMatchObject({
+      offsetTop: 8,
+      offsetRight: 4,
+      offsetBottom: 14,
+      offsetLeft: 6,
+    });
+  });
+
   it("rechaza cronología imposible", () => {
     const invalidTimestamp = invalidProject((project) => {
       project.updatedAt = "2020-01-01T00:00:00.000Z";

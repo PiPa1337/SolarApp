@@ -33,6 +33,7 @@ import type {
 } from "@solara/project-schema";
 import {
   ARGENTINA_LEGAL_PROFILE,
+  buildThemeTextShadow,
   compactResponsiveSources,
   DEFAULT_THEME_TEXT_SHADOW_BLUR,
   DEFAULT_THEME_TEXT_SHADOW_OFFSET_X,
@@ -963,18 +964,39 @@ function themeCss(
     colors.accentAlt ?? `color-mix(in srgb, ${colors.accent} 68%, ${colors.background})`;
   const textShadowColorValue = deriveThemeTextShadowColor(colors);
   const v2TextShadowColorValue = deriveThemeTextShadowColor(colors, colors.background);
-  const textShadowOpacity = t.shadows?.text?.opacity ?? DEFAULT_THEME_TEXT_SHADOW_OPACITY;
-  const textShadowOffsetX = t.shadows?.text?.offsetX ?? DEFAULT_THEME_TEXT_SHADOW_OFFSET_X;
-  const textShadowOffsetY = t.shadows?.text?.offsetY ?? DEFAULT_THEME_TEXT_SHADOW_OFFSET_Y;
-  const textShadowBlur = t.shadows?.text?.blur ?? DEFAULT_THEME_TEXT_SHADOW_BLUR;
+  const textShadow = t.shadows?.text;
+  const textShadowOpacity = textShadow?.opacity ?? DEFAULT_THEME_TEXT_SHADOW_OPACITY;
+  const textShadowOffsetX = textShadow?.offsetX ?? DEFAULT_THEME_TEXT_SHADOW_OFFSET_X;
+  const textShadowOffsetY = textShadow?.offsetY ?? DEFAULT_THEME_TEXT_SHADOW_OFFSET_Y;
+  const textShadowBlur = textShadow?.blur ?? DEFAULT_THEME_TEXT_SHADOW_BLUR;
   const heroTextShadow =
-    t.shadows?.text?.enabled === false
+    textShadow?.enabled === false
       ? "none"
-      : `${textShadowOffsetX}px ${textShadowOffsetY}px ${textShadowBlur}px color-mix(in srgb, var(--solara-text-shadow) ${Math.round(textShadowOpacity * 100)}%, transparent)`;
+      : buildThemeTextShadow({
+          color: "var(--solara-text-shadow)",
+          opacity: textShadowOpacity,
+          offsetX: textShadowOffsetX,
+          offsetY: textShadowOffsetY,
+          offsetTop: textShadow?.offsetTop,
+          offsetRight: textShadow?.offsetRight,
+          offsetBottom: textShadow?.offsetBottom,
+          offsetLeft: textShadow?.offsetLeft,
+          blur: textShadowBlur,
+        });
   const v2HeroTextShadow =
-    t.shadows?.text?.enabled === false
+    textShadow?.enabled === false
       ? "none"
-      : `${textShadowOffsetX}px ${textShadowOffsetY}px ${textShadowBlur}px color-mix(in srgb, ${v2TextShadowColorValue} ${Math.round(textShadowOpacity * 100)}%, transparent)`;
+      : buildThemeTextShadow({
+          color: v2TextShadowColorValue,
+          opacity: textShadowOpacity,
+          offsetX: textShadowOffsetX,
+          offsetY: textShadowOffsetY,
+          offsetTop: textShadow?.offsetTop,
+          offsetRight: textShadow?.offsetRight,
+          offsetBottom: textShadow?.offsetBottom,
+          offsetLeft: textShadow?.offsetLeft,
+          blur: textShadowBlur,
+        });
   // Fondo con imagen por tienda: el color sigue como base y la imagen repite
   // encima. En export `source` ya es la ruta pública; en preview es data URI.
   // La raíz [data-solara-store] pinta el color plano (y cada familia repite
@@ -2308,7 +2330,7 @@ function buildPages(
             ? `categorias/${category.slug}/index.html`
             : `categorias/${category.slug}/pagina/${pageNumber}/index.html`,
         title: fitTitle(
-          `${category.title}${pageNumber > 1 ? ` — Página ${pageNumber}` : ""}`,
+          `${pageNumber > 1 ? `Página ${pageNumber} — ` : ""}${category.title}`,
           project.identity.brandName,
         ),
         description: category.description || project.seo.description,
@@ -2403,7 +2425,7 @@ function buildPages(
               ? `colecciones/${collection.slug}/index.html`
               : `colecciones/${collection.slug}/pagina/${pageNumber}/index.html`,
           title: fitTitle(
-            `${collection.title}${pageNumber > 1 ? ` — Página ${pageNumber}` : ""}`,
+            `${pageNumber > 1 ? `Página ${pageNumber} — ` : ""}${collection.title}`,
             project.identity.brandName,
           ),
           description: collection.description || project.seo.description,

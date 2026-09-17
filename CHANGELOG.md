@@ -1,3 +1,59 @@
+### Marco OG uniforme en las cards del dashboard (2026-09-16)
+
+- Las portadas del dashboard usan el marco estándar 1200×630 y el recorte social
+  `cover`, para que Stylo Lashes conserve el mismo ancho visual que las demás.
+
+### Media optimizada en Predeterminado (2026-09-16)
+
+- Los cinco placeholders de la plantilla protegida pasan de SVG/fallback 1×1 a
+  fuentes rasterizadas con WebP, fallback separado y derivados responsive reales.
+- Las tiendas futuras clonan la misma fuente neutral ya procesada, sin heredar
+  imágenes de RM ni compartir estado mutable.
+
+### Sombra lateral del hero mobile sin recorte (2026-09-16)
+
+- Las líneas del título de Catalog Modern V2 liberan su overflow en mobile para
+  que la sombra configurable pueda extenderse a ambos costados.
+
+### Sombra del hero mobile en cuatro direcciones (2026-09-16)
+
+- El editor de Tema permite configurar en px la sombra hacia arriba, derecha,
+  abajo e izquierda al mismo tiempo, manteniendo el desenfoque y la intensidad.
+- Los proyectos existentes conservan la salida anterior de Horizontal/Vertical
+  hasta que se edite una dirección nueva.
+
+### Plantilla moderna neutral para nuevas tiendas (2026-09-16)
+
+- Predeterminado se migra mediante el canal protegido existente a una fixture
+  neutral de 33 productos, 6 categorías, 0 colecciones y 5 placeholders; RM y
+  las demás tiendas quedan fuera del alcance.
+- Studio y el agente clonan la misma fuente, con IDs y referencias aislados,
+  carrito lateral habilitado y backup verificable antes de la migración.
+- Se documentan `templates.previewUpgrade` y `templates.commitUpgrade` como el
+  contrato MCP oficial; no se agregó una herramienta nueva.
+
+### Catálogo Pao normalizado y copy local (2026-09-16)
+
+- El catálogo de Pao queda en 41 fichas activas, separando diseños distintos y
+  conservando en la misma ficha las fotos del mismo producto.
+- Se revisan títulos, descripciones, variantes y SKU; los identificadores
+  internos quedan únicos y se preservan precios, stock y galerías originales.
+- Se mejora el copy de la tienda y sus categorías para búsquedas en Trelew y
+  Chubut, y las páginas paginadas conservan un título SEO diferenciable.
+
+### Velocidad configurable de entrada a Gargantua (2026-09-16)
+
+- La configuración del dashboard incorpora un slider de `0.25×` a `2.00×` para ajustar la velocidad del zoom-out al abrir la app y del zoom-in al entrar a una tienda.
+
+### Modo de cobro de variantes en dashboard (2026-09-16)
+
+- El detalle de cada tienda permite alternar entre cobrar variantes o calcular sólo productos activos; el modo se conserva por tienda y actualiza la mensualidad.
+
+### Selector global de variantes simplificado (2026-09-16)
+
+- Preview, exportación y tiendas legacy usan la caja desplegable `Variante` como única interfaz visible para elegir variantes.
+- Se eliminan las cápsulas de opciones y los enlaces repetidos; el selector conserva la sincronización de precio, disponibilidad, imagen, SKU y carrito.
+
 ### Variantes visuales en el canal MCP (2026-09-16)
 
 - El protocolo del agente permite crear y reemplazar variantes con opciones,
@@ -5,6 +61,12 @@
   galería del producto.
 - Se documenta el contrato para normalizaciones de catálogo sin editar
   respaldos `.solara.json` directamente.
+
+### Enlace de destacados de Pao (2026-09-16)
+
+- La colección pública de productos destacados queda oculta y la sección de
+  destacados dirige a `/buscar/`; el copy compartido con categorías pasa a ser
+  `Ver todos los productos`.
 
 ### Contexto público de agentes obligatorio en producción (2026-09-16)
 

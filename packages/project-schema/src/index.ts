@@ -29,8 +29,11 @@ import {
   DEFAULT_THEME_TEXT_SHADOW_OFFSET_X,
   DEFAULT_THEME_TEXT_SHADOW_OFFSET_Y,
   DEFAULT_THEME_TEXT_SHADOW_OPACITY,
+  buildThemeTextShadow,
   THEME_TEXT_SHADOW_BLUR_MAX,
   THEME_TEXT_SHADOW_BLUR_MIN,
+  THEME_TEXT_SHADOW_DIRECTION_MAX,
+  THEME_TEXT_SHADOW_DIRECTION_MIN,
   THEME_TEXT_SHADOW_OFFSET_MAX,
   THEME_TEXT_SHADOW_OFFSET_MIN,
 } from "./theme-text-shadow.js";
@@ -646,6 +649,31 @@ export const ThemeTextShadowSchema = z.object({
     .min(THEME_TEXT_SHADOW_OFFSET_MIN)
     .max(THEME_TEXT_SHADOW_OFFSET_MAX)
     .default(DEFAULT_THEME_TEXT_SHADOW_OFFSET_Y),
+  // Campos opcionales para que los respaldos existentes sigan usando offsetX/offsetY.
+  offsetTop: z
+    .number()
+    .int()
+    .min(THEME_TEXT_SHADOW_DIRECTION_MIN)
+    .max(THEME_TEXT_SHADOW_DIRECTION_MAX)
+    .optional(),
+  offsetRight: z
+    .number()
+    .int()
+    .min(THEME_TEXT_SHADOW_DIRECTION_MIN)
+    .max(THEME_TEXT_SHADOW_DIRECTION_MAX)
+    .optional(),
+  offsetBottom: z
+    .number()
+    .int()
+    .min(THEME_TEXT_SHADOW_DIRECTION_MIN)
+    .max(THEME_TEXT_SHADOW_DIRECTION_MAX)
+    .optional(),
+  offsetLeft: z
+    .number()
+    .int()
+    .min(THEME_TEXT_SHADOW_DIRECTION_MIN)
+    .max(THEME_TEXT_SHADOW_DIRECTION_MAX)
+    .optional(),
   blur: z
     .number()
     .int()
@@ -1500,6 +1528,7 @@ export {
   type ThemePreset,
 } from "./theme-presets.js";
 export {
+  buildThemeTextShadow,
   DEFAULT_THEME_TEXT_SHADOW_BLUR,
   DEFAULT_THEME_TEXT_SHADOW_OFFSET_X,
   DEFAULT_THEME_TEXT_SHADOW_OFFSET_Y,
@@ -1507,6 +1536,8 @@ export {
   deriveThemeTextShadowColor,
   THEME_TEXT_SHADOW_BLUR_MAX,
   THEME_TEXT_SHADOW_BLUR_MIN,
+  THEME_TEXT_SHADOW_DIRECTION_MAX,
+  THEME_TEXT_SHADOW_DIRECTION_MIN,
   THEME_TEXT_SHADOW_OFFSET_MAX,
   THEME_TEXT_SHADOW_OFFSET_MIN,
 } from "./theme-text-shadow.js";

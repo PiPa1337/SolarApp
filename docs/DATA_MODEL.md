@@ -57,7 +57,11 @@ seleccionan en canvas usan el `id` estable del ítem y se actualizan con
 `store-modo-sur-demo` es la plantilla visible y protegida. Su `role` es
 `base-template`, su política es `pinned` y sólo puede escribirse mediante
 `templates.commitUpgrade`, con `baseVersion`, backup, auditoría y confirmación.
-Las tiendas creadas desde Studio nacen con `seed: "clean"`, `role: "store"` y
+Su revisión de contenido es independiente de `schemaVersion`: la fixture actual
+usa revisión 2, 33 productos activos, 6 categorías raíz, 0 colecciones y 5
+placeholders rasterizados y optimizados con WebP/fallback/derivados responsive.
+Las tiendas creadas desde Studio y el agente clonan
+esa misma fuente, nacen con `seed: "duplicate"`, `role: "store"` y
 `updatePolicy: "managed"`; el auditor conserva los placeholders como bloqueos
 hasta que se reemplacen. Un `store.create` genérico puede usar `seed:
 "duplicate"` cuando clona una fuente existente. Los proyectos antiguos con una
@@ -91,12 +95,15 @@ plantilla para upgrades tipados.
   asigna a tiendas nuevas. `size` solo admite caracteres seguros de
   `background-size`.
   `theme.shadows.text` es opcional y guarda `{ enabled, opacity, offsetX,
-  offsetY, blur }`: aplica una sombra configurable sólo al texto del hero de
-  Inicio en mobile (hasta 767 px). `offsetX` y `offsetY` aceptan píxeles enteros
-  entre -48 y 48; `blur`, entre 0 y 48; y `opacity`, entre 0 y 1. El color se
-  deriva automáticamente de la paleta, el botón queda excluido y los defaults
-  mantienen la compatibilidad con proyectos anteriores. Studio expone todos
-  estos controles en el editor de Tema.
+  offsetY, offsetTop, offsetRight, offsetBottom, offsetLeft, blur }`: aplica
+  una sombra configurable sólo al texto del hero de Inicio en mobile (hasta 767
+  px). `offsetX` y `offsetY` aceptan píxeles enteros entre -48 y 48 para
+  respaldos anteriores; los cuatro offsets direccionales aceptan entre 0 y 48
+  px, `blur` entre 0 y 48, y `opacity` entre 0 y 1. Cuando existen offsets
+  direccionales, se emite una sombra independiente por cada dirección con valor
+  mayor a cero. El color se deriva automáticamente de la paleta, el botón queda
+  excluido y los defaults mantienen la compatibilidad con proyectos anteriores.
+  Studio expone todos estos controles en el editor de Tema.
 - `navigation`: etiqueta de catálogo, enlaces curados y sus hijos (máximo un
   nivel adicional), además de búsqueda y carrito.
 - `siteShell`: configuración de announcement, header, footer y drawer de carrito.

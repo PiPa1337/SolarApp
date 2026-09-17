@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -97,6 +97,204 @@ describe("control nativo del agente", () => {
       }
     },
   );
+
+  it(
+    "migra la plantilla protegida con backup, reemplazo atómico e idempotencia",
+    { timeout: 30_000 },
+    async () => {
+      const root = await mkdtemp(join(tmpdir(), "solara-agent-template-migration-"));
+      try {
+        const storage = createLocalProjectStorage({
+          applicationRoot: root,
+          projectsRoot: join(root, "proyectos"),
+          stagingRoot: join(root, ".solara-runtime", "transactions"),
+        });
+        const legacy = StoreProjectV2Schema.parse({
+          ...buildCatalogModernProject({
+            seed: "demo",
+            id: "store-modo-sur-demo",
+            name: "Tienda",
+            slug: "demo-catalogo-jerarquico",
+          }),
+          origin: {
+            templateId: "catalog-modern",
+            templateVersion: 1,
+            seed: "placeholder",
+            role: "base-template",
+            updatePolicy: "pinned",
+          },
+        });
+        const other = StoreProjectV2Schema.parse({
+          ...legacy,
+          id: "store-rm-descartables",
+          name: "RM Descartables",
+          slug: "rm-descartables",
+          origin: { ...legacy.origin, seed: "duplicate", role: "store", updatePolicy: "managed" },
+        });
+
+        const seedProject = async (project: typeof legacy, protectedWrite = false) => {
+          const transaction = await storage.beginSave({
+            projectId: project.id,
+            name: project.name,
+            slug: project.slug,
+            projectUpdatedAt: project.updatedAt,
+            expectedVersion: null,
+            actor: protectedWrite
+              ? { kind: "template-upgrade" as const, id: "template-migration-seed" }
+              : { kind: "agent" as const, id: "template-migration-seed" },
+            ...(protectedWrite ? { allowProtectedWrite: true } : {}),
+          });
+          await storage.upload(
+            transaction.transactionId,
+            "project",
+            (async function* () {
+              yield new TextEncoder().encode(createProjectArchive(project));
+            })(),
+          );
+          await storage.commit(transaction.transactionId);
+        };
+
+        await seedProject(legacy, true);
+        await seedProject(other);
+        const otherBefore = await storage.readCurrent(other.id);
+        if (!otherBefore) throw new Error("Falta el respaldo de la tienda no objetivo.");
+        const legacyBefore = await storage.readCurrent(legacy.id);
+        if (!legacyBefore) throw new Error("Falta el respaldo de la plantilla heredada.");
+
+        const controller = createAgentController({ storage, applicationRoot: root });
+        const preview = await controller.previewTemplateUpgrade({});
+        expect(preview.safeChanges.map((change: { id: string }) => change.id)).toContain(
+          "base-template.content.v2",
+        );
+        expect(preview.fromVersion).toBe(1);
+        expect(preview.toVersion).toBe(2);
+        expect(preview.requiresConfirmation).toBe("ACTUALIZAR_PLANTILLA");
+
+        const result = await controller.commitTemplateUpgrade({
+          previewId: preview.previewId,
+          baseVersion: preview.baseVersion,
+          confirmation: "ACTUALIZAR_PLANTILLA",
+          idempotencyKey: "template-migration-001",
+        });
+        expect(result).toMatchObject({ storeId: legacy.id, status: "synced", version: 2 });
+        expect(result.backup).toMatchObject({ version: 1 });
+        const backupPath = join(root, (result.backup as { path: string }).path);
+        expect((await stat(backupPath)).isFile()).toBe(true);
+        expect(await readFile(backupPath)).toEqual(Buffer.from(legacyBefore.bytes));
+
+        const current = await storage.readCurrent(legacy.id);
+        if (!current) throw new Error("Falta la plantilla migrada.");
+        const migrated = readProjectArchive(Buffer.from(current.bytes).toString("utf8"));
+        expect(migrated).toMatchObject({
+          id: legacy.id,
+          name: "Tienda",
+          slug: "demo-catalogo-jerarquico",
+          origin: { role: "base-template", updatePolicy: "pinned", seed: "placeholder" },
+          siteShell: { cart: true },
+          commerceTemplates: {
+            designFamily: "catalog-modern-v2",
+            cart: { enabled: true },
+            checkout: { enabled: true },
+          },
+        });
+        expect(migrated.products).toHaveLength(33);
+        expect(migrated.categories).toHaveLength(6);
+        expect(migrated.collections).toHaveLength(0);
+        expect(migrated.assets).toHaveLength(5);
+        expect(JSON.stringify(migrated).toLowerCase()).not.toContain("rm descartables");
+        expect(migrated.whatsapp.phone).toBe("");
+
+        const otherAfter = await storage.readCurrent(other.id);
+        if (!otherAfter) throw new Error("La tienda no objetivo desapareció.");
+        expect(otherAfter.manifest).toEqual(otherBefore.manifest);
+        expect(otherAfter.bytes).toEqual(otherBefore.bytes);
+
+        const previewAgain = await controller.previewTemplateUpgrade({});
+        expect(previewAgain.safeChanges).toEqual([]);
+        const currentVersion = (current.manifest as { current: { version: number } }).current.version;
+        const alreadyCurrent = await controller.commitTemplateUpgrade({
+          previewId: previewAgain.previewId,
+          baseVersion: previewAgain.baseVersion,
+          confirmation: "ACTUALIZAR_PLANTILLA",
+          idempotencyKey: "template-migration-002",
+        });
+        expect(alreadyCurrent).toMatchObject({ status: "already-current", version: currentVersion });
+        expect(
+          ((await storage.readCurrent(legacy.id))?.manifest as { current: { version: number } }).current
+            .version,
+        ).toBe(currentVersion);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it("no reemplaza la plantilla si el backup previo falla", { timeout: 30_000 }, async () => {
+    const root = await mkdtemp(join(tmpdir(), "solara-agent-template-backup-failure-"));
+    try {
+      const storage = createLocalProjectStorage({
+        applicationRoot: root,
+        projectsRoot: join(root, "proyectos"),
+        stagingRoot: join(root, ".solara-runtime", "transactions"),
+      });
+      const legacy = StoreProjectV2Schema.parse({
+        ...buildCatalogModernProject({
+          seed: "demo",
+          id: "store-modo-sur-demo",
+          name: "Tienda",
+          slug: "demo-catalogo-jerarquico",
+        }),
+        origin: {
+          templateId: "catalog-modern",
+          templateVersion: 1,
+          seed: "placeholder",
+          role: "base-template",
+          updatePolicy: "pinned",
+        },
+      });
+      const seed = await storage.beginSave({
+        projectId: legacy.id,
+        name: legacy.name,
+        slug: legacy.slug,
+        projectUpdatedAt: legacy.updatedAt,
+        expectedVersion: null,
+        actor: { kind: "template-upgrade", id: "backup-failure-seed" },
+        allowProtectedWrite: true,
+      });
+      await storage.upload(
+        seed.transactionId,
+        "project",
+        (async function* () {
+          yield new TextEncoder().encode(createProjectArchive(legacy));
+        })(),
+      );
+      await storage.commit(seed.transactionId);
+      const before = await storage.readCurrent(legacy.id);
+      if (!before) throw new Error("Falta el respaldo previo al fallo.");
+
+      const failingStorage = {
+        ...storage,
+        manualBackup: async () => {
+          throw new Error("backup fail");
+        },
+      };
+      const controller = createAgentController({ storage: failingStorage, applicationRoot: root });
+      const preview = await controller.previewTemplateUpgrade({});
+      await expect(
+        controller.commitTemplateUpgrade({
+          previewId: preview.previewId,
+          baseVersion: preview.baseVersion,
+          confirmation: "ACTUALIZAR_PLANTILLA",
+        }),
+      ).rejects.toThrow("backup fail");
+      const after = await storage.readCurrent(legacy.id);
+      if (!after) throw new Error("La plantilla desapareció después del fallo.");
+      expect(after.manifest).toEqual(before.manifest);
+      expect(after.bytes).toEqual(before.bytes);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 
   it(
     "conserva imageId y opciones al crear y actualizar variantes por MCP",
@@ -408,8 +606,10 @@ describe("control nativo del agente", () => {
       if (!current) throw new Error("Falta el respaldo del test.");
       const project = readProjectArchive(Buffer.from(current.bytes).toString("utf8"));
       expect(project.name).toBe("Tienda de prueba");
-      expect(project.products).toHaveLength(1);
-      expect(project.products[0]?.imageIds).toContain(staged.assetId);
+      expect(project.products).toHaveLength(34);
+      expect(project.products.find((product) => product.id === "product-taza")?.imageIds).toContain(
+        staged.assetId,
+      );
       expect(project.legalProfile).toMatchObject({
         countryCode: "AR",
         taxId: "20-12345678-9",
@@ -1022,8 +1222,12 @@ describe("control nativo del agente", () => {
       const current = await storage.readCurrent(storeId);
       if (!current) throw new Error("Falta el respaldo del test.");
       const project = readProjectArchive(Buffer.from(current.bytes).toString("utf8"));
-      expect(project.products.map((product) => product.id)).toEqual([activeProductId]);
-      expect(project.categories[0]?.productIds).toEqual([activeProductId]);
+      expect(project.products).toHaveLength(34);
+      expect(project.products.map((product) => product.id)).toContain(activeProductId);
+      expect(project.products.map((product) => product.id)).not.toContain(archivedProductId);
+      expect(
+        project.categories.find((category) => category.id === "category-delete-test")?.productIds,
+      ).toEqual([activeProductId]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -1112,7 +1316,9 @@ describe("control nativo del agente", () => {
       const current = await storage.readCurrent(storeId);
       if (!current) throw new Error("Falta el respaldo del test.");
       const project = readProjectArchive(Buffer.from(current.bytes).toString("utf8"));
-      expect(project.categories.map((category) => category.id)).toEqual([activeCategoryId]);
+      expect(project.categories).toHaveLength(7);
+      expect(project.categories.map((category) => category.id)).toContain(activeCategoryId);
+      expect(project.categories.map((category) => category.id)).not.toContain(categoryId);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

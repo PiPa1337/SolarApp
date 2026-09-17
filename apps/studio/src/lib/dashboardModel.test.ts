@@ -4,14 +4,17 @@ import { describe, expect, it, vi } from "vitest";
 import {
   auditStoreHealth,
   calculateMonthlyCost,
-  DEFAULT_PRICING,
   DASHBOARD_GRID_PAGE_SIZE,
   DASHBOARD_LIST_PAGE_SIZE,
+  DEFAULT_PRICING,
+  DEFAULT_VARIANT_BILLING_MODE,
   filterDashboardProjects,
   getDashboardStats,
   getProjectMetrics,
+  loadVariantBillingMode,
   paginateDashboardItems,
   partitionPinnedProjects,
+  saveVariantBillingMode,
   storeHeroAsset,
   storeMark,
   storeSocialImageAsset,
@@ -117,6 +120,33 @@ describe("modelo del dashboard", () => {
 
   it("calcula la mensualidad con productos facturables, no con el inventario real", () => {
     expect(calculateMonthlyCost(catalogModernStore, undefined, DEFAULT_PRICING)).toBe(32_000);
+  });
+
+  it("permite calcular sin cobrar variantes y conserva los extras informativos", () => {
+    const metrics = getProjectMetrics(catalogModernStore, "products-only");
+
+    expect(metrics).toMatchObject({
+      activeProducts: 50,
+      billableProducts: 50,
+      variantExtras: 10,
+    });
+    expect(
+      calculateMonthlyCost(catalogModernStore, undefined, DEFAULT_PRICING, "products-only"),
+    ).toBe(29_000);
+  });
+
+  it("persiste el modo de cobro de variantes por tienda", () => {
+    const values = new Map<string, string>();
+    vi.stubGlobal("window", {});
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    });
+
+    expect(loadVariantBillingMode("tienda-a")).toBe(DEFAULT_VARIANT_BILLING_MODE);
+    saveVariantBillingMode("tienda-a", "products-only");
+    expect(loadVariantBillingMode("tienda-a")).toBe("products-only");
+    expect(loadVariantBillingMode("tienda-b")).toBe(DEFAULT_VARIANT_BILLING_MODE);
   });
 
   it("suma tiendas activas y archivadas sin inventar métricas", () => {

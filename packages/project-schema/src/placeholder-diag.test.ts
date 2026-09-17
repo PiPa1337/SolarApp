@@ -1,4 +1,3 @@
-import { writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildCatalogModernProject } from "./catalog-modern-template";
 
@@ -26,7 +25,7 @@ describe("diagnostico placeholder", () => {
         return texts;
       }),
     };
-    writeFileSync("../../placeholder-dump.json", JSON.stringify(dump, null, 2));
-    expect(p.products).toHaveLength(5);
+    expect(JSON.stringify(dump)).toContain("Producto 01");
+    expect(p.products).toHaveLength(33);
   });
 });

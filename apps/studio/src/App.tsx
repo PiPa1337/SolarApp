@@ -473,9 +473,13 @@ function StudioShell() {
   );
 
   const persistToDisk = useCallback(
-    async (project: StoreProjectV1, expectedVersion: number | null) => {
+    async (
+      project: StoreProjectV1,
+      expectedVersion: number | null,
+      options: { allowProtectedWrite?: boolean } = {},
+    ) => {
       const { persistProjectToDisk: persist } = await loadLocalProjectRepository();
-      const result = await persist(project, expectedVersion);
+      const result = await persist(project, expectedVersion, options);
       await clearRecoveryDraft(project.id);
       if (result.siteError) {
         setNotice(`Proyecto guardado · sitio público pendiente: ${result.siteError}`);
@@ -544,9 +548,22 @@ function StudioShell() {
           // cuando una migración escribe sobre él.
           let diskMutated = false;
           if (detectedStorage.writable) {
-            await Promise.allSettled(
+            const diskMigrationResults = await Promise.allSettled(
               diskListing.projects.map(async (diskProject) => {
-                if (isBaseTemplate(diskProject.project)) return;
+                if (isBaseTemplate(diskProject.project)) {
+                  const { migrateProtectedBaseTemplateOnDisk } =
+                    await loadLocalProjectRepository();
+                  const migrated = await migrateProtectedBaseTemplateOnDisk(
+                    diskProject.project,
+                    diskProject.diskVersion,
+                  );
+                  if (!migrated.changed) return;
+                  diskProject.project = migrated.project;
+                  diskProject.diskVersion = migrated.receipt?.version ?? diskProject.diskVersion;
+                  diskProject.mediaRepairPending = false;
+                  diskMutated = true;
+                  return;
+                }
                 const migrated = await migrateCatalogModernDemo(diskProject.project);
                 const testimonialsExpanded = expandCatalogModernDemoTestimonials(migrated);
                 if (testimonialsExpanded === diskProject.project && !diskProject.mediaRepairPending)
@@ -563,6 +580,18 @@ function StudioShell() {
                 diskMutated = true;
               }),
             );
+            const protectedMigrationFailure = diskMigrationResults.find(
+              (result) => result.status === "rejected",
+            );
+            if (protectedMigrationFailure?.status === "rejected") {
+              setNotice(
+                `No se pudo actualizar la plantilla protegida: ${
+                  protectedMigrationFailure.reason instanceof Error
+                    ? protectedMigrationFailure.reason.message
+                    : "error desconocido"
+                }. Recargá Studio para reintentar.`,
+              );
+            }
             const browserProjects = await listProjectsWithRecovery();
             const diskById = new Map(diskListing.projects.map((item) => [item.id, item]));
             await Promise.allSettled(
@@ -628,7 +657,10 @@ function StudioShell() {
         if (detectedStorage.managed && detectedStorage.writable) {
           await Promise.allSettled(
             browserResult.projects.map(async (stored) => {
-              if (isBaseTemplate(stored.project)) return;
+              if (isBaseTemplate(stored.project)) {
+                await persistToDisk(stored.project, null, { allowProtectedWrite: true });
+                return;
+              }
               await markProjectMigration(stored.id, "pending");
               const { persistProjectToDisk } = await loadLocalProjectRepository();
               const result = await persistProjectToDisk(stored.project, null);

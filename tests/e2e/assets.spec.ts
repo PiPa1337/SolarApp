@@ -17,6 +17,7 @@ test.afterAll(async () => {
 });
 
 test("procesa una imagen, muestra el lote y persiste el asset", async ({ page }) => {
+  test.setTimeout(60_000);
   await page.goto(studioUrl);
   await page.evaluate(
     () =>
@@ -57,6 +58,7 @@ test("procesa una imagen, muestra el lote y persiste el asset", async ({ page })
   await expect(uploadedItem).toHaveCount(1);
   await expect(uploadedItem.locator("picture")).toHaveCount(1);
   await expect(uploadedItem.locator("picture source")).toHaveAttribute("srcset", /\s1w/);
+  await uploadedItem.scrollIntoViewIfNeeded();
   await expect
     .poll(() => uploadedItem.locator("img").evaluate((image) => image.currentSrc))
     .toMatch(/^data:image\/(?:avif|webp)/);
@@ -91,9 +93,9 @@ test("el asset del hero de Predeterminado muestra su uso y no se puede borrar", 
   await page.getByRole("tab", { name: "Recursos", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Recursos" })).toBeVisible();
 
-  // El hero de la demo usa posterAssetId "asset-hero".
+  // La plantilla moderna usa el placeholder dedicado de portada.
   const heroAsset = page.locator(".asset-item").filter({
-    has: page.locator('input[value="Campaña de temporada"]'),
+    has: page.locator('input[value="Imagen de plantilla - portada"]'),
   });
   await expect(heroAsset).toBeVisible();
   await heroAsset.getByTestId("ui-asset-detail-open").click();

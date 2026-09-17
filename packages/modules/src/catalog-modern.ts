@@ -1480,37 +1480,6 @@ export const catalogProductDetail: ModuleDefinition<
         return `<option value="${escapeAttribute(variant.id)}" data-variant-data="${escapeAttribute(variant.id)}" data-variant-id="${escapeAttribute(variant.id)}" data-variant-title="${escapeAttribute(variant.title)}" data-sku="${escapeAttribute(variant.sku)}" data-image-id="${escapeAttribute(variant.imageId ?? product.imageIds[0] ?? "")}"${imageUrl ? ` data-image-url="${escapeAttribute(imageUrl)}" data-image-width="${variantImage?.width ?? ""}" data-image-height="${variantImage?.height ?? ""}"` : ""} data-price="${variant.price}" data-compare-at="${variant.compareAtPrice ?? ""}" data-available="${String(variant.available)}"${variant.available ? "" : " disabled"}${variant.id === firstVariant?.id ? " selected" : ""}>${escapeHtml(variant.title)} · ${escapeHtml(formatMoneyForProject(variant.price, context.project))}${variant.available ? "" : ` · ${escapeHtml(copy.product.outOfStock)}`}</option>`;
       })
       .join("");
-    const optionNames = [
-      ...new Set(product.variants.flatMap((variant) => Object.keys(variant.optionValues))),
-    ];
-    const optionControls = optionNames
-      .map((optionName) => {
-        const values = [
-          ...new Set(
-            product.variants
-              .map((variant) => variant.optionValues[optionName])
-              .filter((value): value is string => Boolean(value)),
-          ),
-        ];
-        const controls = values
-          .map((value) => {
-            const matching = product.variants.filter(
-              (variant) => variant.optionValues[optionName] === value,
-            );
-            const selected = matching[0];
-            const available = matching.some((variant) => variant.available);
-            return `<button type="button" class="catalog-option-pill" data-variant-option data-option-key="${escapeAttribute(optionName)}" data-option-value="${escapeAttribute(value)}" data-variant-id="${escapeAttribute(selected?.id ?? "")}" aria-pressed="${String(firstVariant?.optionValues[optionName] === value)}"${available ? "" : " disabled"}>${escapeHtml(value)}</button>`;
-          })
-          .join("");
-        return `<fieldset class="catalog-option-group"><legend>${escapeHtml(optionName)}</legend><div>${controls}</div></fieldset>`;
-      })
-      .join("");
-    const variantLinks = product.variants
-      .map(
-        (variant) =>
-          `<a href="/productos/${escapeAttribute(product.slug)}/?variant=${escapeAttribute(variant.id)}">${escapeHtml(variant.title)}</a>`,
-      )
-      .join("");
     const whatsappFallback = buildWhatsAppInquiryLink(context, product);
     const compareAt =
       context.settings.showCompareAtPrice && firstVariant?.compareAtPrice
@@ -1525,10 +1494,7 @@ export const catalogProductDetail: ModuleDefinition<
     const isV2 = context.project.commerceTemplates.designFamily === "catalog-modern-v2";
     const descriptionBeforePurchase = isV2 ? "" : description;
     const descriptionAfterPurchase = isV2 ? description : "";
-    const variantLabel =
-      context.project.commerceTemplates.designFamily === "catalog-modern-v1"
-        ? "Elegí talle y color"
-        : copy.product.variant;
+    const variantLabel = copy.product.variant;
     const monoVariant = product.variants.length === 1;
     return moduleRoot(
       "catalog-product-detail",
@@ -1544,13 +1510,11 @@ export const catalogProductDetail: ModuleDefinition<
             <input type="hidden" name="product" value="${escapeAttribute(product.id)}">
             <label for="catalog-variant-${escapeAttribute(context.section.id)}"${monoVariant ? " hidden" : ""}>${escapeHtml(variantLabel)}</label>
             <select id="catalog-variant-${escapeAttribute(context.section.id)}" name="variant" data-variant-select required${monoVariant ? " hidden" : ""}>${variants}</select>
-            ${optionControls ? `<div class="catalog-variant-options" aria-label="${escapeAttribute(copy.product.options)}"${monoVariant ? " hidden" : ""}>${optionControls}</div>` : ""}
             <div class="catalog-quantity-row"><label for="catalog-quantity-${escapeAttribute(context.section.id)}">${escapeHtml(copy.product.quantity)}</label><input id="catalog-quantity-${escapeAttribute(context.section.id)}" name="quantity" type="number" min="1" max="99" value="1" inputmode="numeric"></div>
             <button class="catalog-product-add" type="submit" data-add-to-cart${canvasTextAttributes(canvasContext(context), "actionLabel", 100)}>${escapeHtml(context.settings.actionLabel)}</button>
             ${whatsappFallback ? `<noscript><style>[data-solara-store].catalog-modern .catalog-add-form .catalog-add-fallback{display:inline-flex}[data-solara-store].catalog-modern .catalog-add-form .catalog-product-add{display:none}</style><a class="catalog-add-fallback" href="${escapeAttribute(whatsappFallback)}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.product.askWhatsApp)}</a></noscript>` : ""}
           </form>
           ${descriptionAfterPurchase}
-          <nav class="catalog-variant-links" aria-label="${escapeAttribute(copy.export.variantLinks)}">${variantLinks}</nav>
           <p class="catalog-delivery-note"${canvasTextAttributes(canvasContext(context), "deliveryNote", 240)}>${escapeHtml(context.settings.deliveryNote)}</p>
           <dl id="${escapeAttribute(detailsPanelId)}" class="catalog-product-specs"><div><dt>${escapeHtml(copy.product.sku)}</dt><dd data-product-sku>${escapeHtml(firstVariant?.sku ?? "")}</dd></div><div><dt>${escapeHtml(copy.product.availability)}</dt><dd data-product-availability>${firstVariant?.available ? escapeHtml(copy.product.available) : escapeHtml(copy.product.outOfStock)}</dd></div></dl>
           <div id="${escapeAttribute(policiesPanelId)}" class="catalog-product-policies"><details open><summary>${escapeHtml(copy.product.shipping)}</summary><p>${escapeHtml(context.project.policies.shipping.details)}</p></details><details open><summary>${escapeHtml(copy.product.returns)}</summary><p>${escapeHtml(context.project.policies.returns.details)}</p></details></div>

@@ -8,20 +8,22 @@ test("muestra y abre Predeterminado al iniciar Studio", async ({ page }) => {
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
     const demo = page.getByRole("button", { name: /Predeterminado/ });
     await expect(demo).toBeVisible();
-    await expect(demo).toContainText("50 productos");
+    await expect(demo).toContainText("33 productos");
 
     await demo.click();
     await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
     await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
     await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
-    await expect(page.getByText("50 productos y 60 variantes.")).toBeVisible();
-    const collapseRemeras = page.getByRole("button", { name: "Contraer Remeras" });
-    await expect(collapseRemeras).toHaveAttribute("aria-expanded", "true");
-    await collapseRemeras.click();
-    await expect(page.locator(".category-tree strong", { hasText: "Básicas" })).toBeHidden();
-    await page.getByRole("button", { name: "Expandir Remeras" }).click();
-    await expect(page.locator(".category-tree strong", { hasText: "Básicas" })).toBeVisible();
+    await expect(page.getByText("33 productos y 41 variantes.")).toBeVisible();
+    await expect(page.locator(".category-tree strong")).toHaveText([
+      "Hogar",
+      "Cocina",
+      "Decoración",
+      "Textiles",
+      "Organización",
+      "Limpieza",
+    ]);
 
     await page.goto(running.url);
     await expect(page.getByRole("button", { name: /Predeterminado/ })).toHaveCount(1);

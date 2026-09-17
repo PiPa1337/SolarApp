@@ -97,10 +97,10 @@ plantilla vigente en disco con IDs regenerados, pero **no hereda los datos de
 contacto de ejemplo**: `identity.email` e `identity.phone` nacen vacíos salvo
 que la operación los provea, y un `phone` provisto configura también
 `whatsapp.phone` (la marca sobrescribe `identity.brandName`, `legalName` y el
-greeting de WhatsApp). El catálogo demo de la plantilla (5 productos
-placeholder) sí se hereda con IDs nuevos: los planes lo advierten en
-`warnings` y el readiness marca sus textos como placeholder; reemplazalos
-antes de considerar la tienda lista.
+greeting de WhatsApp). La plantilla actual aporta 33 productos placeholder en
+6 categorías, con 5 assets genéricos y sin colecciones; se heredan con IDs
+nuevos. Los planes lo advierten en `warnings` y readiness marca sus textos como
+placeholder; reemplazalos antes de considerar la tienda lista.
 
 Si la tienda recién creada todavía no puede exportarse a producción por falta
 de contenido, el respaldo editable se conserva y la respuesta indica
@@ -156,6 +156,10 @@ ignora.
 `store.updateIdentity` también acepta `baseUrl` como URL absoluta de la tienda;
 al cambiarla, el siguiente commit regenera canonical, Open Graph, sitemap y
 JSON-LD con ese origen público.
+
+`collection.update` acepta `status: "hidden"` para retirar una colección del
+sitio público y de sus rutas exportadas sin eliminarla del respaldo; volver a
+`active` permite recuperarla.
 
 Sin él, `whatsapp.phone` queda vacío y el sitio se exporta sin enlaces de
 WhatsApp. `store.updateNavigation` ajusta el modo, la etiqueta del catálogo y
@@ -359,6 +363,20 @@ la confirmación literal `ACTUALIZAR_PLANTILLA`:
 {"id":11,"method":"templates.previewUpgrade","params":{"baseVersion":1}}
 {"id":12,"method":"templates.commitUpgrade","params":{"previewId":"PREVIEW_ID","baseVersion":1,"confirmation":"ACTUALIZAR_PLANTILLA","idempotencyKey":"template-upgrade-2026-08-23"}}
 ```
+
+El upgrade vigente reemplaza el contenido heredado de `store-modo-sur-demo` por
+la fixture neutral de 33 productos, 6 categorías, 0 colecciones y 5 placeholders
+rasterizados y optimizados con WebP, fallback separado y fuentes responsive.
+Conserva el ID, nombre visible, slug, protección y anchors de
+sección; deja habilitados `catalog-cart-drawer`, carrito y checkout. El commit
+crea primero un respaldo manual verificable y luego publica proyecto y sitio en
+una transacción atómica. Si falla el backup, schema, exportación, escritura o
+relectura, la versión anterior queda vigente. Repetirlo sobre la misma fixture
+responde `already-current` sin crear otra versión.
+
+No se agregó una herramienta MCP nueva: `templates.previewUpgrade` y
+`templates.commitUpgrade` son el contrato oficial existente para esta migración
+protegida. El agente no edita `.solara.json` ni `proyectos/` directamente.
 
 Para un bug de CSS o renderer usar `site-rebuild`; no migrar datos. Para un
 cambio persistido usar `project-migration` y revisar conflictos por tienda:

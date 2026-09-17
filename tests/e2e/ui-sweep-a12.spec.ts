@@ -10,7 +10,8 @@
  *      de la card, disabled/title coherentes;
  *  (3) datos: persistencia en localStorage/IndexedDB y payload del handler
  *      → receptor (selectCard → writeStoredSelectedId; togglePin →
- *      writePinnedIds; panel "Abrir tienda" → Studio con el proyecto).
+ *      writePinnedIds; panel "Abrir tienda" → Studio con el proyecto;
+ *      modo de cobro de variantes → cálculo mensual del detalle).
  *
  * Cubre el bin A12: búsqueda (filtra cards y renumera), filtro de estado,
  * orden (reordena de verdad), vista grilla/lista (layout + estado
@@ -404,6 +405,42 @@ test("el botón Abrir tienda del detalle abre el editor con el proyecto", async 
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
     timeout: 20_000,
   });
+});
+
+test("el modo de cobro de variantes alterna el cálculo y su estado visual", async ({ page }) => {
+  await openDashboard(page);
+  await page.evaluate(() => localStorage.removeItem("solara-store-variant-billing"));
+  await selectCardByName(page, "Predeterminado");
+
+  const panel = detailPanel(page, "Predeterminado");
+  const toggle = panel.getByTestId("ui-variant-billing-toggle");
+  const facts = panel.locator(".dashboard-store-detail__facts dd");
+  const monthly = facts.nth(4);
+  const chargingFact = await facts.nth(2).textContent();
+  const chargingCost = await monthly.textContent();
+
+  await expect(toggle).toHaveText("Cobrando variantes");
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(toggle).toHaveClass(/is-charging/);
+  await expect(toggle.locator("svg")).toHaveCount(1);
+  await expect
+    .poll(() => toggle.evaluate((element) => getComputedStyle(element).backgroundColor))
+    .toMatch(/123,\s*217,\s*138/);
+
+  await toggle.click();
+
+  await expect(toggle).toHaveText("No cobrando Variantes");
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  await expect(toggle).toHaveClass(/is-not-charging/);
+  await expect(facts.nth(2)).not.toHaveText(chargingFact ?? "");
+  await expect(monthly).not.toHaveText(chargingCost ?? "");
+  await expect
+    .poll(() => toggle.evaluate((element) => getComputedStyle(element).backgroundColor))
+    .toMatch(/231,\s*190,\s*98/);
+
+  await toggle.click();
+  await expect(toggle).toHaveText("Cobrando variantes");
+  await expect(monthly).toHaveText(chargingCost ?? "");
 });
 
 test("los chips de salud seleccionan la tienda, persisten y enfocan la card", async ({ page }) => {

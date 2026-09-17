@@ -51,3 +51,7 @@ Abrir SolaraCommerce.exe
 .impeccable/live/deferred-svelte-component-accepts.json
 .impeccable/live/*.png
 # impeccable-ignore-end
+back up/
+capturas-inicio-25ms/
+capturas-inicio-40ms/
+capturas-inicio-compositor/

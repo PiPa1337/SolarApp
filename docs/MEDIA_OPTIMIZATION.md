@@ -5,6 +5,22 @@ y el auditor de una tienda. El objetivo visual y de rendimiento es el snapshot
 actual de RM Descartables: fuente desktop de producto de **1254 px**, variante
 intermedia de **768 px**, formato primario WebP/AVIF y fallback JPEG/PNG.
 
+## Predeterminada y tiendas futuras
+
+La revisión 2 de la fixture protegida `store-modo-sur-demo` aplica este mismo
+contrato a sus cinco placeholders neutrales: producto cuadrado de 1254×1254,
+categoría de 1200×900, portada de 1800×1200, social de 1200×628 y favicon ICO
+de 32×32. Las cuatro imágenes grandes tienen fuentes WebP reales, fallback JPEG
+separado y derivados WebP de 480 px, 768 px y el ancho máximo de cada composición;
+el favicon tiene fallback y responsive PNG de 32 px. No se reutilizan SVG ni
+fallbacks de 1×1.
+
+Los placeholders se rasterizan de forma determinista y neutral para que la
+plantilla sea autosuficiente y no herede imágenes de RM. Studio y el agente
+clonan esas fuentes ya procesadas, remapean sus IDs y conservan los bytes en
+cada tienda nueva; por eso las altas futuras reciben la misma optimización sin
+compartir estado mutable con Predeterminada.
+
 ## Regla de oro
 
 Una imagen de producto no se considera optimizada sólo porque pese poco o tenga

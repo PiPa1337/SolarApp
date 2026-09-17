@@ -11,11 +11,13 @@ import {
 } from "@solara/project-schema";
 import {
   buildCatalogModernProject,
+  buildModernBaseTemplateProject,
   catalogModernCleanStore,
   ensureCatalogModernV2Sections,
+  isModernBaseTemplateContent,
+  replaceModernBaseTemplateContent,
   replaceCatalogBrandText,
 } from "@solara/project-schema/catalog-modern-template";
-import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import { cloneProjectFromTemplate, isBaseTemplate } from "@solara/project-schema/project-policy";
 import Dexie, { type EntityTable } from "dexie";
 import {
@@ -154,97 +156,21 @@ export const V1_DEMO_PROJECT_ID = "store-modo-sur";
 export const PREDETERMINADO_V1_PROJECT_ID = "store-modo-sur-demo-v1";
 /** Purga única de tiendas: conserva sólo la demo Predeterminado V2. */
 export const DEMO_ONLY_PURGE_SENTINEL = "solara-demo-only-purge";
-const DEMO_ONLY_PURGE_VERSION = "3"; // v3: la demo protegida vuelve a ser la fixture de escala
-// La demo protegida es la fixture de escala para QA; las tiendas nuevas se
-// clonan desde la semilla placeholder en createProject().
+const DEMO_ONLY_PURGE_VERSION = "3"; // v3: la demo protegida usa la fixture moderna neutral
+// Predeterminado es la fixture canónica protegida; la cobertura de escala vive
+// en `catalogScaleStore` y otros fixtures técnicos, fuera del alta normal.
 const DEMO_KEEP_PROJECT_IDS = new Set<string>();
 const LEGACY_SCALE_DEMO_PROJECT_NAME = "Demo Modo Sur, catálogo moderno";
 const LEGACY_CLEAN_PROJECT_ID = "store-catalog-modern-clean-default";
 const LEGACY_CLEAN_PROJECT_NAME = "Mi primera tienda";
 
 export function buildScaleDemoProject(): StoreProjectV1 {
-  const demo = buildCatalogModernProject({
-    seed: "demo",
+  return buildModernBaseTemplateProject({
     id: SCALE_DEMO_PROJECT_ID,
     name: SCALE_DEMO_PROJECT_NAME,
-    brandName: SCALE_DEMO_PROJECT_NAME,
     slug: "demo-catalogo-jerarquico",
     baseUrl: "https://demo-catalogo-jerarquico.example",
   });
-
-  const templateCategories = [
-    ["Hogar", "Productos para equipar y renovar espacios.", "hogar"],
-    ["Cocina", "Accesorios prácticos para cada preparación.", "cocina"],
-    ["Decoración", "Detalles que aportan estilo al ambiente.", "decoracion"],
-    ["Textiles", "Texturas cómodas para el uso diario.", "textiles"],
-    ["Organización", "Soluciones para mantener todo en orden.", "organizacion"],
-    ["Limpieza", "Elementos útiles para una rutina eficiente.", "limpieza"],
-    ["Exterior", "Productos para patios y espacios abiertos.", "exterior"],
-    ["Oficina", "Artículos para trabajar con comodidad.", "oficina"],
-    ["Regalos", "Opciones listas para sorprender.", "regalos"],
-    ["Novedades", "Nuevos ingresos del catálogo.", "novedades"],
-  ] as const;
-  const imageId = demo.assets[0]?.id;
-  const categories = templateCategories.map(([title, description, slug], index) => ({
-    id: `predeterminado-category-${index + 1}`,
-    title,
-    slug,
-    description,
-    productIds: [],
-    imageId,
-  }));
-  const templateProduct = demo.products[0];
-  if (!templateProduct) throw new Error("La demo no tiene un producto base para clonar.");
-  const products = Array.from({ length: 200 }, (_, index) => {
-    const category = categories[index % categories.length];
-    if (!category) throw new Error("La demo no tiene categorías para asignar productos.");
-    const collectionIds = demo.collections.map((collection) => collection.id);
-    return {
-      ...structuredClone(templateProduct),
-      id: `predeterminado-product-${index + 1}`,
-      variants: structuredClone(templateProduct.variants).map((variant, variantIndex) => ({
-        ...variant,
-        id: `predeterminado-product-${index + 1}-variant-${variantIndex + 1}`,
-      })),
-      slug: `producto-${index + 1}`,
-      title: `${category.title} producto ${index + 1}`,
-      description: `${category.title}: una propuesta pensada para mostrar calidad, practicidad y una experiencia simple de compra. Adaptá este texto con la información real de tu negocio.`,
-      categoryIds: [category.id],
-      collectionIds,
-      imageIds: imageId ? [imageId] : [],
-      tags: [category.slug, "catalogo-base", "editable"],
-    };
-  });
-  const categoriesWithProducts = categories.map((category) => ({
-    ...category,
-    productIds: products.filter((product) => product.categoryIds.includes(category.id)).map((product) => product.id),
-  }));
-
-  return ensureCatalogModernV2Sections(
-    StoreProjectV1Schema.parse({
-      ...demo,
-      products,
-      categories: categoriesWithProducts,
-      collections: demo.collections.map((collection) => ({
-        ...collection,
-        productIds: products.map((product) => product.id),
-      })),
-      identity: {
-        ...demo.identity,
-        legalName: SCALE_DEMO_PROJECT_NAME,
-        brandName: SCALE_DEMO_PROJECT_NAME,
-      },
-      navigation: {
-        ...demo.navigation,
-        items: [],
-      },
-      theme: structuredClone(catalogModernV2Store.theme),
-      commerceTemplates: {
-        ...demo.commerceTemplates,
-        designFamily: "catalog-modern-v2",
-      },
-    }),
-  );
 }
 
 function collectReferencedAssetIds(
@@ -1174,18 +1100,9 @@ export async function createProject(input: string | CreateProjectOptions): Promi
   if (!isBaseTemplate(base)) {
     throw new Error("No se puede crear una tienda: la plantilla base no está protegida.");
   }
-  // Predeterminado conserva un catálogo grande para inspección/QA, pero una
-  // tienda nueva nace desde la semilla placeholder y no obliga a borrar la
-  // demo antes de empezar. Ambas rutas pasan por el mismo cloner de IDs.
-  const newStoreTemplate = buildCatalogModernProject({
-    seed: "placeholder",
-    id: base.id,
-    name: base.name,
-    brandName: base.identity.brandName,
-    slug: base.slug,
-    baseUrl: base.baseUrl,
-  });
-  const cloned = cloneProjectFromTemplate(newStoreTemplate, {
+  // La plantilla protegida es la única fuente: Studio y el agente pasan por
+  // el mismo cloner para que IDs, assets y referencias queden aislados.
+  const cloned = cloneProjectFromTemplate(base, {
     id: `store-${suffix}`,
     name: normalizedName,
     brandName: options.brandName?.trim() || normalizedName,
@@ -1193,12 +1110,7 @@ export async function createProject(input: string | CreateProjectOptions): Promi
     baseUrl: `https://${slug}.example`,
     now: timestamp,
   });
-  const template = StoreProjectV1Schema.parse({
-    ...cloned,
-    // Una tienda creada desde la plantilla sigue siendo editable, pero el
-    // auditor la trata como clean hasta reemplazar sus placeholders.
-    origin: { ...cloned.origin, seed: "clean" as const },
-  });
+  const template = StoreProjectV1Schema.parse(cloned);
   const project = await embedFixtureAssets(
     StoreProjectV1Schema.parse({
       ...template,
@@ -1338,28 +1250,14 @@ export async function ensureScaleDemoProject(): Promise<boolean> {
   if (existing) {
     const parsed = StoreProjectV1Schema.parse(existing.project);
     if (isBaseTemplate(parsed)) {
-      // La versión 2.0 sembró Predeterminado con placeholders. Como la base
-      // es protegida, la migración puede reemplazar sólo ese seed reservado
-      // por la demo de escala sin tocar tiendas del usuario.
-      if (parsed.origin?.seed === "placeholder") {
-        await saveProject(await embedFixtureAssets(buildScaleDemoProject()), {
-          allowProtectedWrite: true,
-        });
-        return true;
-      }
-      // Predeterminado is protected by id, so the regular demo migration below
-      // is intentionally unreachable for old protected records. Refresh the
-      // reserved template when its catalog is still the previous small seed.
-      if (
-        parsed.origin?.seed === "demo" &&
-        (parsed.products.length < 200 || parsed.categories.length < 10)
-      ) {
-        await saveProject(await embedFixtureAssets(buildScaleDemoProject()), {
-          allowProtectedWrite: true,
-        });
-        return true;
-      }
-      return false;
+      if (isModernBaseTemplateContent(parsed)) return false;
+      await saveProject(
+        await embedFixtureAssets(
+          replaceModernBaseTemplateContent(parsed, { updatedAt: new Date().toISOString() }),
+        ),
+        { allowProtectedWrite: true },
+      );
+      return true;
     }
     if (
       parsed.origin?.seed === "demo" &&

@@ -39,10 +39,15 @@ export const GRAVITY_TAA_QUALITY_META: Record<
   },
 };
 
+export const GRAVITY_ANIMATION_SPEED_MIN = 0.25;
+export const GRAVITY_ANIMATION_SPEED_MAX = 2;
+export const DEFAULT_GRAVITY_ANIMATION_SPEED = 1;
+
 export interface GravitySettings {
   renderScaleMultiplier: number;
   maxFps: number;
   diskLayers: number;
+  animationSpeed: number;
   materialSpeed: number;
   pointerResponse: number;
   starDensity: number;
@@ -156,6 +161,7 @@ export const GRAVITY_NUMERIC_SETTINGS: NumericGravitySetting[] = [
   ];
 
 export const GRAVITY_CINEMATIC_SETTINGS: readonly NumericGravitySetting[] = [
+  "animationSpeed",
   "turbulence",
   "filamentDetail",
   "gasAbsorption",
@@ -226,6 +232,7 @@ export const DEFAULT_GRAVITY_SETTINGS: GravitySettings = {
   renderScaleMultiplier: 1,
   maxFps: 60,
   diskLayers: 3,
+  animationSpeed: DEFAULT_GRAVITY_ANIMATION_SPEED,
   materialSpeed: 1,
   pointerResponse: 1,
   starDensity: 1,
@@ -285,6 +292,7 @@ export const GRAVITY_PRESETS: Record<GravityPresetId, GravitySettings> = {
     renderScaleMultiplier: 0.1,
     maxFps: 30,
     diskLayers: 1,
+    animationSpeed: DEFAULT_GRAVITY_ANIMATION_SPEED,
     materialSpeed: 0.1,
     pointerResponse: 0.1,
     starDensity: 0.1,
@@ -341,6 +349,7 @@ export const GRAVITY_PRESETS: Record<GravityPresetId, GravitySettings> = {
     renderScaleMultiplier: 2.5,
     maxFps: 120,
     diskLayers: 6,
+    animationSpeed: DEFAULT_GRAVITY_ANIMATION_SPEED,
     materialSpeed: 4,
     pointerResponse: 4,
     starDensity: 3,
@@ -448,10 +457,18 @@ function isGravityTaaQuality(value: unknown): value is GravityTaaQuality {
 function parseGravitySettings(value: unknown): GravitySettings | null {
   if (typeof value !== "object" || value === null) return null;
   const candidate = value as Record<string, unknown>;
+  const animationSpeed =
+    candidate.animationSpeed === undefined
+      ? DEFAULT_GRAVITY_ANIMATION_SPEED
+      : candidate.animationSpeed;
   if (
     !GRAVITY_NUMERIC_SETTINGS.every(
       (setting) => typeof candidate[setting] === "number" && Number.isFinite(candidate[setting]),
     ) ||
+    typeof animationSpeed !== "number" ||
+    !Number.isFinite(animationSpeed) ||
+    animationSpeed < GRAVITY_ANIMATION_SPEED_MIN ||
+    animationSpeed > GRAVITY_ANIMATION_SPEED_MAX ||
     typeof candidate.pauseWhenHidden !== "boolean"
   ) {
     return null;
@@ -552,6 +569,7 @@ function parseGravitySettings(value: unknown): GravitySettings | null {
   return {
     ...DEFAULT_GRAVITY_SETTINGS,
     ...candidate,
+    animationSpeed,
     staticDiskDetails,
     dustBeltEnabled,
     proceduralDetailEnabled,

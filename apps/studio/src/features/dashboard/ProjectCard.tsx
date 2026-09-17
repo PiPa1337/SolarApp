@@ -9,6 +9,7 @@ import {
   FolderOpen,
   Globe,
   Minus,
+  Money,
   Package,
   Plus,
   Star,
@@ -22,16 +23,20 @@ import { Button, IconButton } from "../../components/Ui";
 import {
   calculateMonthlyCostForCount,
   DEFAULT_PRICING,
+  DEFAULT_VARIANT_BILLING_MODE,
   formatMonthlyCost,
   getMonthlyCostBreakdown,
   getProjectMetrics,
   loadPricingConfig,
   loadStoreDiscount,
+  loadVariantBillingMode,
   type PricingConfig,
   savePricingConfig,
   saveStoreDiscount,
+  saveVariantBillingMode,
   storeFaviconSrc,
   storeMark,
+  type VariantBillingMode,
 } from "../../lib/dashboardModel";
 import { formatDate } from "../../lib/format";
 import type { StoredProject } from "../../lib/repository";
@@ -113,15 +118,24 @@ export function ProjectCard({
   const [storeDiscount, setStoreDiscount] = useState<number>(() =>
     projectId ? loadStoreDiscount(projectId) : 0,
   );
+  const [variantBillingMode, setVariantBillingMode] = useState<VariantBillingMode>(() =>
+    projectId ? loadVariantBillingMode(projectId) : DEFAULT_VARIANT_BILLING_MODE,
+  );
 
   useEffect(() => {
     if (projectId) setStoreDiscount(loadStoreDiscount(projectId));
     else setStoreDiscount(0);
+    setVariantBillingMode(
+      projectId ? loadVariantBillingMode(projectId) : DEFAULT_VARIANT_BILLING_MODE,
+    );
   }, [projectId]);
 
-  const projectMetrics = project ? getProjectMetrics(project.project) : undefined;
+  const projectMetrics = project
+    ? getProjectMetrics(project.project, variantBillingMode)
+    : undefined;
   const billableProducts = projectMetrics?.billableProducts ?? 0;
   const variantExtras = projectMetrics?.variantExtras ?? 0;
+  const chargingVariants = variantBillingMode === "with-variants";
   const [calculatorOpen, setCalculatorOpen] = useState(false);
   const [calculatorView, setCalculatorView] = useState<"quote" | "pricing">("quote");
   const [simulatorOpen, setSimulatorOpen] = useState(false);
@@ -204,6 +218,13 @@ export function ProjectCard({
     const clamped = Math.max(0, Math.min(100, Math.round(safeValue)));
     setStoreDiscount(clamped);
     if (project) saveStoreDiscount(project.id, clamped);
+  };
+
+  const toggleVariantBillingMode = () => {
+    if (!projectId) return;
+    const nextMode: VariantBillingMode = chargingVariants ? "products-only" : "with-variants";
+    setVariantBillingMode(nextMode);
+    saveVariantBillingMode(projectId, nextMode);
   };
 
   const openCalculator = () => {
@@ -518,6 +539,18 @@ export function ProjectCard({
               onClick={openCalculator}
             >
               Calculadora
+            </Button>
+            <Button
+              className={`dashboard-store-detail__variant-billing ${
+                chargingVariants ? "is-charging" : "is-not-charging"
+              }`}
+              variant="secondary"
+              icon={Money}
+              aria-pressed={chargingVariants}
+              data-testid="ui-variant-billing-toggle"
+              onClick={toggleVariantBillingMode}
+            >
+              {chargingVariants ? "Cobrando variantes" : "No cobrando Variantes"}
             </Button>
             <div
               className={`dashboard-store-detail__actions-danger${onDelete ? "" : " is-single"}`}

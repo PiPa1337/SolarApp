@@ -125,7 +125,17 @@
           "required": ["type", "changes"],
           "properties": {
             "type": { "const": "store.updateIdentity" },
-            "changes": { "type": "object", "additionalProperties": false }
+            "changes": {
+              "type": "object",
+              "properties": {
+                "slug": { "$ref": "#/$defs/slug" },
+                "title": { "type": "string", "maxLength": 160 },
+                "description": { "type": "string", "maxLength": 2000 },
+                "status": { "enum": ["active", "hidden"] },
+                "imageId": { "$ref": "#/$defs/id" }
+              },
+              "additionalProperties": false
+            }
           }
         },
         {
@@ -265,7 +275,17 @@
           "properties": {
             "type": { "const": "collection.update" },
             "collectionId": { "$ref": "#/$defs/id" },
-            "changes": { "type": "object", "additionalProperties": false }
+            "changes": {
+              "type": "object",
+              "properties": {
+                "slug": { "$ref": "#/$defs/slug" },
+                "title": { "type": "string", "maxLength": 160 },
+                "description": { "type": "string", "maxLength": 2000 },
+                "status": { "enum": ["active", "hidden"] },
+                "imageId": { "$ref": "#/$defs/id" }
+              },
+              "additionalProperties": false
+            }
           }
         },
         {

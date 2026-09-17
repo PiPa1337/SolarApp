@@ -7,6 +7,7 @@ import {
   Wrench,
 } from "@phosphor-icons/react";
 import {
+  buildThemeTextShadow,
   DEFAULT_THEME_TEXT_SHADOW_BLUR,
   DEFAULT_THEME_TEXT_SHADOW_OFFSET_X,
   DEFAULT_THEME_TEXT_SHADOW_OFFSET_Y,
@@ -17,8 +18,8 @@ import {
   type StoreProjectV1,
   THEME_TEXT_SHADOW_BLUR_MAX,
   THEME_TEXT_SHADOW_BLUR_MIN,
-  THEME_TEXT_SHADOW_OFFSET_MAX,
-  THEME_TEXT_SHADOW_OFFSET_MIN,
+  THEME_TEXT_SHADOW_DIRECTION_MAX,
+  THEME_TEXT_SHADOW_DIRECTION_MIN,
   type Theme,
 } from "@solara/project-schema";
 import { useEffect, useRef, useState } from "react";
@@ -593,7 +594,12 @@ const CONTRAST_THRESHOLD = 4.5;
 
 type ThemeBackground = NonNullable<Theme["background"]>;
 type ThemeTextShadow = NonNullable<NonNullable<Theme["shadows"]>["text"]>;
-type ThemeTextShadowLengthKey = "offsetX" | "offsetY" | "blur";
+type ThemeTextShadowLengthKey =
+  | "offsetTop"
+  | "offsetRight"
+  | "offsetBottom"
+  | "offsetLeft"
+  | "blur";
 
 const BACKGROUND_REPEAT_OPTIONS: Array<ThemeBackground["repeat"]> = [
   "repeat",
@@ -660,14 +666,28 @@ export function ThemeEditor({
     Partial<Record<ThemeTextShadowLengthKey, boolean>>
   >({});
 
-  const textShadowEnabled = project.theme.shadows?.text?.enabled ?? true;
+  const textShadow = project.theme.shadows?.text;
+  const textShadowEnabled = textShadow?.enabled ?? true;
   const textShadowOpacity =
-    project.theme.shadows?.text?.opacity ?? DEFAULT_THEME_TEXT_SHADOW_OPACITY;
+    textShadow?.opacity ?? DEFAULT_THEME_TEXT_SHADOW_OPACITY;
   const textShadowOffsetX =
-    project.theme.shadows?.text?.offsetX ?? DEFAULT_THEME_TEXT_SHADOW_OFFSET_X;
+    textShadow?.offsetX ?? DEFAULT_THEME_TEXT_SHADOW_OFFSET_X;
   const textShadowOffsetY =
-    project.theme.shadows?.text?.offsetY ?? DEFAULT_THEME_TEXT_SHADOW_OFFSET_Y;
-  const textShadowBlur = project.theme.shadows?.text?.blur ?? DEFAULT_THEME_TEXT_SHADOW_BLUR;
+    textShadow?.offsetY ?? DEFAULT_THEME_TEXT_SHADOW_OFFSET_Y;
+  const hasDirectionalTextShadowOffsets =
+    textShadow?.offsetTop !== undefined ||
+    textShadow?.offsetRight !== undefined ||
+    textShadow?.offsetBottom !== undefined ||
+    textShadow?.offsetLeft !== undefined;
+  const textShadowOffsetTop =
+    textShadow?.offsetTop ?? (hasDirectionalTextShadowOffsets ? 0 : Math.max(-textShadowOffsetY, 0));
+  const textShadowOffsetRight =
+    textShadow?.offsetRight ?? (hasDirectionalTextShadowOffsets ? 0 : Math.max(textShadowOffsetX, 0));
+  const textShadowOffsetBottom =
+    textShadow?.offsetBottom ?? (hasDirectionalTextShadowOffsets ? 0 : Math.max(textShadowOffsetY, 0));
+  const textShadowOffsetLeft =
+    textShadow?.offsetLeft ?? (hasDirectionalTextShadowOffsets ? 0 : Math.max(-textShadowOffsetX, 0));
+  const textShadowBlur = textShadow?.blur ?? DEFAULT_THEME_TEXT_SHADOW_BLUR;
   const isCatalogModernV2 = project.commerceTemplates.designFamily === "catalog-modern-v2";
   const heroPreviewTextColor = isCatalogModernV2
     ? project.theme.colors.background
@@ -676,7 +696,17 @@ export function ThemeEditor({
     ? deriveThemeTextShadowColor(project.theme.colors, project.theme.colors.background)
     : deriveThemeTextShadowColor(project.theme.colors);
   const previewTextShadow = textShadowEnabled
-    ? `${textShadowOffsetX}px ${textShadowOffsetY}px ${textShadowBlur}px color-mix(in srgb, ${textShadowColor} ${Math.round(textShadowOpacity * 100)}%, transparent)`
+    ? buildThemeTextShadow({
+        color: textShadowColor,
+        opacity: textShadowOpacity,
+        offsetX: textShadowOffsetX,
+        offsetY: textShadowOffsetY,
+        offsetTop: textShadow?.offsetTop,
+        offsetRight: textShadow?.offsetRight,
+        offsetBottom: textShadow?.offsetBottom,
+        offsetLeft: textShadow?.offsetLeft,
+        blur: textShadowBlur,
+      })
     : "none";
 
   /* biome-ignore lint/correctness/useExhaustiveDependencies: al cambiar los colores confirmados (commit, preset o reset) los borradores de texto deben volver a partir de esos valores. */
@@ -794,7 +824,12 @@ export function ThemeEditor({
     }
   };
 
-  const updateTextShadow = (changes: Partial<ThemeTextShadow>) =>
+  const updateTextShadow = (changes: Partial<ThemeTextShadow>) => {
+    const hasDirectionalChanges =
+      changes.offsetTop !== undefined ||
+      changes.offsetRight !== undefined ||
+      changes.offsetBottom !== undefined ||
+      changes.offsetLeft !== undefined;
     updateTheme({
       ...project.theme,
       shadows: {
@@ -803,15 +838,25 @@ export function ThemeEditor({
         overlay: project.theme.shadows?.overlay ?? "0 24px 70px rgba(0,0,0,.14)",
         ...project.theme.shadows,
         text: {
+          ...textShadow,
           enabled: textShadowEnabled,
           opacity: textShadowOpacity,
           offsetX: textShadowOffsetX,
           offsetY: textShadowOffsetY,
           blur: textShadowBlur,
           ...changes,
+          ...(hasDirectionalChanges
+            ? {
+                offsetTop: changes.offsetTop ?? textShadowOffsetTop,
+                offsetRight: changes.offsetRight ?? textShadowOffsetRight,
+                offsetBottom: changes.offsetBottom ?? textShadowOffsetBottom,
+                offsetLeft: changes.offsetLeft ?? textShadowOffsetLeft,
+              }
+            : {}),
         },
       },
     });
+  };
 
   const commitTextShadowLength = (
     key: ThemeTextShadowLengthKey,
@@ -833,8 +878,14 @@ export function ThemeEditor({
     }
     setTextShadowLengthDrafts((current) => ({ ...current, [key]: String(numeric) }));
     setTextShadowLengthErrors((current) => ({ ...current, [key]: false }));
-    if (key === "offsetX" && numeric !== textShadowOffsetX) updateTextShadow({ offsetX: numeric });
-    if (key === "offsetY" && numeric !== textShadowOffsetY) updateTextShadow({ offsetY: numeric });
+    if (key === "offsetTop" && numeric !== textShadowOffsetTop)
+      updateTextShadow({ offsetTop: numeric });
+    if (key === "offsetRight" && numeric !== textShadowOffsetRight)
+      updateTextShadow({ offsetRight: numeric });
+    if (key === "offsetBottom" && numeric !== textShadowOffsetBottom)
+      updateTextShadow({ offsetBottom: numeric });
+    if (key === "offsetLeft" && numeric !== textShadowOffsetLeft)
+      updateTextShadow({ offsetLeft: numeric });
     if (key === "blur" && numeric !== textShadowBlur) updateTextShadow({ blur: numeric });
   };
 
@@ -1265,10 +1316,9 @@ export function ThemeEditor({
                     <TextT aria-hidden size={19} /> Sombra del hero mobile
                   </legend>
                   <p className="theme-text-shadow-meta">
-                    Sólo aparece hasta 767 px. Ajustá la distancia horizontal/vertical, el
-                    desenfoque y la intensidad; el color se deriva automáticamente del token de
-                    mayor contraste de la paleta y no afecta el botón. Valores positivos desplazan
-                    la sombra hacia la derecha/abajo y negativos hacia la izquierda/arriba.
+                    Sólo aparece hasta 767 px. Ajustá la distancia arriba, derecha, abajo e
+                    izquierda, el desenfoque y la intensidad; el color se deriva automáticamente
+                    del token de mayor contraste de la paleta y no afecta el botón.
                   </p>
                   <label className="theme-text-shadow-toggle">
                     <input
@@ -1281,55 +1331,109 @@ export function ThemeEditor({
                   </label>
                   <div className="theme-text-shadow-controls">
                     <Field
-                      label={`Horizontal ${textShadowOffsetX}px`}
-                      {...(textShadowLengthErrors.offsetX
+                      label={`Arriba ${textShadowOffsetTop}px`}
+                      {...(textShadowLengthErrors.offsetTop
                         ? {
-                            error: `Usá un entero entre ${THEME_TEXT_SHADOW_OFFSET_MIN} y ${THEME_TEXT_SHADOW_OFFSET_MAX}.`,
+                            error: `Usá un entero entre ${THEME_TEXT_SHADOW_DIRECTION_MIN} y ${THEME_TEXT_SHADOW_DIRECTION_MAX}.`,
                           }
                         : {})}
                     >
                       <input
                         type="number"
-                        min={THEME_TEXT_SHADOW_OFFSET_MIN}
-                        max={THEME_TEXT_SHADOW_OFFSET_MAX}
+                        min={THEME_TEXT_SHADOW_DIRECTION_MIN}
+                        max={THEME_TEXT_SHADOW_DIRECTION_MAX}
                         step={1}
-                        value={textShadowLengthDrafts.offsetX ?? String(textShadowOffsetX)}
+                        value={textShadowLengthDrafts.offsetTop ?? String(textShadowOffsetTop)}
                         disabled={!textShadowEnabled}
-                        aria-label="Desplazamiento horizontal de la sombra del hero mobile"
-                        data-testid="ui-text-shadow-offset-x"
+                        aria-label="Desplazamiento hacia arriba de la sombra del hero mobile"
+                        data-testid="ui-text-shadow-offset-top"
                         onChange={(event) =>
                           commitTextShadowLength(
-                            "offsetX",
+                            "offsetTop",
                             event.target.value,
-                            THEME_TEXT_SHADOW_OFFSET_MIN,
-                            THEME_TEXT_SHADOW_OFFSET_MAX,
+                            THEME_TEXT_SHADOW_DIRECTION_MIN,
+                            THEME_TEXT_SHADOW_DIRECTION_MAX,
                           )
                         }
                       />
                     </Field>
                     <Field
-                      label={`Vertical ${textShadowOffsetY}px`}
-                      {...(textShadowLengthErrors.offsetY
+                      label={`Derecha ${textShadowOffsetRight}px`}
+                      {...(textShadowLengthErrors.offsetRight
                         ? {
-                            error: `Usá un entero entre ${THEME_TEXT_SHADOW_OFFSET_MIN} y ${THEME_TEXT_SHADOW_OFFSET_MAX}.`,
+                            error: `Usá un entero entre ${THEME_TEXT_SHADOW_DIRECTION_MIN} y ${THEME_TEXT_SHADOW_DIRECTION_MAX}.`,
                           }
                         : {})}
                     >
                       <input
                         type="number"
-                        min={THEME_TEXT_SHADOW_OFFSET_MIN}
-                        max={THEME_TEXT_SHADOW_OFFSET_MAX}
+                        min={THEME_TEXT_SHADOW_DIRECTION_MIN}
+                        max={THEME_TEXT_SHADOW_DIRECTION_MAX}
                         step={1}
-                        value={textShadowLengthDrafts.offsetY ?? String(textShadowOffsetY)}
+                        value={textShadowLengthDrafts.offsetRight ?? String(textShadowOffsetRight)}
                         disabled={!textShadowEnabled}
-                        aria-label="Desplazamiento vertical de la sombra del hero mobile"
-                        data-testid="ui-text-shadow-offset-y"
+                        aria-label="Desplazamiento hacia la derecha de la sombra del hero mobile"
+                        data-testid="ui-text-shadow-offset-right"
                         onChange={(event) =>
                           commitTextShadowLength(
-                            "offsetY",
+                            "offsetRight",
                             event.target.value,
-                            THEME_TEXT_SHADOW_OFFSET_MIN,
-                            THEME_TEXT_SHADOW_OFFSET_MAX,
+                            THEME_TEXT_SHADOW_DIRECTION_MIN,
+                            THEME_TEXT_SHADOW_DIRECTION_MAX,
+                          )
+                        }
+                      />
+                    </Field>
+                    <Field
+                      label={`Abajo ${textShadowOffsetBottom}px`}
+                      {...(textShadowLengthErrors.offsetBottom
+                        ? {
+                            error: `Usá un entero entre ${THEME_TEXT_SHADOW_DIRECTION_MIN} y ${THEME_TEXT_SHADOW_DIRECTION_MAX}.`,
+                          }
+                        : {})}
+                    >
+                      <input
+                        type="number"
+                        min={THEME_TEXT_SHADOW_DIRECTION_MIN}
+                        max={THEME_TEXT_SHADOW_DIRECTION_MAX}
+                        step={1}
+                        value={textShadowLengthDrafts.offsetBottom ?? String(textShadowOffsetBottom)}
+                        disabled={!textShadowEnabled}
+                        aria-label="Desplazamiento hacia abajo de la sombra del hero mobile"
+                        data-testid="ui-text-shadow-offset-bottom"
+                        onChange={(event) =>
+                          commitTextShadowLength(
+                            "offsetBottom",
+                            event.target.value,
+                            THEME_TEXT_SHADOW_DIRECTION_MIN,
+                            THEME_TEXT_SHADOW_DIRECTION_MAX,
+                          )
+                        }
+                      />
+                    </Field>
+                    <Field
+                      label={`Izquierda ${textShadowOffsetLeft}px`}
+                      {...(textShadowLengthErrors.offsetLeft
+                        ? {
+                            error: `Usá un entero entre ${THEME_TEXT_SHADOW_DIRECTION_MIN} y ${THEME_TEXT_SHADOW_DIRECTION_MAX}.`,
+                          }
+                        : {})}
+                    >
+                      <input
+                        type="number"
+                        min={THEME_TEXT_SHADOW_DIRECTION_MIN}
+                        max={THEME_TEXT_SHADOW_DIRECTION_MAX}
+                        step={1}
+                        value={textShadowLengthDrafts.offsetLeft ?? String(textShadowOffsetLeft)}
+                        disabled={!textShadowEnabled}
+                        aria-label="Desplazamiento hacia la izquierda de la sombra del hero mobile"
+                        data-testid="ui-text-shadow-offset-left"
+                        onChange={(event) =>
+                          commitTextShadowLength(
+                            "offsetLeft",
+                            event.target.value,
+                            THEME_TEXT_SHADOW_DIRECTION_MIN,
+                            THEME_TEXT_SHADOW_DIRECTION_MAX,
                           )
                         }
                       />

@@ -994,11 +994,11 @@
   display: grid;
   min-height: 0;
   flex: 1 1 auto;
-  /* Cuatro bandas flexibles ordenan las acciones sin inflar el alto de cada
-   * botón: principales, gestión/respaldos, calculadora y riesgo. */
+  /* Cinco bandas ordenan las acciones sin inflar el alto de cada botón:
+   * principales, gestión/respaldos, calculadora, cobro y riesgo. */
   align-content: stretch;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(5, minmax(0, 1fr));
   gap: 7px;
   margin-top: 10px;
 }
@@ -4976,12 +4976,30 @@ tbody tr[data-selected="true"] {
 
 .theme-text-shadow-controls {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
 }
 
 .theme-text-shadow-controls .field {
   min-width: 0;
+}
+
+@media (max-width: 980px) {
+  .theme-text-shadow-controls {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .theme-text-shadow-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 430px) {
+  .theme-text-shadow-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .theme-text-shadow-preview {
@@ -6807,9 +6825,9 @@ tbody tr[data-selected="true"] {
 }
 
 .dashboard-gargantua .dashboard-store-card__hero img {
-  /* La portada es un asset editorial: se muestra completa y sin parallax
-   * interno para no cortar laterales ni alterar su composición. */
-  object-fit: contain;
+  /* Todas las cards comparten el marco OG 1200x630; cover replica el recorte
+   * social cuando el asset original tiene una relación ligeramente distinta. */
+  object-fit: cover;
   object-position: center;
   filter: none;
   transform: none;
@@ -9096,7 +9114,10 @@ body:has(.app-root--dashboard-cosmic) .confirm-dialog {
     ),
     rgb(1 2 5 / 0.22);
   pointer-events: auto;
-  animation: dashboard-gargantua-curtain 3000ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: dashboard-gargantua-curtain
+    var(--dashboard-gargantua-transition-duration, 3000ms)
+    cubic-bezier(0.16, 1, 0.3, 1)
+    both;
 }
 
 /* El aro elíptico no forma parte del viaje: el blackout y el campo gravitatorio
@@ -9113,7 +9134,10 @@ body:has(.app-root--dashboard-cosmic) .confirm-dialog {
   content: "";
   opacity: 0;
   pointer-events: none;
-  animation: dashboard-gargantua-blackout 3000ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: dashboard-gargantua-blackout
+    var(--dashboard-gargantua-transition-duration, 3000ms)
+    cubic-bezier(0.22, 1, 0.36, 1)
+    both;
 }
 
 .dashboard-gargantua-transition--reverse,
@@ -9206,7 +9230,7 @@ body:has(.app-root--dashboard-cosmic) .confirm-dialog {
 
   .dashboard-gargantua-transition,
   .dashboard-gargantua-transition::after {
-    animation-duration: 240ms;
+    animation-duration: var(--dashboard-gargantua-reduced-transition-duration, 240ms);
   }
 
   .store-launch-curtain.is-releasing {
@@ -9229,7 +9253,7 @@ body:has(.app-root--dashboard-cosmic) .confirm-dialog {
  * grupo de riesgo. */
 .dashboard-gargantua .dashboard-store-detail__actions {
   align-content: start;
-  grid-template-rows: repeat(4, auto);
+  grid-template-rows: repeat(5, auto);
   gap: 8px;
   margin-top: 12px;
 }
@@ -9767,4 +9791,67 @@ body:has(.app-root--dashboard-cosmic) .confirm-dialog {
   .dashboard-calculator-dialog:not(.dashboard-delete-dialog) * {
     transition: none;
   }
+}
+
+/* El estado del cobro queda visible sin competir con las acciones principales. */
+.dashboard-store-detail__actions .button.dashboard-store-detail__variant-billing {
+  grid-column: 1 / -1;
+}
+
+.dashboard-store-detail__actions .button.dashboard-store-detail__variant-billing.is-charging,
+.dashboard-gargantua
+  .dashboard-store-detail__actions
+  .button.dashboard-store-detail__variant-billing.is-charging {
+  border-color: rgb(123 217 138 / 0.3);
+  background: rgb(123 217 138 / 0.08);
+  color: #c7efcc;
+}
+
+.dashboard-store-detail__actions
+  .button.dashboard-store-detail__variant-billing.is-charging:hover,
+.dashboard-gargantua
+  .dashboard-store-detail__actions
+  .button.dashboard-store-detail__variant-billing.is-charging:hover,
+.dashboard-store-detail__actions
+  .button.dashboard-store-detail__variant-billing.is-charging:focus-visible {
+  border-color: rgb(123 217 138 / 0.52);
+  background: rgb(123 217 138 / 0.14);
+  color: #ddf8e1;
+}
+
+.dashboard-gargantua
+  .dashboard-store-detail__actions
+  .button.dashboard-store-detail__variant-billing.is-charging:focus-visible {
+  border-color: rgb(123 217 138 / 0.52);
+  background: rgb(123 217 138 / 0.14);
+  color: #ddf8e1;
+}
+
+.dashboard-store-detail__actions .button.dashboard-store-detail__variant-billing.is-not-charging,
+.dashboard-gargantua
+  .dashboard-store-detail__actions
+  .button.dashboard-store-detail__variant-billing.is-not-charging {
+  border-color: rgb(231 190 98 / 0.3);
+  background: rgb(231 190 98 / 0.08);
+  color: #f1d99c;
+}
+
+.dashboard-store-detail__actions
+  .button.dashboard-store-detail__variant-billing.is-not-charging:hover,
+.dashboard-gargantua
+  .dashboard-store-detail__actions
+  .button.dashboard-store-detail__variant-billing.is-not-charging:hover,
+.dashboard-store-detail__actions
+  .button.dashboard-store-detail__variant-billing.is-not-charging:focus-visible {
+  border-color: rgb(231 190 98 / 0.52);
+  background: rgb(231 190 98 / 0.14);
+  color: #ffedbd;
+}
+
+.dashboard-gargantua
+  .dashboard-store-detail__actions
+  .button.dashboard-store-detail__variant-billing.is-not-charging:focus-visible {
+  border-color: rgb(231 190 98 / 0.52);
+  background: rgb(231 190 98 / 0.14);
+  color: #ffedbd;
 }

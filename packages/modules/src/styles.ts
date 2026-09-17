@@ -1550,23 +1550,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   min-height: 52px;
   text-decoration: none;
 }
-[data-solara-module="product-detail"] .solara-variant-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .5rem;
-  margin-top: 0.85rem;
-}
-[data-solara-module="product-detail"] .solara-variant-links a {
-  border-bottom: 1px solid var(--solara-border);
-  color: var(--solara-muted);
-  font-size: 0.78rem;
-  padding: .25rem 0;
-  text-decoration: none;
-}
-[data-solara-module="product-detail"] .solara-variant-links a:hover {
-  border-color: var(--solara-text);
-  color: var(--solara-text);
-}
 [data-solara-module="product-detail"] .solara-delivery-note {
   color: var(--solara-muted);
   font-size: 0.85rem;
@@ -2398,8 +2381,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-product-add:focus-visible { background: var(--solara-accent); color: var(--solara-accent-text); border-color: var(--solara-accent); transform: none; box-shadow: none; }
 [data-solara-store].catalog-modern .catalog-product-add:disabled { cursor: not-allowed; opacity: .5; }
 [data-solara-store].catalog-modern .catalog-add-fallback { align-items: center; display: none; justify-content: center; min-height: 50px; margin-top: .55rem; border-radius: var(--solara-radius); background: var(--solara-accent); color: var(--solara-accent-text); font-weight: 800; text-decoration: none; }
-[data-solara-store].catalog-modern .catalog-variant-links { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; font-size: .75rem; }
-[data-solara-store].catalog-modern .catalog-variant-links a { padding: .25rem .55rem; border-radius: 999px; background: var(--catalog-surface); text-decoration: none; }
 [data-solara-store].catalog-modern .catalog-delivery-note { margin-top: 1.2rem; color: var(--catalog-muted); font-size: .8rem; }
 [data-solara-store].catalog-modern .catalog-product-specs { display: grid; gap: .5rem; margin-top: 1.4rem; padding-top: 1rem; border-top: 1px solid var(--catalog-border); }
 [data-solara-store].catalog-modern .catalog-product-specs div { display: flex; justify-content: space-between; gap: 1rem; font-size: .8rem; }
@@ -2409,14 +2390,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
 [data-solara-store].catalog-modern .catalog-product-policies details { padding: .75rem 0; border-bottom: 1px solid var(--catalog-border); }
 [data-solara-store].catalog-modern .catalog-product-policies summary { cursor: pointer; font-weight: 700; }
 [data-solara-store].catalog-modern .catalog-product-policies p { margin-top: .6rem; color: var(--catalog-muted); font-size: .82rem; }
-[data-solara-store].catalog-modern .catalog-variant-options { display: grid; gap: .75rem; margin-top: .45rem; }
-[data-solara-store].catalog-modern .catalog-option-group { display: grid; gap: .5rem; margin: 0; padding: 0; border: 0; }
-[data-solara-store].catalog-modern .catalog-option-group legend { font-size: .78rem; font-weight: 700; }
-[data-solara-store].catalog-modern .catalog-option-group > div { display: flex; flex-wrap: wrap; gap: .5rem; }
-[data-solara-store].catalog-modern .catalog-option-pill { min-height: 42px; padding: .5rem .8rem; border: 1px solid var(--catalog-border); border-radius: 999px; background: var(--catalog-paper); color: var(--catalog-ink); cursor: pointer; font: inherit; font-size: .78rem; max-width: 100%; overflow-wrap: anywhere; }
-[data-solara-store].catalog-modern .catalog-option-pill:hover,
-[data-solara-store].catalog-modern .catalog-option-pill[aria-pressed="true"] { border-color: var(--catalog-ink); background: var(--catalog-ink); color: var(--catalog-paper); }
-[data-solara-store].catalog-modern .catalog-option-pill:disabled { cursor: not-allowed; opacity: .45; text-decoration: line-through; }
 [data-solara-store].catalog-modern .catalog-search-link svg,
 [data-solara-store].catalog-modern .catalog-mobile-menu-button svg { width: 1.05rem; height: 1.05rem; fill: none; stroke: currentcolor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 [data-solara-store].catalog-modern .catalog-product-info select { min-height: 42px; }
@@ -3646,7 +3619,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   margin-top: 2rem;
   padding-top: 1.5rem;
 }
-.cm.v2 .catalog-option-pill,
 .cm.v2 .catalog-product-info select,
 .cm.v2 .catalog-product-tabs button {
   border-radius: var(--catalog-v2-radius);
@@ -5110,9 +5082,6 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   .cm.v2 .contact-form-fields textarea {
     border-radius: var(--catalog-v2-radius);
   }
-  .cm.v2 .catalog-option-pill {
-    border-radius: 999px;
-  }
   .cm.v2 .catalog-category-filters:has(details[open]),
   .cm.v2 .catalog-cart-drawer {
     border-radius: var(--catalog-v2-radius) var(--catalog-v2-radius) 0 0;
@@ -5218,6 +5187,11 @@ export const MODULE_STYLE_BLOCKS: Readonly<Record<string, string>> = {
   /* En mobile la foto conserva el encuadre vertical sin convertir el borde
      de 767px en un hero de más de una pantalla. */
   @media (max-width: 767px) {
+    /* La sombra configurable del título necesita salir de su carril de reveal
+       para no cortarse en los laterales del hero móvil. */
+    .cm.v2 [data-solara-module="catalog-hero"] .catalog-hero-line {
+      overflow: visible;
+    }
     .cm.v2 .catalog-hero-editorial .catalog-hero-inner,
     .cm.v2 .catalog-hero-page .catalog-hero-inner {
       min-height: clamp(35.5rem, min(82svh, calc(100vw * 16 / 9)), 43rem);

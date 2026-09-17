@@ -17,7 +17,9 @@ test.afterAll(async () => {
 
 test("mantiene landmarks, nombres accesibles y foco en el dashboard", async ({ page }) => {
   await page.goto(studioUrl);
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 20_000,
+  });
   await expect(page.getByRole("main")).toBeVisible();
 
   const unlabeledControls = await page

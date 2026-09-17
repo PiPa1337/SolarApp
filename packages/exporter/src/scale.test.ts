@@ -24,6 +24,12 @@ describe("exporter con catálogo jerárquico de escala", () => {
     expect(exported.files.has("categorias/novedades/index.html")).toBe(false);
     expect(exported.files.has("categorias/sale/index.html")).toBe(false);
 
+    const categoryPageOne = String(exported.files.get("categorias/casa/index.html"));
+    const categoryPageTwo = String(exported.files.get("categorias/casa/pagina/2/index.html"));
+    const titleOf = (html: string) => /<title>([^<]+)<\/title>/.exec(html)?.[1] ?? "";
+    expect(titleOf(categoryPageTwo)).toContain("Página 2");
+    expect(titleOf(categoryPageTwo)).not.toBe(titleOf(categoryPageOne));
+
     const sitemap = String(exported.files.get("sitemap.xml"));
     const home = String(exported.files.get("index.html"));
     expect(home).toContain(">Categorías</summary>");

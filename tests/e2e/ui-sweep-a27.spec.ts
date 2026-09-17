@@ -11,7 +11,7 @@ const PRODUCT_PATH = "/productos/remera-esencial-de-algodon/";
 const GALLERY_VARIANT_MANTA = "modo-variant-01-02";
 const SOLD_OUT_VARIANT = "modo-variant-01-08";
 const FIRST_VARIANT = "modo-variant-01-01";
-const ARENA_PILL = "modo-variant-01-05";
+const ARENA_VARIANT = "modo-variant-01-05";
 
 // Desde 9a22a95 los assets del fixture viajan embebidos como data URLs;
 // solo los 12 productos quedan como archivos webp servibles en /fixtures/.
@@ -419,7 +419,7 @@ test("C8: el detalle apila descripcion, specs y politicas visibles y navegables"
   await expect(page.locator("[data-product-sku]")).toBeVisible();
 });
 
-test("C9: el botón de compra refleja disponibilidad, pill y variante agotada", async ({ page }) => {
+test("C9: el botón de compra refleja disponibilidad y variante agotada", async ({ page }) => {
   test.info().annotations.push({ type: "contrato", description: "A27 · C9 · buy button states" });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(storeUrl(basePort, PRODUCT_PATH));
@@ -435,16 +435,8 @@ test("C9: el botón de compra refleja disponibilidad, pill y variante agotada", 
   await expect(sku).toHaveText("MS-001-NE-S");
   await expect(page.locator('option[value="modo-variant-01-08"]')).toBeDisabled();
 
-  await page.getByRole("button", { name: "Arena", exact: true }).click();
-  await expect(select).toHaveValue(ARENA_PILL);
-  await expect(page.getByRole("button", { name: "Negro", exact: true })).toHaveAttribute(
-    "aria-pressed",
-    "false",
-  );
-  await expect(page.getByRole("button", { name: "Arena", exact: true })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await select.selectOption(ARENA_VARIANT);
+  await expect(select).toHaveValue(ARENA_VARIANT);
   await expect(addButton).toBeEnabled();
 
   await select.evaluate((element, variantId) => {
@@ -483,7 +475,7 @@ test("C9b: un producto con todas las variantes agotadas inicia el botón deshabi
   await expect(addButton).toHaveText("Sin stock");
   await expect(page.locator("[data-product-availability]")).toHaveText("Agotado");
   await expect(page.locator("[data-variant-select] option")).toBeDisabled();
-  await expect(page.locator('[data-variant-option][data-option-value="Único"]')).toBeDisabled();
+  await expect(page.locator('[data-variant-select] option:disabled')).toHaveCount(1);
 });
 
 test("C10: el checkout del drawer moderno abre WhatsApp con el pedido", async ({ page }) => {
@@ -550,9 +542,8 @@ test("C11: el contrato del detalle moderno declara los atributos que lee el runt
   // (esos son solo del store clonado de C4 sobre galleryPort).
   expect(productHtml).toContain('data-gallery-image-id="asset-product-01"');
   expect(productHtml).toContain('data-gallery-thumb="asset-product-01"');
-  expect(productHtml).toContain('data-option-key="Color"');
-  expect(productHtml).toContain('data-option-key="Talle"');
-  expect(productHtml).toContain('data-variant-option data-option-key="Talle"');
+  expect(productHtml).not.toContain("data-variant-option");
+  expect(productHtml).not.toContain("catalog-option-pill");
   expect(productHtml).toContain('href="https://wa.me/5491123456789?text=');
   expect(productHtml).toContain('name="quantity" type="number" min="1" max="99"');
   expect(productHtml).toContain("catalog-product-description-");

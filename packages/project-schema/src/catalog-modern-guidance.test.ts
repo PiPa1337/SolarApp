@@ -100,7 +100,7 @@ describe("Catalog Modern guidance", () => {
         const message = `${seed}: ${requirement.id} -> ${requirement.target}`;
         expect(resolved, message).toBeDefined();
         const expected =
-          requirement.target === "whatsapp.phone"
+          requirement.target === "whatsapp.phone" && seed === "demo"
             ? requirement.value === ""
               ? CATALOG_MODERN_PLACEHOLDER_PHONE
               : requirement.value
@@ -143,9 +143,9 @@ describe("Catalog Modern guidance", () => {
     // existen en respaldos on-disk): el requisito honesto es "missing".
     expect(byId("identity.email")?.status).toBe("missing");
     expect(byId("seo.description")?.status).toBe("placeholder");
-    expect(byId("product.product-placeholder-1.title")?.status).toBe("placeholder");
-    expect(byId("product.product-placeholder-1.description")?.status).toBe("placeholder");
-    expect(byId("category.category-placeholder-1.title")?.status).toBe("placeholder");
+    expect(byId("product.product-template-01.title")?.status).toBe("placeholder");
+    expect(byId("product.product-template-01.description")?.status).toBe("placeholder");
+    expect(byId("category.category-template-01.title")?.status).toBe("placeholder");
   });
 
   it("el contenido real de una tienda customizada no dispara ningún sentinel", () => {

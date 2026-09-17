@@ -1,6 +1,8 @@
 import { ArrowCounterClockwise, FloppyDisk, X } from "@phosphor-icons/react";
 import { useEffect, useId, useRef } from "react";
 import {
+  GRAVITY_ANIMATION_SPEED_MAX,
+  GRAVITY_ANIMATION_SPEED_MIN,
   GRAVITY_PRESET_IDS,
   GRAVITY_PRESET_META,
   GRAVITY_PRESETS,
@@ -371,6 +373,17 @@ export function GravitySettingsPanel({
             <div className="dashboard-gargantua-settings__section-head">
               <h2 id={`${titleId}-motion`}>Movimiento</h2>
             </div>
+            <RangeSetting
+              setting="animationSpeed"
+              label="Velocidad de animación"
+              hint="Ajusta la velocidad del zoom al abrir la app y al entrar a una tienda."
+              value={settings.animationSpeed}
+              min={GRAVITY_ANIMATION_SPEED_MIN}
+              max={GRAVITY_ANIMATION_SPEED_MAX}
+              step={0.05}
+              format={(value) => `${value.toFixed(2)}×`}
+              onChange={onChange}
+            />
             <RangeSetting
               setting="materialSpeed"
               label="Velocidad del material"

@@ -7,8 +7,53 @@ export const DEFAULT_THEME_TEXT_SHADOW_OFFSET_Y = 1;
 export const DEFAULT_THEME_TEXT_SHADOW_BLUR = 0;
 export const THEME_TEXT_SHADOW_OFFSET_MIN = -48;
 export const THEME_TEXT_SHADOW_OFFSET_MAX = 48;
+export const THEME_TEXT_SHADOW_DIRECTION_MIN = 0;
+export const THEME_TEXT_SHADOW_DIRECTION_MAX = 48;
 export const THEME_TEXT_SHADOW_BLUR_MIN = 0;
 export const THEME_TEXT_SHADOW_BLUR_MAX = 48;
+
+type ThemeTextShadowValue = {
+  color: string;
+  opacity: number;
+  offsetX: number;
+  offsetY: number;
+  offsetTop?: number | undefined;
+  offsetRight?: number | undefined;
+  offsetBottom?: number | undefined;
+  offsetLeft?: number | undefined;
+  blur: number;
+};
+
+/** Genera la sombra legacy o las sombras independientes configuradas por dirección. */
+export function buildThemeTextShadow({
+  color,
+  opacity,
+  offsetX,
+  offsetY,
+  offsetTop,
+  offsetRight,
+  offsetBottom,
+  offsetLeft,
+  blur,
+}: ThemeTextShadowValue): string {
+  const colorValue = `color-mix(in srgb, ${color} ${Math.round(opacity * 100)}%, transparent)`;
+  const hasDirectionalOffsets = [offsetTop, offsetRight, offsetBottom, offsetLeft].some(
+    (value) => value !== undefined,
+  );
+
+  if (!hasDirectionalOffsets) {
+    return `${offsetX}px ${offsetY}px ${blur}px ${colorValue}`;
+  }
+
+  const directionalShadows = [
+    offsetTop ? `0px -${offsetTop}px ${blur}px ${colorValue}` : null,
+    offsetRight ? `${offsetRight}px 0px ${blur}px ${colorValue}` : null,
+    offsetBottom ? `0px ${offsetBottom}px ${blur}px ${colorValue}` : null,
+    offsetLeft ? `-${offsetLeft}px 0px ${blur}px ${colorValue}` : null,
+  ].filter((shadow): shadow is string => shadow !== null);
+
+  return directionalShadows.join(", ") || "none";
+}
 
 function parseThemeHex(value: string): [number, number, number] | null {
   const match = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value.trim());

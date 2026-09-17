@@ -53,7 +53,9 @@ describe("tienda base catalog-modern de 50 productos", () => {
     expect(home).toContain("Remeras");
     expect(home).toContain("Camisas");
     expect(product).toContain('data-solara-module="catalog-product-detail"');
-    expect(product).toContain("catalog-option-pill");
+    expect(product).toContain("data-variant-select");
+    expect(product).not.toContain("catalog-option-pill");
+    expect(product).not.toContain("catalog-variant-links");
     expect(product).not.toContain('role="tablist"');
     expect(product).toContain('class="catalog-product-specs"');
     expect(product).toContain('class="catalog-product-policies"');

@@ -7,7 +7,10 @@ import {
   StoreProjectV1Schema,
 } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
-import { catalogModernCleanStore } from "@solara/project-schema/catalog-modern-template";
+import {
+  buildModernBaseTemplateProject,
+  catalogModernCleanStore,
+} from "@solara/project-schema/catalog-modern-template";
 import { referenceStore } from "@solara/project-schema/fixture";
 import { isBaseTemplate } from "@solara/project-schema/project-policy";
 import Dexie from "dexie";
@@ -268,9 +271,9 @@ describe("repositorio local", () => {
   it("crea una tienda nueva desde la plantilla sin inventar un teléfono de WhatsApp", async () => {
     const clean = await createProject({ name: "Tienda nueva" });
     expect(clean.whatsapp.phone).toBe("");
-    expect(clean.origin?.seed).toBe("clean");
+    expect(clean.origin?.seed).toBe("duplicate");
     expect(clean.origin?.role).toBe("store");
-    expect(clean.products).toHaveLength(5);
+    expect(clean.products).toHaveLength(33);
     expect(clean.assets.length).toBeGreaterThan(0);
 
     const configured = await createProject({
@@ -385,8 +388,8 @@ describe("repositorio local", () => {
     await saveProject(legacyDemo);
 
     expect(await ensureScaleDemoProject()).toBe(true);
-    expect((await getProject(legacyDemo.id))?.name).toBe("Predeterminado");
-    expect((await getProject(legacyDemo.id))?.identity.brandName).toBe("Predeterminado");
+    expect((await getProject(legacyDemo.id))?.name).toBe("Demo Modo Sur, catálogo moderno");
+    expect((await getProject(legacyDemo.id))?.identity.brandName).toBe("Mi tienda");
     expect((await getProject(legacyClean.id))?.status).toBe("archived");
     expect((await getProject(legacyClean.id))?.name).toBe("Base limpia anterior");
   });
@@ -407,15 +410,20 @@ describe("repositorio local", () => {
     const repaired = await getProject(SCALE_DEMO_PROJECT_ID);
     expect(repaired?.commerceTemplates.designFamily).toBe("catalog-modern-v2");
     expect(repaired?.theme.container).toBe(1760);
-    expect(repaired?.products).toHaveLength(200);
+    expect(repaired?.products).toHaveLength(33);
   });
 
   it("migra el seed placeholder reservado de Predeterminado a la demo de escala", async () => {
     const staleDemo = StoreProjectV1Schema.parse({
-      ...structuredClone(buildScaleDemoProject()),
-      origin: { ...buildScaleDemoProject().origin, seed: "placeholder" as const },
-      pages: structuredClone(catalogModernStore.pages),
-      assets: structuredClone(catalogModernStore.assets),
+      ...structuredClone(catalogModernStore),
+      id: SCALE_DEMO_PROJECT_ID,
+      name: "Predeterminado",
+      origin: {
+        ...catalogModernStore.origin,
+        seed: "placeholder" as const,
+        role: "base-template" as const,
+        updatePolicy: "pinned" as const,
+      },
     });
     await putCachedAsset({
       hash: "remote-unsplash-about-hero",
@@ -436,22 +444,20 @@ describe("repositorio local", () => {
     expect(await ensureScaleDemoProject()).toBe(true);
 
     const cleaned = await getProject(SCALE_DEMO_PROJECT_ID);
-    expect(cleaned?.origin?.seed).toBe("demo");
-    expect(cleaned?.products).toHaveLength(200);
+    expect(cleaned?.origin?.seed).toBe("placeholder");
+    expect(cleaned?.products).toHaveLength(33);
     expect(await getCachedAsset("remote-unsplash-about-hero")).toBeDefined();
   });
 
   it("construye Predeterminado directamente con Editorial V2", () => {
     const demo = buildScaleDemoProject();
     expect(demo.name).toBe("Predeterminado");
-    expect(demo.identity.brandName).toBe("Predeterminado");
+    expect(demo.identity.brandName).toBe("Mi tienda");
     expect(JSON.stringify(demo)).not.toContain("Modo Sur");
     expect(demo.commerceTemplates.designFamily).toBe("catalog-modern-v2");
     expect(demo.theme.container).toBe(1760);
-    // Predeterminado es la demo protegida de escala; las tiendas nuevas usan
-    // la semilla placeholder en createProject().
-    expect(demo.products).toHaveLength(200);
-    expect(demo.categories).toHaveLength(10);
+    expect(demo.products).toHaveLength(33);
+    expect(demo.categories).toHaveLength(6);
   });
 
   it("retira Sale y Novedades de todos los proyectos sin perder productos", async () => {
@@ -772,6 +778,19 @@ describe("predicado de optimización de imágenes", () => {
       fallbackSource: "data:image/png;base64,dHJhbnNwYXJlbnRl",
     });
     expect(needsImageOptimization(transparent)).toBe(false);
+  });
+
+  it("considera optimizados todos los placeholders de la plantilla moderna", () => {
+    const template = buildModernBaseTemplateProject();
+    expect(template.assets).toHaveLength(5);
+    expect(template.assets.every((asset) => needsImageOptimization(asset))).toBe(false);
+    expect(template.assets.map((asset) => [asset.width, asset.height])).toEqual([
+      [1254, 1254],
+      [1200, 900],
+      [1800, 1200],
+      [1200, 628],
+      [32, 32],
+    ]);
   });
 
   it("excluye los favicons de la migración responsive", () => {

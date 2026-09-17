@@ -1,13 +1,16 @@
 import {
   buildCatalogModernProject,
   CATALOG_MODERN_TEMPLATE_VERSION,
+  isModernBaseTemplateContent,
+  replaceModernBaseTemplateContent,
 } from "./catalog-modern-template";
 import { type StoreProjectV2, StoreProjectV2Schema, type StoreSection } from "./index";
+import { BASE_TEMPLATE_STORE_ID, isBaseTemplate } from "./project-policy";
 
 export interface TemplateChange {
   id: string;
   label: string;
-  kind: "version" | "section-add" | "field";
+  kind: "version" | "section-add" | "field" | "content-replacement";
   sectionId?: string;
   next?: StoreSection;
   path?: string;
@@ -31,6 +34,23 @@ export interface TemplateUpgradePlan {
 }
 
 export function planCatalogModernUpgrade(project: StoreProjectV2): TemplateUpgradePlan {
+  if (project.id === BASE_TEMPLATE_STORE_ID && isBaseTemplate(project)) {
+    return {
+      fromVersion: project.origin?.templateVersion ?? 1,
+      toVersion: CATALOG_MODERN_TEMPLATE_VERSION,
+      safeChanges: isModernBaseTemplateContent(project)
+        ? []
+        : [
+            {
+              id: "base-template.content.v2",
+              label: "Reemplazar el contenido heredado por la plantilla moderna neutral",
+              kind: "content-replacement",
+            },
+          ],
+      conflicts: [],
+      preservedUserChanges: [],
+    };
+  }
   const fromVersion = project.origin?.templateVersion ?? CATALOG_MODERN_TEMPLATE_VERSION;
   const seed =
     project.origin?.seed === "demo"
@@ -114,6 +134,9 @@ export function applyCatalogModernUpgrade(
 ): StoreProjectV2 {
   const plan = planCatalogModernUpgrade(project);
   const accepted = new Set(acceptedChangeIds);
+  if (accepted.has("base-template.content.v2")) {
+    return replaceModernBaseTemplateContent(project);
+  }
   const sections = [...project.sections];
   let navigation = project.navigation;
   for (const change of plan.safeChanges) {

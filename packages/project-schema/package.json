@@ -10,6 +10,7 @@
     "./catalog-modern-fixture": "./src/catalog-modern-fixture.ts",
     "./catalog-modern-v2-fixture": "./src/catalog-modern-v2-fixture.ts",
     "./catalog-modern-template": "./src/catalog-modern-template.ts",
+    "./modern-base-template": "./src/modern-base-template.ts",
     "./catalog-modern-guidance": "./src/catalog-modern-guidance.ts",
     "./catalog-modern-upgrade": "./src/catalog-modern-upgrade.ts",
     "./project-policy": "./src/project-policy.ts",

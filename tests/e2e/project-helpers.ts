@@ -1,4 +1,6 @@
 import { expect, type Page } from "@playwright/test";
+import { createProjectArchive } from "@solara/exporter";
+import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 
 export async function createCleanStore(page: Page, name = "Tienda de prueba"): Promise<void> {
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
@@ -36,7 +38,7 @@ export async function resetStudioIndexedDb(
   });
 }
 
-/** Abre una copia mutable de la plantilla protegida conservando el catálogo de escala. */
+/** Importa la fixture de escala como tienda mutable, sin usar Predeterminado. */
 export async function openMutableScaleStore(
   page: Page,
   name = "Tienda de escala mutable",
@@ -44,16 +46,20 @@ export async function openMutableScaleStore(
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
     timeout: 10_000,
   });
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page
-    .getByRole("region", { name: "Tienda seleccionada: Predeterminado" })
-    .getByRole("button", { name: "Duplicar", exact: true })
-    .click();
-  const dialog = page.getByTestId("ui-duplicate-dialog");
-  await expect(dialog).toBeVisible();
-  await dialog.getByTestId("ui-duplicate-name").fill(name);
-  await dialog.getByRole("button", { name: "Duplicar", exact: true }).click();
-  await expect(dialog).toBeHidden();
+  const fixture = structuredClone(catalogScaleStore);
+  fixture.name = name;
+  const createDialog = page.getByRole("button", { name: "Nueva tienda", exact: true });
+  await createDialog.click();
+  await page.getByLabel("Seleccionar tienda para importar").setInputFiles({
+    name: "catalog-scale.solara.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(createProjectArchive(fixture), "utf8"),
+  });
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
+    timeout: 20_000,
+  });
+  await page.getByRole("button", { name: "Volver a tiendas" }).click();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
 
   const copy = page.locator(".dashboard-store-card").filter({ hasText: name }).first();
   const id = await copy.locator(".dashboard-store-card__button").getAttribute("data-store-card-id");

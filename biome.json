@@ -15,7 +15,9 @@
       "!**/proyectos",
       "!**/screenshots",
       "!**/_qa",
-      "!.local-backups"
+      "!.local-backups",
+      "!**/back up",
+      "!**/back up/**"
     ]
   },
   "formatter": {

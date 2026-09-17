@@ -4,10 +4,15 @@
  * del sitio no debe descartar el respaldo editable ni el último sitio válido.
  */
 import type { StoreProjectV1 } from "@solara/project-schema";
-import { ensureCatalogModernV2Sections } from "@solara/project-schema/catalog-modern-template";
+import {
+  ensureCatalogModernV2Sections,
+  isModernBaseTemplateContent,
+  replaceModernBaseTemplateContent,
+} from "@solara/project-schema/catalog-modern-template";
 import { isBaseTemplate } from "@solara/project-schema/project-policy";
 import { assertProjectImagesOptimized } from "./imageAsset";
 import {
+  createLocalManualBackup,
   type LocalProjectSummary,
   type LocalSaveReceipt,
   listLocalProjects,
@@ -155,7 +160,7 @@ export async function loadAllDiskProjects(): Promise<{
 export async function persistProjectToDisk(
   project: StoreProjectV1,
   expectedVersion: number | null,
-  options: { allowProtectedWrite?: boolean } = {},
+  options: { allowProtectedWrite?: boolean; requireSite?: boolean } = {},
 ): Promise<{ receipt: LocalSaveReceipt; siteError?: string }> {
   const optimizedProject = await optimizeProjectAssets(project);
   assertProjectImagesOptimized(optimizedProject);
@@ -181,6 +186,9 @@ export async function persistProjectToDisk(
           : "La exportación de producción no pudo completarse.";
     }
   }
+  if (siteError && options.requireSite) {
+    throw new Error(`La migración protegida se canceló: ${siteError}`);
+  }
   const receipt = await saveLocalProject(
     {
       projectId: optimizedProject.id,
@@ -202,4 +210,29 @@ export async function persistProjectToDisk(
     else siteSyncIndex.delete(optimizedProject.id);
   }
   return { receipt, ...(siteError ? { siteError } : {}) };
+}
+
+/** Migra la base protegida con backup manual y el mismo canal autorizado que el agente. */
+export async function migrateProtectedBaseTemplateOnDisk(
+  project: StoreProjectV1,
+  expectedVersion: number,
+): Promise<{
+  changed: boolean;
+  project: StoreProjectV1;
+  backup?: { path: string; version: number };
+  receipt?: LocalSaveReceipt;
+  siteError?: string;
+}> {
+  if (!isBaseTemplate(project) || isModernBaseTemplateContent(project)) {
+    return { changed: false, project };
+  }
+  const backup = await createLocalManualBackup(project.id);
+  const migrated = replaceModernBaseTemplateContent(project, {
+    updatedAt: new Date().toISOString(),
+  });
+  const saved = await persistProjectToDisk(migrated, expectedVersion, {
+    allowProtectedWrite: true,
+    requireSite: true,
+  });
+  return { changed: true, project: migrated, backup, ...saved };
 }

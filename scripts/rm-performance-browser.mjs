@@ -30,7 +30,11 @@ const child = spawn(
   ],
   {
     cwd: root,
-    env: { ...process.env, SOLARA_PERF_PLAYWRIGHT_OUTPUT_DIR: resolve(reportDir, "playwright") },
+    env: {
+      ...process.env,
+      SOLARA_E2E_MODE: process.env.SOLARA_E2E_MODE ?? "audit",
+      SOLARA_PERF_PLAYWRIGHT_OUTPUT_DIR: resolve(reportDir, "playwright"),
+    },
     stdio: "inherit",
   },
 );

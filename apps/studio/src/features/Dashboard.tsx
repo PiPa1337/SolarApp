@@ -66,6 +66,8 @@ import { DuplicateDialog } from "./dashboard/DuplicateDialog";
 import { GravityField } from "./dashboard/GravityField";
 import {
   DEFAULT_GRAVITY_SETTINGS,
+  GRAVITY_ANIMATION_SPEED_MAX,
+  GRAVITY_ANIMATION_SPEED_MIN,
   type GravitySettings,
 } from "./dashboard/gravitySettings";
 import { formatCompactDate, ProjectCard, statusLabel } from "./dashboard/ProjectCard";
@@ -106,6 +108,8 @@ interface DashboardStoreCardProps {
   onKeyDown(event: ReactKeyboardEvent<HTMLElement>, record: StoredProject): void;
 }
 
+const DASHBOARD_SOCIAL_FRAME_RATIO = 1200 / 630;
+
 const DashboardStoreCard = memo(function DashboardStoreCard({
   record,
   index,
@@ -124,10 +128,6 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
   const protectedTemplate = isBaseTemplate(record.project);
   const faviconSrc = storeFaviconSrc(record.project);
   const heroAsset = storeSocialImageAsset(record.project);
-  const heroRatio =
-    heroAsset && heroAsset.width > 0 && heroAsset.height > 0
-      ? heroAsset.width / heroAsset.height
-      : 1.72;
   return (
     <article
       className={`dashboard-store-card${isSelected ? " is-selected" : ""}${
@@ -157,7 +157,7 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
         aria-description={`Selecciona ${record.name} para revisar su información y acciones.`}
         title={`Seleccionar ${record.name} para revisar el detalle`}
         data-store-card-id={record.id}
-        style={{ "--dashboard-store-hero-ratio": heroRatio } as CSSProperties}
+        style={{ "--dashboard-store-hero-ratio": DASHBOARD_SOCIAL_FRAME_RATIO } as CSSProperties}
         ref={(element) => {
           if (element) cardButtonRefs.current.set(record.id, element);
           else cardButtonRefs.current.delete(record.id);
@@ -199,7 +199,7 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
           {heroAsset ? (
             <ResponsiveAssetImage
               asset={heroAsset}
-              alt=""
+              alt={`Vista previa de ${record.name}`}
               width={heroAsset.width}
               height={heroAsset.height}
               // La página sólo monta 9 cards (5 en lista): la preview visible
@@ -214,7 +214,14 @@ const DashboardStoreCard = memo(function DashboardStoreCard({
         <span className="dashboard-store-card__index">{index + 1}</span>
         <span className="dashboard-store-card__mark" aria-hidden>
           {faviconSrc ? (
-            <img src={faviconSrc} alt="" width={42} height={42} loading="lazy" decoding="async" />
+            <img
+              src={faviconSrc}
+              alt={`Identidad de ${record.name}`}
+              width={42}
+              height={42}
+              loading="lazy"
+              decoding="async"
+            />
           ) : (
             storeMark(record.name)
           )}
@@ -348,6 +355,14 @@ export function Dashboard({
     [pageVisible],
   );
   const isShutdownTerminal = shutdownTerminal === true || shutdownState === "closed";
+  const animationSpeed = Math.min(
+    GRAVITY_ANIMATION_SPEED_MAX,
+    Math.max(GRAVITY_ANIMATION_SPEED_MIN, gravitySettings.animationSpeed),
+  );
+  const transitionStyle = {
+    "--dashboard-gargantua-transition-duration": `${GARGANTUA_STARTUP_REVEAL_DURATION_MS / animationSpeed}ms`,
+    "--dashboard-gargantua-reduced-transition-duration": `${240 / animationSpeed}ms`,
+  } as CSSProperties;
   const managed = shutdownState === "available" && !isShutdownTerminal;
   const comparePair = useMemo(() => {
     if (compareIds.length !== 2) return undefined;
@@ -372,7 +387,10 @@ export function Dashboard({
     const startedAt = performance.now();
     setStartupProgress(1);
     const animateStartupReveal = (now: number) => {
-      const elapsed = Math.min(1, (now - startedAt) / GARGANTUA_STARTUP_REVEAL_DURATION_MS);
+      const elapsed = Math.min(
+        1,
+        (now - startedAt) / (GARGANTUA_STARTUP_REVEAL_DURATION_MS / animationSpeed),
+      );
       const progress = 1 - elapsed;
       setStartupProgress(progress);
       if (progress <= 0) {
@@ -390,7 +408,7 @@ export function Dashboard({
         startupFrameRef.current = undefined;
       }
     };
-  }, [onStartupRevealComplete, startupReveal]);
+  }, [animationSpeed, onStartupRevealComplete, startupReveal]);
 
   useEffect(() => {
     if (page !== paginated.page) setPage(paginated.page);
@@ -578,7 +596,7 @@ export function Dashboard({
       const token = `${id}:${performance.now()}`;
       const startedAt = performance.now();
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const duration = reducedMotion ? 240 : GARGANTUA_LAUNCH_DURATION_MS;
+      const duration = (reducedMotion ? 240 : GARGANTUA_LAUNCH_DURATION_MS) / animationSpeed;
       const handoffAt = reducedMotion ? 0.46 : GARGANTUA_LAUNCH_HANDOFF;
       launchTokenRef.current = token;
       launchHandoffRef.current = false;
@@ -608,7 +626,7 @@ export function Dashboard({
 
       launchFrameRef.current = window.requestAnimationFrame(animateLaunch);
     },
-    [onOpen, openingStoreId, projects],
+    [animationSpeed, onOpen, openingStoreId, projects],
   );
 
   useEffect(
@@ -986,6 +1004,7 @@ export function Dashboard({
     <main
       id={"tiendas"}
       tabIndex={-1}
+      style={transitionStyle}
       className={`dashboard-page dashboard-cosmic dashboard-gargantua${
         openingStoreId ? " is-store-launching" : ""
       }${isDashboardEntering ? " is-dashboard-entering" : ""}`}

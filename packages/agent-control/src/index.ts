@@ -57,7 +57,7 @@ import {
   StoreProjectV2Schema,
 } from "@solara/project-schema";
 import { isCatalogModernSentinelValue } from "@solara/project-schema/catalog-modern-guidance";
-import { buildCatalogModernProject } from "@solara/project-schema/catalog-modern-template";
+import { buildModernBaseTemplateProject } from "@solara/project-schema/catalog-modern-template";
 import {
   applyCatalogModernUpgrade,
   planCatalogModernUpgrade,
@@ -104,6 +104,7 @@ interface AgentLocalProjectStorage {
   commit(transactionId: string, options?: { protectedSiteKeys?: string[] }): Promise<unknown>;
   abort(transactionId: string): Promise<void>;
   readCurrent(projectId: string): Promise<{ manifest: unknown; bytes: Uint8Array } | undefined>;
+  manualBackup(projectId: string): Promise<{ path: string; version: number }>;
   rebuildSite(
     projectId: string,
     request: AsyncIterable<Uint8Array> & { headers?: Record<string, string> },
@@ -481,19 +482,20 @@ function createCleanProject(
 ): StoreProjectV1 {
   const slug = operation.slug ?? safeSlug(operation.name);
   const brandName = operation.brandName ?? operation.name;
-  const base = buildCatalogModernProject({
-    seed: "clean",
+  const timestamp = now.toISOString();
+  const base = cloneProjectFromTemplate(buildModernBaseTemplateProject(), {
     id: storeId,
     name: operation.name,
     slug,
     baseUrl: operation.baseUrl ?? `https://${slug}.example`,
     brandName,
+    now: timestamp,
   });
-  const timestamp = now.toISOString();
   return StoreProjectV2Schema.parse({
     ...base,
     createdAt: timestamp,
     updatedAt: timestamp,
+    origin: { ...base.origin, seed: "duplicate" as const },
     identity: {
       ...base.identity,
       legalName: brandName,
@@ -1069,6 +1071,27 @@ export class AgentController {
     const current = await this.readTemplateProject();
     if (current.version !== preview.baseVersion)
       fail("VERSION_CONFLICT", "La plantilla cambió desde el preview.");
+    const currentPlan = planCatalogModernUpgrade(current.project);
+    if (currentPlan.safeChanges.length === 0) {
+      const result = {
+        storeId: current.project.id,
+        version: current.version,
+        status: "already-current",
+        fromTemplateVersion: currentPlan.fromVersion,
+        toTemplateVersion: currentPlan.toVersion,
+      };
+      if (params.idempotencyKey)
+        await writeAtomic(
+          this.committedPath(params.idempotencyKey),
+          `${JSON.stringify(result, null, 2)}\n`,
+        );
+      await rm(this.templateUpgradePath(preview.previewId), { force: true });
+      this.templateUpgrades.delete(preview.previewId);
+      return result;
+    }
+    // Backup verificable antes de abrir la transacción de reemplazo. El storage
+    // conserva además su backup automático al publicar el nuevo snapshot.
+    const backup = await this.options.storage.manualBackup(current.project.id);
     const upgraded = StoreProjectV2Schema.parse({
       ...applyCatalogModernUpgrade(
         current.project,
@@ -1105,6 +1128,7 @@ export class AgentController {
         storeId: upgraded.id,
         version: tx.version,
         receipt,
+        backup,
         status: "synced",
         fromTemplateVersion: preview.plan.fromVersion,
         toTemplateVersion: preview.plan.toVersion,

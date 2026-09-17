@@ -1125,12 +1125,6 @@ export const productDetail: ModuleDefinition<
         return `<option value="${escapeAttribute(variant.id)}" data-variant-data="${escapeAttribute(variant.id)}" data-variant-id="${escapeAttribute(variant.id)}" data-variant-title="${escapeAttribute(variant.title)}" data-sku="${escapeAttribute(variant.sku)}" data-image-id="${escapeAttribute(variant.imageId ?? product.imageIds[0] ?? "")}"${variantImage ? ` data-image-url="${escapeAttribute(safeAssetUrl(variantImage.source, ""))}" data-image-width="${variantImage.width}" data-image-height="${variantImage.height}"` : ""} data-price="${variant.price}" data-compare-at="${variant.compareAtPrice ?? ""}" data-available="${String(variant.available)}" ${variant.available ? "" : "disabled"}${variant.id === firstVariant?.id ? " selected" : ""}>${escapeHtml(variant.title)} - ${escapeHtml(formatMoneyForProject(variant.price, context.project))}${variant.available ? "" : ` - ${escapeHtml(copy.product.outOfStock)}`}</option>`;
       })
       .join("");
-    const variantLinks = product.variants
-      .map(
-        (variant) =>
-          `<a href="/productos/${escapeAttribute(product.slug)}/?variant=${escapeAttribute(variant.id)}">${escapeHtml(variant.title)}</a>`,
-      )
-      .join("");
     const monoVariant = product.variants.length === 1;
     const whatsappFallback = buildWhatsAppInquiryLink(context, product);
     const compareAt =
@@ -1162,7 +1156,6 @@ export const productDetail: ModuleDefinition<
             <button type="submit" data-add-to-cart${canvasTextAttributes(canvas, "actionLabel", 100)}>${escapeHtml(context.settings.actionLabel)}</button>
             ${whatsappFallback ? `<noscript><style>[data-solara-add-form] .solara-add-fallback{display:inline-flex}[data-solara-add-form] [data-add-to-cart]{display:none}</style><a class="solara-add-fallback" href="${escapeAttribute(whatsappFallback)}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.product.askWhatsApp)}</a></noscript>` : ""}
           </form>
-          <nav class="solara-variant-links" aria-label="${escapeAttribute(copy.export.variantLinks)}">${variantLinks}</nav>
           <p class="solara-delivery-note"${canvasTextAttributes(canvas, "deliveryNote", 240)}>${escapeHtml(context.settings.deliveryNote)}</p>
           <dl class="solara-product-specs">
             <div><dt>${escapeHtml(copy.product.sku)}</dt><dd data-product-sku>${escapeHtml(firstVariant?.sku ?? "")}</dd></div>

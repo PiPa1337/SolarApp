@@ -239,6 +239,7 @@ export const AGENT_MCP_TOOL_DEFINITIONS = [
               changes: {
                 type: "object",
                 properties: {
+                  status: { enum: ["active", "hidden"] },
                   variants: { type: "array", minItems: 1, items: mcpVariantInputSchema },
                 },
               },
@@ -285,6 +286,7 @@ export const AGENT_MCP_TOOL_DEFINITIONS = [
               changes: {
                 type: "object",
                 properties: {
+                  status: { enum: ["active", "hidden"] },
                   variants: { type: "array", minItems: 1, items: mcpVariantInputSchema },
                 },
               },

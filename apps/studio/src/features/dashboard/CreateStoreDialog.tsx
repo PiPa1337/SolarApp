@@ -184,7 +184,8 @@ export function CreateStoreDialog({
         ) : null}
         {step === 2 ? (
           <p className="dashboard-cosmic-dialog__summary">
-            La plantilla deja listos los textos, la navegación y los espacios para tus imágenes.
+            La plantilla deja listos 33 productos de ejemplo en 6 categorías, además de los textos,
+            la navegación y los espacios para tus imágenes.
           </p>
         ) : null}
         {step >= 3 ? (
@@ -208,15 +209,15 @@ export function CreateStoreDialog({
               />
             </Field>
             <p className="dashboard-cosmic-dialog__summary">
-              El catálogo comienza vacío. Después podrás importar un CSV o cargar productos
+              Podrás reemplazar los productos de ejemplo, importar un CSV o cargar productos
               manualmente.
             </p>
           </div>
         ) : null}
         {step === 4 ? (
           <p className="dashboard-cosmic-dialog__summary" aria-live="polite">
-            Vas a crear una tienda vacía con el diseño Catalog Modern. La demo de 50 productos queda
-            disponible como proyecto separado.
+            Vas a crear una tienda con 33 productos de ejemplo y el diseño Catalog Modern. Podrás
+            reemplazarlos cuando personalices tu catálogo.
           </p>
         ) : null}
         <footer className="dashboard-cosmic-dialog__actions">

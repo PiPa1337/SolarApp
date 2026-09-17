@@ -142,6 +142,7 @@ describe("preferencias persistentes de Gargantua", () => {
 
   it("mantiene activados los nuevos controles al leer preferencias anteriores", async () => {
     const legacySettings = { ...DEFAULT_GRAVITY_SETTINGS } as Record<string, unknown>;
+    delete legacySettings.animationSpeed;
     delete legacySettings.dustBeltEnabled;
     delete legacySettings.proceduralDetailEnabled;
     delete legacySettings.diskWarpEnabled;
@@ -192,6 +193,7 @@ describe("preferencias persistentes de Gargantua", () => {
     const loaded = await loadGravityPreferencesFromDisk();
 
     expect(loaded?.activeSettings).toMatchObject({
+      animationSpeed: 1,
       dustBeltEnabled: true,
       proceduralDetailEnabled: true,
       diskWarpEnabled: true,
@@ -224,6 +226,7 @@ describe("preferencias persistentes de Gargantua", () => {
       layerCorrugationEnabled: true,
     });
     expect(loaded?.customPresets[0]).toMatchObject({
+      animationSpeed: 1,
       dustBeltEnabled: true,
       proceduralDetailEnabled: true,
       diskWarpEnabled: true,

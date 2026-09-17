@@ -1,4 +1,5 @@
 import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
+import { buildModernBaseTemplateProject } from "@solara/project-schema/catalog-modern-template";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { normalizeLoadedProject } from "./localProjectRepository";
 
@@ -26,6 +27,10 @@ const saveLocalProject = vi.fn(async () => ({
   projectPath: "p",
   site: null,
 }));
+const createLocalManualBackup = vi.fn(async () => ({
+  path: "proyectos/base/backup.solara.json",
+  version: 1,
+}));
 
 vi.mock("./workers", () => ({
   createProjectArchiveInWorker: (...args: unknown[]) => createProjectArchiveInWorker(...args),
@@ -37,6 +42,7 @@ vi.mock("./localStorage", () => ({
   listLocalProjects: vi.fn(),
   readLocalProject: vi.fn(),
   saveLocalProject: (...args: unknown[]) => saveLocalProject(...args),
+  createLocalManualBackup: (...args: unknown[]) => createLocalManualBackup(...args),
 }));
 
 vi.mock("./repository", () => ({
@@ -113,5 +119,16 @@ describe("persistProjectToDisk", () => {
 
     expect(exportSiteInWorker).toHaveBeenCalledTimes(1);
     expect(saveLocalProject.mock.calls[0]?.[2]).toEqual(expect.any(String));
+  });
+
+  it("cancela una migración protegida si la exportación de producción falla", async () => {
+    const { persistProjectToDisk } = await import("./localProjectRepository");
+    const project = buildModernBaseTemplateProject({ id: "store-site-failure", slug: "site-failure" });
+    exportSiteInWorker.mockRejectedValueOnce(new Error("site fail"));
+
+    await expect(
+      persistProjectToDisk(project, 1, { allowProtectedWrite: true, requireSite: true }),
+    ).rejects.toThrow(/migración protegida se canceló.*site fail/);
+    expect(saveLocalProject).not.toHaveBeenCalled();
   });
 });
