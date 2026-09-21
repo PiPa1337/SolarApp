@@ -1468,6 +1468,7 @@ export const editorialFooter: ModuleDefinition<
       context.section,
       safeHtml(`<div class="solara-footer" data-motion-zone="content">
         <div><a class="solara-brand" href="/">${renderBrand(context.project, canvas)}</a><p${canvasTextAttributes(canvas, "note", 240)}>${escapeHtml(note)}</p></div>
+        <nav aria-label="${escapeAttribute(copy.footer.explore)}"><a href="/listado/">${escapeHtml(copy.productList.title)}</a></nav>
         ${policies}
         <address>${email}${phone}${address}</address>
          <small>© ${new Date(context.project.updatedAt).getUTCFullYear()} ${escapeHtml(context.project.identity.brandName)} · ${escapeHtml(copy.footer.copyright)}</small>

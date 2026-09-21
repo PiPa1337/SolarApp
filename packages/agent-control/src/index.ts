@@ -108,7 +108,11 @@ interface AgentLocalProjectStorage {
   rebuildSite(
     projectId: string,
     request: AsyncIterable<Uint8Array> & { headers?: Record<string, string> },
-    options?: { actor?: { kind: "rollout"; id: string }; rendererFingerprint?: string },
+    options?: {
+      actor?: { kind: "rollout" | "template-upgrade"; id: string };
+      rendererFingerprint?: string;
+      allowProtectedWrite?: boolean;
+    },
   ): Promise<unknown>;
   restoreSite(
     projectId: string,
@@ -988,6 +992,7 @@ export class AgentController {
   private async readTemplateProject(): Promise<{
     project: StoreProjectV1;
     version: number;
+    siteRebuildRequired: boolean;
   }> {
     const current = await this.options.storage.readCurrent(this.baseTemplateStoreId);
     if (!current) fail("TEMPLATE_NOT_FOUND", `No existe la plantilla ${this.baseTemplateStoreId}.`);
@@ -996,6 +1001,9 @@ export class AgentController {
       fail("TEMPLATE_INVALID", "La tienda base no está marcada como protegida.");
     return {
       project,
+      siteRebuildRequired:
+        (current.manifest as { lastValidSite?: { rendererFingerprint?: string } })?.lastValidSite
+          ?.rendererFingerprint !== EXPORTER_RENDERER_FINGERPRINT,
       version: Number(
         (current.manifest as { current?: { version?: number } })?.current?.version ?? 0,
       ),
@@ -1019,7 +1027,7 @@ export class AgentController {
     await this.ready();
     this.requireScope("template:read");
     TemplatePreviewUpgradeParamsSchema.parse(rawParams);
-    const { project, version } = await this.readTemplateProject();
+    const { project, version, siteRebuildRequired } = await this.readTemplateProject();
     const baseVersion =
       rawParams && typeof rawParams === "object" && "baseVersion" in rawParams
         ? (rawParams as { baseVersion?: number }).baseVersion
@@ -1051,6 +1059,7 @@ export class AgentController {
       storeId: project.id,
       baseVersion: version,
       ...plan,
+      siteRebuildRequired,
       requiresConfirmation: "ACTUALIZAR_PLANTILLA",
       expiresAt: preview.expiresAt,
     };
@@ -1078,10 +1087,38 @@ export class AgentController {
       fail("VERSION_CONFLICT", "La plantilla cambió desde el preview.");
     const currentPlan = planCatalogModernUpgrade(current.project);
     if (currentPlan.safeChanges.length === 0) {
+      let siteRebuild: { site: unknown; backup: { path: string; version: number } } | undefined;
+      if (current.siteRebuildRequired) {
+        // El contenido puede estar vigente aunque su sitio use un renderer anterior.
+        // Reutilizar la confirmación protegida sin reescribir el respaldo editable.
+        await this.agentLocks.claim(current.project.id, preview.previewId, {
+          kind: "template-upgrade",
+        });
+        try {
+          const locked = await this.readTemplateProject();
+          if (locked.version !== preview.baseVersion)
+            fail("VERSION_CONFLICT", "La plantilla cambió desde el preview.");
+          const exported = exportProject(locked.project, { mode: "production" });
+          const backup = await this.options.storage.manualBackup(locked.project.id);
+          const site = await this.options.storage.rebuildSite(
+            locked.project.id,
+            bytesStream(new TextEncoder().encode(siteMap(exported.files))),
+            {
+              actor: { kind: "template-upgrade", id: preview.previewId },
+              allowProtectedWrite: true,
+              rendererFingerprint: EXPORTER_RENDERER_FINGERPRINT,
+            },
+          );
+          siteRebuild = { site, backup };
+        } finally {
+          await this.agentLocks.release(current.project.id, preview.previewId);
+        }
+      }
       const result = {
         storeId: current.project.id,
         version: current.version,
-        status: "already-current",
+        status: siteRebuild ? "synced" : "already-current",
+        ...siteRebuild,
         fromTemplateVersion: currentPlan.fromVersion,
         toTemplateVersion: currentPlan.toVersion,
       };
@@ -1092,6 +1129,12 @@ export class AgentController {
         );
       await rm(this.templateUpgradePath(preview.previewId), { force: true });
       this.templateUpgrades.delete(preview.previewId);
+      if (siteRebuild)
+        await this.audit("template.site.rebuilt", {
+          previewId: preview.previewId,
+          storeId: current.project.id,
+          version: current.version,
+        });
       return result;
     }
     // Backup verificable antes de abrir la transacción de reemplazo. El storage

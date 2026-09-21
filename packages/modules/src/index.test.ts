@@ -2016,7 +2016,8 @@ describe("auditoría Resumen — fixes Ola 3 (navegación y footer moderno)", ()
     expect(explore).toContain(
       `href="/carrito/" data-solara-cart-open data-open-cart data-cart-label="${catalogModernV2Store.publicCopy.navigation.cart}"`,
     );
-    expect(explore.match(/<a /g) ?? []).toHaveLength(3);
+    expect(explore).toContain('href="/listado/"');
+    expect(explore.match(/<a /g) ?? []).toHaveLength(4);
     expect(html).toContain('class="catalog-footer-nav catalog-footer-nav--categories"');
     for (const category of publicCategories) {
       expect(html).toContain(`href="/categorias/${category.slug}/">${category.title}</a>`);

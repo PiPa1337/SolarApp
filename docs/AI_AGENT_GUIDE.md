@@ -374,7 +374,11 @@ sección; deja habilitados `catalog-cart-drawer`, carrito y checkout. El commit
 crea primero un respaldo manual verificable y luego publica proyecto y sitio en
 una transacción atómica. Si falla el backup, schema, exportación, escritura o
 relectura, la versión anterior queda vigente. Repetirlo sobre la misma fixture
-responde `already-current` sin crear otra versión.
+responde `already-current` sin crear otra versión si el sitio también usa el
+renderer vigente. Si sólo quedó obsoleto el sitio, el preview informa
+`siteRebuildRequired: true` y el mismo commit protegido lo reconstruye con backup
+y conservación del sitio anterior. El respaldo editable y su versión no cambian;
+los rollouts globales siguen excluyendo la plantilla.
 
 No se agregó una herramienta MCP nueva: `templates.previewUpgrade` y
 `templates.commitUpgrade` son el contrato oficial existente para esta migración

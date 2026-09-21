@@ -2076,6 +2076,70 @@ function storefrontBoot(): void {
     startAutoplay();
   });
 
+  const productList = hasFeature("product-list")
+    ? document.querySelector<HTMLElement>("[data-product-list]")
+    : null;
+  if (productList) {
+    const controls = productList.querySelector<HTMLFormElement>("[data-product-list-controls]");
+    const query = productList.querySelector<HTMLInputElement>("[data-product-list-search]");
+    const category = productList.querySelector<HTMLSelectElement>("[data-product-list-category]");
+    const count = productList.querySelector<HTMLElement>("[data-product-list-count]");
+    const empty = productList.querySelector<HTMLElement>("[data-product-list-empty]");
+    const bodies = Array.from(
+      productList.querySelectorAll<HTMLTableSectionElement>("[data-product-list-body]"),
+    );
+    const normalize = (value: string): string =>
+      value
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLocaleLowerCase(locale);
+    const entries = Array.from(
+      productList.querySelectorAll<HTMLTableRowElement>("[data-product-list-row]"),
+    ).map((row) => ({
+      row,
+      title: normalize(row.dataset.listTitle ?? ""),
+      categories: JSON.parse(row.dataset.listCategories ?? "[]") as string[],
+    }));
+    if (controls && query && category && count && empty && bodies.length === 2) {
+      const filterList = (): void => {
+        const terms = normalize(query.value).trim().split(/\s+/).filter(Boolean);
+        const matched = entries.filter(
+          (entry) =>
+            terms.every((term) => entry.title.includes(term)) &&
+            (!category.value || entry.categories.includes(category.value)),
+        );
+        const middle = Math.ceil(matched.length / 2);
+        // Mover las filas originales conserva enlaces y el orden de lectura, también sin red.
+        bodies.forEach((body, index) => {
+          const rows = index === 0 ? matched.slice(0, middle) : matched.slice(middle);
+          body.replaceChildren(...rows.map((entry) => entry.row));
+          const column = body.closest<HTMLElement>("[data-product-list-column]");
+          if (column) column.hidden = rows.length === 0;
+        });
+        count.textContent = (count.dataset.countTemplate ?? "{count}").replaceAll(
+          "{count}",
+          String(matched.length),
+        );
+        empty.hidden = matched.length > 0;
+      };
+      query.addEventListener("input", filterList);
+      category.addEventListener("change", filterList);
+      controls.addEventListener("submit", (event) => {
+        event.preventDefault();
+        filterList();
+      });
+      controls.addEventListener("reset", (event) => {
+        event.preventDefault();
+        query.value = "";
+        category.value = "";
+        filterList();
+        query.focus();
+      });
+      controls.hidden = false;
+      filterList();
+    }
+  }
+
   const searchInput = document.querySelector<HTMLInputElement>("#solara-search-input");
   const searchResults = document.querySelector<HTMLElement>("[data-search-results]");
   if (searchInput && searchResults) {

@@ -292,6 +292,28 @@ conserva el `.solara.zip` original en `respaldos/` y actualiza el manifest a
 temporales: se eliminan en un release posterior (ver
 [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md)).
 
+## Listado público de productos
+
+`publicCopy.productList` reúne los textos de `/listado/`: `title`, `description`,
+`search`, `category`, `allCategories`, `product`, `pricesIn` (`{currency}`),
+`count` (`{count}`) y `clear`. Zod normaliza tanto el grupo ausente como campos
+faltantes en respaldos anteriores; `schemaVersion` sigue en 2.
+
+La página es derivada, siempre disponible en Preview y exportación, independiente
+de la búsqueda general. Incluye sólo productos `active`, en el orden del proyecto,
+una fila por producto. Usa el menor precio de sus variantes en centavos y muestra
+«Desde» sólo si difieren, con la moneda y el formato de fracciones de cada tienda.
+Los filtros locales no modifican datos y conservan la pertenencia a categorías
+padre. Sin JavaScript se mantienen todas las filas y enlaces al producto.
+
+El enlace pertenece a Explorar en el footer moderno y a la navegación del footer
+legacy; respeta la configuración existente de visibilidad del footer. Los sitios
+ya exportados se actualizan mediante el rollout nativo `site-rebuild`, no editando
+archivos del sitio ni el respaldo `.solara.json`.
+Para Predeterminado se utiliza `templates.previewUpgrade`/`templates.commitUpgrade`:
+si el contenido ya está vigente, regenera sólo el sitio cuando cambió el renderer,
+con respaldo, idempotencia y conservación de la versión editable.
+
 ## Qué modificar para extender el modelo
 
 1. Cambiar primero el schema y sus fixtures en `project-schema`.

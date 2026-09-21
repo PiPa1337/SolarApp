@@ -1,3 +1,17 @@
+### Listado compacto para todas las tiendas (2026-09-21)
+
+- Se agrega `/listado/` con todos los productos publicados, nombre y precio,
+  doble columna en Tablet/Desktop y una columna en Mobile.
+- El footer enlaza «Listado de productos» en Explorar. Búsqueda local y filtro
+  por categoría (incluyendo subcategorías), precios según moneda/formato de la
+  tienda y «Desde» para variantes con precios distintos.
+- Preview y exportación comparten la página; conserva contenido completo sin
+  JavaScript, metadatos, sitemap y contexto público IA. Los respaldos V2
+  anteriores reciben los textos nuevos por defecto sin migrar sus datos.
+- Predeterminado puede regenerar su sitio desde el flujo de actualización
+  protegido aunque su contenido ya esté vigente, sin cambiar el catálogo ni
+  la versión editable y conservando respaldo y sitio anterior.
+
 ### Estabilidad de pruebas E2E (2026-09-21)
 
 - Se estabilizó la prueba del menú móvil V2 esperando un layout realmente

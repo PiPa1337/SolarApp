@@ -143,6 +143,19 @@ export const NavigationConfigSchema = z.object({
 });
 
 export const PublicCopySchema = z.object({
+  productList: z
+    .object({
+      title: z.string().min(1).default(PUBLIC_COPY_DEFAULTS.productList.title),
+      description: z.string().min(1).default(PUBLIC_COPY_DEFAULTS.productList.description),
+      search: z.string().min(1).default(PUBLIC_COPY_DEFAULTS.productList.search),
+      category: z.string().min(1).default(PUBLIC_COPY_DEFAULTS.productList.category),
+      allCategories: z.string().min(1).default(PUBLIC_COPY_DEFAULTS.productList.allCategories),
+      product: z.string().min(1).default(PUBLIC_COPY_DEFAULTS.productList.product),
+      pricesIn: z.string().min(1).default(PUBLIC_COPY_DEFAULTS.productList.pricesIn),
+      count: z.string().min(1).default(PUBLIC_COPY_DEFAULTS.productList.count),
+      clear: z.string().min(1).default(PUBLIC_COPY_DEFAULTS.productList.clear),
+    })
+    .default(PUBLIC_COPY_DEFAULTS.productList),
   navigation: z
     .object({
       home: z.string().min(1).default("Inicio"),

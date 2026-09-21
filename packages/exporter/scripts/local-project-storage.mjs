@@ -943,7 +943,10 @@ export function createLocalProjectStorage(options = {}) {
     if (!found) throw new Error("La tienda no existe en disco.");
     const currentPath = manifestPath(found.root, found.manifest.current.projectPath);
     const currentProject = parseProjectJson(await readFile(currentPath), projectId);
-    if (isProtectedProject(currentProject, protectedStoreIds)) {
+    if (
+      isProtectedProject(currentProject, protectedStoreIds) &&
+      !(options.allowProtectedWrite === true && options.actor?.kind === "template-upgrade")
+    ) {
       const error = new Error("La plantilla protegida no se incluye en reconstrucciones globales.");
       error.code = "PROTECTED_STORE";
       throw error;

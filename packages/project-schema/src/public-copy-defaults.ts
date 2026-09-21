@@ -4,6 +4,17 @@
  * estados compartidos que antes tenían fallbacks repartidos por los renderers.
  */
 export const PUBLIC_COPY_DEFAULTS = {
+  productList: {
+    title: "Listado de productos",
+    description: "Todos los productos y sus precios, en un solo lugar.",
+    search: "Buscar en el listado",
+    category: "Filtrar por categoría",
+    allCategories: "Todas las categorías",
+    product: "Producto",
+    pricesIn: "Precios en {currency}",
+    count: "{count} productos",
+    clear: "Limpiar filtros",
+  },
   navigation: {
     home: "Inicio",
     catalog: "Categorías",

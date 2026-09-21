@@ -42,7 +42,15 @@ export interface AppliedOptimization {
 
 export interface OptimizationRoute {
   path: string;
-  pageType: "home" | "category" | "collection" | "product" | "legal" | "search" | "cart";
+  pageType:
+    | "home"
+    | "category"
+    | "collection"
+    | "product"
+    | "legal"
+    | "search"
+    | "cart"
+    | "product-list";
   indexable: boolean;
   canonicalPath: string;
   title: string;
@@ -111,6 +119,7 @@ const reservedSlugs = new Set([
   "contacto",
   "nosotros",
   "buscar",
+  "listado",
   "carrito",
   "compra",
 ]);
@@ -257,6 +266,15 @@ function buildRoutes(project: StoreProjectV1): OptimizationRoute[] {
   const pageSize = project.commerceTemplates.category.productsPerPage;
   const activeProductTitleCounts = buildPublicProductTitleCounts(project);
   const routes: OptimizationRoute[] = [
+    route(
+      "/listado/",
+      "product-list",
+      true,
+      "/listado/",
+      `${project.publicCopy.productList.title} | ${project.identity.brandName}`,
+      project.publicCopy.productList.description,
+      project.siteShell.footer,
+    ),
     route(
       "/",
       "home",

@@ -196,6 +196,7 @@ export function getPreviewRoutes(project: StoreProjectV1): PreviewRoute[] {
   const lastProduct = project.products.at(-1);
   return [
     { path: "/", label: "Home" },
+    { path: "/listado/", label: project.publicCopy.productList.title },
     ...(firstRoot
       ? [{ path: `/categorias/${firstRoot.slug}/`, label: `Categor\u00eda: ${firstRoot.title}` }]
       : []),

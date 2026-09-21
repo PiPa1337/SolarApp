@@ -62,6 +62,7 @@ import {
 } from "@solara/site-optimizer";
 import { STOREFRONT_RUNTIME_CSS, STOREFRONT_RUNTIME_JS } from "@solara/storefront-runtime";
 import { activeFonts, type FontTransport, fontCssFor, fontFilesFor } from "./fonts";
+import { renderProductList } from "./product-list";
 
 export type { OptimizationReport } from "@solara/site-optimizer";
 export type { FontOption, FontTransport } from "./fonts";
@@ -203,6 +204,7 @@ export interface PageDescriptor {
     | "collection"
     | "product"
     | "search"
+    | "product-list"
     | "cart"
     | "legal"
     | "not-found";
@@ -1340,6 +1342,7 @@ function createPublicExportManifestWithMedia(
     runtimeFeatures.add("header");
   }
   if (project.commerceTemplates.search.enabled) runtimeFeatures.add("search");
+  if (pages.some((page) => page.pageType === "product-list")) runtimeFeatures.add("product-list");
   if (project.commerceTemplates.cart.enabled || project.siteShell.cart) runtimeFeatures.add("cart");
   if (project.commerceTemplates.checkout.enabled) runtimeFeatures.add("checkout");
   if (pages.some((page) => page.pageType === "category")) runtimeFeatures.add("category");
@@ -1392,7 +1395,9 @@ function renderProjectSections(
   },
 ): string {
   const modulePageType =
-    pageContext.pageType === "legal" || pageContext.pageType === "not-found"
+    pageContext.pageType === "legal" ||
+    pageContext.pageType === "not-found" ||
+    pageContext.pageType === "product-list"
       ? "content"
       : pageContext.pageType;
   const activeSections = activeProjectSections(project, sections);
@@ -2502,6 +2507,27 @@ function buildPages(
   });
 
   const copyValues = { storeName: project.identity.brandName };
+  const productListPage: PageDescriptor = {
+    path: "listado/index.html",
+    title: `${copy.productList.title} | ${project.identity.brandName}`,
+    description: copy.productList.description,
+    canonicalPath: "/listado/",
+    pageType: "product-list",
+    body: `${renderPageSections(sharedHeader, { pageType: "product-list" })}${renderProductList(project)}${renderPageSections(sharedFooter, { pageType: "product-list" })}`,
+    structuredData: [
+      {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        name: copy.productList.title,
+        description: copy.productList.description,
+        url: absoluteUrl(project, "/listado/"),
+      },
+      breadcrumbData(project, [
+        { name: copy.pages.home, path: "/" },
+        { name: copy.productList.title, path: "/listado/" },
+      ]),
+    ],
+  };
   const whatsAppContactLink = buildWhatsAppLink(
     project,
     interpolatePublicCopy(copy.whatsapp.ask, copyValues),
@@ -2998,6 +3024,7 @@ Podemos actualizar estos Términos para reflejar cambios operativos o legales. L
 
   return [
     home,
+    productListPage,
     ...(project.commerceTemplates.search.enabled ? [searchPage] : []),
     ...(project.commerceTemplates.cart.enabled ? [cartPage] : []),
     notFoundPage,
