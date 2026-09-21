@@ -14,6 +14,8 @@ export const RESPONSIVE_IMAGE_INTERMEDIATE_WIDTH = 768;
 export const RESPONSIVE_IMAGE_MAX_WIDTH = 1800;
 /** Marca estable para distinguir la receta materializada de las variantes. */
 export const IMAGE_ASSET_RECIPE = "responsive-export-v1";
+/** Receta materializada por el optimizador de imágenes de Studio. */
+export const IMAGE_ASSET_RECIPE_V2 = "responsive-alpha-v2";
 
 function isValidIcoEntryImage(view: DataView, offset: number, size: number): boolean {
   if (

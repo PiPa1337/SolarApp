@@ -1,3 +1,27 @@
+### Estabilidad de pruebas E2E (2026-09-21)
+
+- Se estabilizó la prueba del menú móvil V2 esperando un layout realmente
+  desplazable antes de validar el estado del header; smoke completo verificado
+  164/164 y 10/10 corridas aisladas bajo 3 workers.
+- Se corrigieron declaraciones duplicadas en los barridos A13/A24 para que la
+  auditoría y la matriz release puedan parsear esos specs.
+- Firefox queda pendiente de infraestructura: un script mínimo de Playwright
+  falla al crear la primera página antes de cargar la aplicación, mientras
+  Chromium y WebKit funcionan.
+
+### Flujo de prospección de Instagram (2026-09-19)
+
+- La guía indica dar `Follow` a todos los perfiles analizados de cada tanda,
+  aptos y no aptos, con pausas variables de 5, 6 o 7 segundos antes de
+  refrescar `explore/people`.
+
+### Pipeline de imágenes del agente (2026-09-17)
+
+- El canal MCP procesa PNG, JPEG, WebP, AVIF, GIF e ICO con la misma receta
+  responsive que Studio, conservando hash del original, fallback y derivados.
+- La plantilla neutral queda en revisión de contenido 3 y sus futuras tiendas
+  heredan media rasterizada sin depender de assets de RM.
+
 ### Marco OG uniforme en las cards del dashboard (2026-09-16)
 
 - Las portadas del dashboard usan el marco estándar 1200×630 y el recorte social
@@ -6,7 +30,8 @@
 ### Media optimizada en Predeterminado (2026-09-16)
 
 - Los cinco placeholders de la plantilla protegida pasan de SVG/fallback 1×1 a
-  fuentes rasterizadas con WebP, fallback separado y derivados responsive reales.
+  fuentes rasterizadas con WebP, fallback JPEG a 768 px, derivados responsive
+  reales, hashes SHA-256 y receta `responsive-alpha-v2`.
 - Las tiendas futuras clonan la misma fuente neutral ya procesada, sin heredar
   imágenes de RM ni compartir estado mutable.
 

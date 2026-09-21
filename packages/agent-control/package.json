@@ -13,6 +13,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@playwright/test": "1.55.0",
     "@solara/agent-contracts": "workspace:*",
     "@solara/core": "workspace:*",
     "@solara/exporter": "workspace:*",

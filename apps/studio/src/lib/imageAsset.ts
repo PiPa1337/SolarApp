@@ -1,5 +1,6 @@
 import {
   IMAGE_ASSET_RECIPE,
+  IMAGE_ASSET_RECIPE_V2,
   isValidIcoDataUrl,
   type ImageAsset,
   RESPONSIVE_IMAGE_MAX_WIDTH,
@@ -10,7 +11,7 @@ import type { ProcessedImage } from "./workers";
 const PRIMARY_IMAGE_MIME_TYPES = new Set(["image/avif", "image/webp"]);
 const FALLBACK_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png"]);
 
-export const IMAGE_ASSET_RECIPE_V2 = "responsive-alpha-v2";
+export { IMAGE_ASSET_RECIPE_V2 };
 
 const KNOWN_IMAGE_ASSET_RECIPES = new Set([IMAGE_ASSET_RECIPE, IMAGE_ASSET_RECIPE_V2]);
 

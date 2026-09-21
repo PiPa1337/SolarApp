@@ -354,7 +354,14 @@ export const StoreGetParamsSchema = z.object({
 export const AssetStageParamsSchema = z.object({
   name: z.string().min(1).max(160),
   alt: z.string().max(500).default(""),
-  mimeType: z.enum(["image/png", "image/jpeg", "image/webp", "image/gif", "image/x-icon"]),
+  mimeType: z.enum([
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/avif",
+    "image/gif",
+    "image/x-icon",
+  ]),
   source: z.discriminatedUnion("kind", [
     z.object({ kind: z.literal("base64"), data: z.string().min(1).max(8_000_000) }),
     z.object({ kind: z.literal("inbox"), filename: z.string().min(1).max(160) }),
@@ -407,7 +414,14 @@ export const AuditListParamsSchema = z.object({
 export const AssetUploadBeginParamsSchema = z.object({
   name: z.string().min(1).max(160),
   alt: z.string().max(500).default(""),
-  mimeType: z.enum(["image/png", "image/jpeg", "image/webp", "image/gif", "image/x-icon"]),
+  mimeType: z.enum([
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/avif",
+    "image/gif",
+    "image/x-icon",
+  ]),
   expectedBytes: z.number().int().positive().max(20_000_000).optional(),
 });
 

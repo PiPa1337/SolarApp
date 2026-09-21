@@ -316,8 +316,8 @@ test("A13: abrir tienda — la card y el detalle navegan al editor", async ({ pa
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
 
   await page.getByRole("button", { name: "Volver a tiendas" }).click();
-  const detail = await selectStore(page, "Predeterminado");
-  await detail.getByRole("button", { name: "Abrir tienda" }).click();
+  const detailAfterReturn = await selectStore(page, "Predeterminado");
+  await detailAfterReturn.getByRole("button", { name: "Abrir tienda" }).click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
 });
 

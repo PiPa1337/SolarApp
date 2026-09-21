@@ -58,7 +58,7 @@ seleccionan en canvas usan el `id` estable del ítem y se actualizan con
 `base-template`, su política es `pinned` y sólo puede escribirse mediante
 `templates.commitUpgrade`, con `baseVersion`, backup, auditoría y confirmación.
 Su revisión de contenido es independiente de `schemaVersion`: la fixture actual
-usa revisión 2, 33 productos activos, 6 categorías raíz, 0 colecciones y 5
+usa revisión 3, 33 productos activos, 6 categorías raíz, 0 colecciones y 5
 placeholders rasterizados y optimizados con WebP/fallback/derivados responsive.
 Las tiendas creadas desde Studio y el agente clonan
 esa misma fuente, nacen con `seed: "duplicate"`, `role: "store"` y

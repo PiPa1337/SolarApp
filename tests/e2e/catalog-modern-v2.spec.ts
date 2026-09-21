@@ -2878,7 +2878,13 @@ test("V2 abre el menú móvil a pantalla completa aunque el header esté scrolle
   await page.goto(serverUrl);
 
   const header = page.locator('[data-solara-module="catalog-header"]');
-  await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight / 2 }));
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollHeight))
+    .toBeGreaterThan(844);
+  await page.evaluate(() =>
+    window.scrollTo({ top: Math.max(1, document.documentElement.scrollHeight / 2), behavior: "instant" }),
+  );
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   await expect(header).toHaveAttribute("data-scrolled", "true");
 
   await page.locator("[data-catalog-menu-open]").click();

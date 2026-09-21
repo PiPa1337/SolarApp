@@ -7,11 +7,12 @@ intermedia de **768 px**, formato primario WebP/AVIF y fallback JPEG/PNG.
 
 ## Predeterminada y tiendas futuras
 
-La revisión 2 de la fixture protegida `store-modo-sur-demo` aplica este mismo
+La revisión 3 de la fixture protegida `store-modo-sur-demo` aplica este mismo
 contrato a sus cinco placeholders neutrales: producto cuadrado de 1254×1254,
 categoría de 1200×900, portada de 1800×1200, social de 1200×628 y favicon ICO
 de 32×32. Las cuatro imágenes grandes tienen fuentes WebP reales, fallback JPEG
-separado y derivados WebP de 480 px, 768 px y el ancho máximo de cada composición;
+separado a 768 px y derivados WebP de 480 px, 768 px y el ancho máximo de cada
+composición;
 el favicon tiene fallback y responsive PNG de 32 px. No se reutilizan SVG ni
 fallbacks de 1×1.
 
@@ -20,6 +21,14 @@ plantilla sea autosuficiente y no herede imágenes de RM. Studio y el agente
 clonan esas fuentes ya procesadas, remapean sus IDs y conservan los bytes en
 cada tienda nueva; por eso las altas futuras reciben la misma optimización sin
 compartir estado mutable con Predeterminada.
+
+La receta persistida es `responsive-alpha-v2` y cada fuente primaria lleva un
+hash SHA-256 de sus bytes. El agente no marca una carga cruda como optimizada:
+si no puede materializar la misma estructura WebP/AVIF + fallback + responsive,
+debe rechazarla explícitamente para que no entre al catálogo con metadatos
+incompletos. `assets.stage` y `assets.upload.finish` ejecutan ese proceso en un
+navegador headless interno; no abren una ventana ni exponen el navegador al
+usuario. También aceptan AVIF como entrada, además de PNG, JPEG, WebP y GIF.
 
 ## Regla de oro
 
@@ -45,8 +54,9 @@ pero el auditor debe informar que no alcanza el baseline.
 2. Generar o preparar la composición final al menos a 1254×1254 si será una
    imagen cuadrada de producto. El fondo, escala del objeto y sombra pertenecen
    a la composición; el optimizador no los reconstruye.
-3. Procesar el archivo por el worker de imágenes de Studio (`processImage`) o
-   por `createImageAssetFromProcessed`. No insertar manualmente un PNG como
+3. Procesar el archivo por el worker de imágenes de Studio (`processImage`), por
+   `createImageAssetFromProcessed` o por los métodos MCP
+   `assets.stage`/`assets.upload.finish`. No insertar manualmente un PNG como
    `source` ni fabricar variantes copiando la misma data URL.
 4. Revisar el proyecto y la exportación: HTML con `<picture>`, WebP/AVIF como
    fuente primaria, 768 px para tablet y 1254 px (o el ancho real de una fuente

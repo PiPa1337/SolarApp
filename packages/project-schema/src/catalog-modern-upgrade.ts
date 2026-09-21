@@ -42,7 +42,7 @@ export function planCatalogModernUpgrade(project: StoreProjectV2): TemplateUpgra
         ? []
         : [
             {
-              id: "base-template.content.v2",
+              id: "base-template.content.v3",
               label: "Reemplazar el contenido heredado por la plantilla moderna neutral",
               kind: "content-replacement",
             },
@@ -134,7 +134,7 @@ export function applyCatalogModernUpgrade(
 ): StoreProjectV2 {
   const plan = planCatalogModernUpgrade(project);
   const accepted = new Set(acceptedChangeIds);
-  if (accepted.has("base-template.content.v2")) {
+  if (accepted.has("base-template.content.v3")) {
     return replaceModernBaseTemplateContent(project);
   }
   const sections = [...project.sections];

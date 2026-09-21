@@ -1,7 +1,7 @@
 {
   "$comment": "Specs E2E con inestabilidad verificada bajo carga paralela. Excluidos del smoke diario; se corren en el canal semanal/manual con SMOKE_INCLUDE_UNSTABLE=1. Un spec sale de esta lista tras 10/10 corridas limpias con scripts/e2e-stability.mjs. Reglas completas: docs/TESTING.md (Política de estabilidad E2E).",
-  "updatedAt": "2026-08-23",
-  "verifiedBaseline": "c4d71ae",
+  "updatedAt": "2026-09-21",
+  "verifiedBaseline": "73067426",
   "debtRef": "docs/TECHNICAL_DEBT.md (fila specs E2E inestables)",
   "specs": []
 }

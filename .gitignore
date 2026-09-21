@@ -22,6 +22,7 @@ _qa/
 .DS_Store
 .superpowers/sdd/
 .playwright-cli/
+.clientes/
 
 placeholder-dump.json
 placeholder-dump.json.bak

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -6,11 +7,14 @@ import { createLocalProjectStorage } from "../../exporter/scripts/local-project-
 import { createProjectArchive, readProjectArchive } from "../../exporter/src/index";
 import { buildFaviconIco } from "../../exporter/src/pwa";
 import { buildCatalogModernProject } from "../../project-schema/src/catalog-modern-template";
+import { MODERN_BASE_TEMPLATE_MEDIA } from "../../project-schema/src/modern-base-template-media";
 import { StoreProjectV2Schema } from "../../project-schema/src/index";
 import { createAgentController } from "./index";
 
 const validPng =
-  "iVBORw0KGgoAAAAASUhEUgAAAGQAAABkCAYAAABw4pVUAAAAAElEQVR4nO3RMQ0AIBDAwJeD/yAMByCDDjfc3qRz9rp0zO8ADEkzJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJMaQGENiDIkxJOYBf9ogFAWt/vEAAAAASUVORK5CYII=";
+  MODERN_BASE_TEMPLATE_MEDIA.favicon.fallbackSource.split(",")[1] ?? "";
+const validJpeg = MODERN_BASE_TEMPLATE_MEDIA.product.fallbackSource.split(",")[1] ?? "";
+const validWebp = MODERN_BASE_TEMPLATE_MEDIA.product.source.split(",")[1] ?? "";
 
 describe("control nativo del agente", () => {
   it(
@@ -164,7 +168,7 @@ describe("control nativo del agente", () => {
         const controller = createAgentController({ storage, applicationRoot: root });
         const preview = await controller.previewTemplateUpgrade({});
         expect(preview.safeChanges.map((change: { id: string }) => change.id)).toContain(
-          "base-template.content.v2",
+          "base-template.content.v3",
         );
         expect(preview.fromVersion).toBe(1);
         expect(preview.toVersion).toBe(2);
@@ -543,6 +547,74 @@ describe("control nativo del agente", () => {
     }
   });
 
+  it(
+    "optimiza PNG, JPEG y WebP con la misma receta que Studio",
+    { timeout: 30_000 },
+    async () => {
+      const root = await mkdtemp(join(tmpdir(), "solara-agent-image-pipeline-"));
+      try {
+        const storage = createLocalProjectStorage({
+          applicationRoot: root,
+          projectsRoot: join(root, "proyectos"),
+          stagingRoot: join(root, ".solara-runtime", "transactions"),
+        });
+        const controller = createAgentController({ storage, applicationRoot: root });
+        const inputs = [
+          { name: "entrada.png", mimeType: "image/png" as const, data: validPng },
+          { name: "entrada.jpg", mimeType: "image/jpeg" as const, data: validJpeg },
+          { name: "entrada.webp", mimeType: "image/webp" as const, data: validWebp },
+        ];
+        const staged = [];
+        for (const input of inputs) {
+          staged.push(
+            await controller.stageAsset({
+              name: input.name,
+              alt: input.name,
+              mimeType: input.mimeType,
+              source: { kind: "base64", data: input.data },
+            }),
+          );
+        }
+        const plan = await controller.createPlan({
+          operations: [
+            {
+              type: "store.create",
+              storeId: "store-agent-image-pipeline",
+              name: "Pipeline de imágenes",
+              slug: "pipeline-imagenes",
+              source: { kind: "clean" },
+            },
+            ...staged.map((asset, index) => ({
+              type: "product.create" as const,
+              productId: `product-pipeline-${index}`,
+              slug: `producto-pipeline-${index}`,
+              title: `Producto pipeline ${index}`,
+              description: "Producto de prueba.",
+              imageIds: [asset.assetId],
+            })),
+          ],
+        });
+        const planned = await controller.getPlan({ planId: plan.planId, includeProject: true });
+        for (const [index, stagedAsset] of staged.entries()) {
+          const input = inputs[index];
+          if (!input) throw new Error("Falta la entrada de prueba.");
+          const asset = planned.project?.assets.find((candidate) => candidate.id === stagedAsset.assetId);
+          expect(asset).toBeDefined();
+          expect(asset?.optimizationRecipe).toBe("responsive-alpha-v2");
+          expect(asset?.mimeType).toBe("image/webp");
+          expect(asset?.source).toMatch(/^data:image\/webp;base64,/);
+          expect(asset?.fallbackSource).toMatch(/^data:image\/(?:jpeg|png);base64,/);
+          expect(asset?.hash).toBe(createHash("sha256").update(Buffer.from(input.data, "base64")).digest("hex"));
+          const widths = asset?.responsiveSources?.map((source) => source.width) ?? [];
+          expect(widths.length).toBeGreaterThan(0);
+          expect(widths.at(-1)).toBe(asset?.width);
+        }
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
   it("crea, stagea, adjunta y publica una tienda sin copiar el demo", async () => {
     const root = await mkdtemp(join(tmpdir(), "solara-agent-control-"));
     try {
@@ -675,6 +747,10 @@ describe("control nativo del agente", () => {
       if (!current) throw new Error("Falta el respaldo de la tienda de favicon.");
       const project = readProjectArchive(Buffer.from(current.bytes).toString("utf8"));
       expect(project.seo.faviconAssetId).toBe(ico.assetId);
+      const favicon = project.assets.find((asset) => asset.id === ico.assetId);
+      expect(favicon?.optimizationRecipe).toBe("responsive-alpha-v2");
+      expect(favicon?.fallbackSource).toMatch(/^data:image\/png;base64,/);
+      expect(favicon?.responsiveSources?.at(-1)?.width).toBe(favicon?.width);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

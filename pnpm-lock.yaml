@@ -87,6 +87,9 @@ importers:
 
   packages/agent-control:
     dependencies:
+      '@playwright/test':
+        specifier: 1.55.0
+        version: 1.55.0
       '@solara/agent-contracts':
         specifier: workspace:*
         version: link:../agent-contracts

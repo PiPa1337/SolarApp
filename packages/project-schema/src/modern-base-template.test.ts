@@ -59,7 +59,7 @@ describe("plantilla base moderna neutral", () => {
       project.sections.findIndex((section) => section.moduleId === "catalog-footer"),
     );
     expect(isModernBaseTemplateContent(project)).toBe(true);
-    expect(MODERN_BASE_TEMPLATE_CONTENT_VERSION).toBe(2);
+    expect(MODERN_BASE_TEMPLATE_CONTENT_VERSION).toBe(3);
   });
 
   it("usa placeholders reconocibles y assets con proporciones específicas", () => {
@@ -83,7 +83,8 @@ describe("plantilla base moderna neutral", () => {
     const favicon = project.assets.find((asset) => asset.id === "asset-template-favicon");
     expect(isValidIcoDataUrl(favicon?.source)).toBe(true);
     for (const asset of project.assets) {
-      expect(asset.optimizationRecipe).toBe("responsive-export-v1");
+      expect(asset.optimizationRecipe).toBe("responsive-alpha-v2");
+      expect(asset.hash).toMatch(/^[0-9a-f]{64}$/i);
       expect(asset.fallbackSource).toMatch(/^data:image\/(?:png|jpeg);base64,/);
       expect(asset.responsiveSources?.at(-1)?.width).toBe(asset.width);
     }

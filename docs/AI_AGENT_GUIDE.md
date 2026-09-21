@@ -315,7 +315,9 @@ usar el upload por chunks:
 ```
 
 El host valida tamaño, firma binaria, MIME, SHA-256 y dimensiones reales (mínimo 32×32 px) de PNG,
-JPEG, WebP, GIF o ICO. Staging no modifica una tienda. Para `seo.favicon`, el asset debe ser
+JPEG, WebP, AVIF, GIF o ICO. Las imágenes raster pasan por el mismo pipeline headless que Studio:
+WebP/AVIF primario, fallback JPEG/PNG y fuentes responsive; si el procesamiento no es posible, el
+staging falla. Staging no modifica una tienda. Para `seo.favicon`, el asset debe ser
 un ICO válido; PNG/WebP/GIF no pueden adjuntarse directamente como favicon. La respuesta devuelve
 `assetId`; usarlo en el mismo plan:
 

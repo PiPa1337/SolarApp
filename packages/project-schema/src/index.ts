@@ -13,6 +13,7 @@ import { ARGENTINA_LEGAL_PROFILE, LegalProfileSchema } from "./legal-profile.js"
 import {
   compactResponsiveSources,
   IMAGE_ASSET_RECIPE,
+  IMAGE_ASSET_RECIPE_V2,
   ImageAssetSchema,
   isValidIco,
   isValidIcoDataUrl,
@@ -41,6 +42,7 @@ import {
 export {
   compactResponsiveSources,
   IMAGE_ASSET_RECIPE,
+  IMAGE_ASSET_RECIPE_V2,
   ImageAssetSchema,
   isValidIco,
   isValidIcoDataUrl,

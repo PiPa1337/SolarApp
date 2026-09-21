@@ -1,5 +1,5 @@
 import {
-  IMAGE_ASSET_RECIPE,
+  IMAGE_ASSET_RECIPE_V2,
   isValidIcoDataUrl,
   type StoreProjectV2,
   type StoreSection,
@@ -9,7 +9,7 @@ import { defaultHomeContactSections } from "./catalog-modern-contact";
 import { MODERN_BASE_TEMPLATE_MEDIA } from "./modern-base-template-media";
 
 /** Revisión de contenido independiente de schemaVersion. */
-export const MODERN_BASE_TEMPLATE_CONTENT_VERSION = 2 as const;
+export const MODERN_BASE_TEMPLATE_CONTENT_VERSION = 3 as const;
 
 const FIXED_DATE = "2026-09-16T00:00:00.000Z";
 const BASE_ID = "store-modo-sur-demo";
@@ -132,13 +132,13 @@ function imageAsset(
     name,
     alt,
     mimeType: "image/webp",
-    optimizationRecipe: IMAGE_ASSET_RECIPE,
+    optimizationRecipe: IMAGE_ASSET_RECIPE_V2,
     source: media.source,
     fallbackSource: media.fallbackSource,
     responsiveSources: media.responsiveSources,
     width: media.width,
     height: media.height,
-    hash: `template-${id}`,
+    hash: media.hash,
   };
 }
 
@@ -150,13 +150,13 @@ function faviconAsset() {
     name: "Favicon de plantilla",
     alt: "Imagen de ejemplo para reemplazar",
     mimeType: "image/x-icon",
-    optimizationRecipe: IMAGE_ASSET_RECIPE,
+    optimizationRecipe: IMAGE_ASSET_RECIPE_V2,
     source: media.source,
     fallbackSource: media.fallbackSource,
     responsiveSources: media.responsiveSources,
     width: media.width,
     height: media.height,
-    hash: "template-asset-template-favicon",
+    hash: media.hash,
   };
 }
 
@@ -534,6 +534,7 @@ export function isModernBaseTemplateContent(project: StoreProjectV2): boolean {
   const optimizedRasterAsset = (id: string, width: number, height: number): boolean => {
     const asset = project.assets.find((candidate) => candidate.id === id);
     if (!asset) return false;
+    if (asset.optimizationRecipe !== IMAGE_ASSET_RECIPE_V2) return false;
     if (asset.mimeType !== "image/webp" && asset.mimeType !== "image/avif") return false;
     if (!/^data:image\/(?:webp|avif);base64,/i.test(asset.source)) return false;
     if (!/^data:image\/(?:jpeg|png);base64,/i.test(asset.fallbackSource ?? "")) return false;
@@ -548,6 +549,7 @@ export function isModernBaseTemplateContent(project: StoreProjectV2): boolean {
   const favicon = project.assets.find((candidate) => candidate.id === "asset-template-favicon");
   const optimizedFavicon =
     favicon?.mimeType === "image/x-icon" &&
+    favicon.optimizationRecipe === IMAGE_ASSET_RECIPE_V2 &&
     isValidIcoDataUrl(favicon.source) &&
     /^data:image\/png;base64,/i.test(favicon.fallbackSource ?? "") &&
     favicon.width === 32 &&

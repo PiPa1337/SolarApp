@@ -77,7 +77,7 @@ import { createAgentLockStore } from "../../exporter/scripts/agent-lock.mjs";
 // incorpora al bundle y el contrato runtime se comprueba en tests locales.
 // @ts-expect-error módulo .mjs compartido sin d.ts
 import { assertNoReparsePoints } from "../../exporter/scripts/local-layout.mjs";
-import { generateResponsiveVariants } from "./image-processor.js";
+import { optimizeFavicon, optimizeRasterImage } from "./image-optimizer.js";
 import { migrationApplies, resolveMigration } from "./migration-registry.js";
 
 interface AgentLocalProjectStorage {
@@ -415,7 +415,8 @@ function imageDimensions(mimeType: AssetStageParams["mimeType"], bytes: Uint8Arr
   if (
     mimeType === "image/gif" &&
     bytes.length >= 10 &&
-    String.fromCharCode(...bytes.subarray(0, 6)) === "GIF89a"
+    (String.fromCharCode(...bytes.subarray(0, 6)) === "GIF89a" ||
+      String.fromCharCode(...bytes.subarray(0, 6)) === "GIF87a")
   ) {
     return { width: byte(6) | (byte(7) << 8), height: byte(8) | (byte(9) << 8) };
   }
@@ -470,6 +471,10 @@ function validateImageSignature(mimeType: AssetStageParams["mimeType"], bytes: U
     (mimeType === "image/webp" &&
       starts([0x52, 0x49, 0x46, 0x46]) &&
       String.fromCharCode(...bytes.subarray(8, 12)) === "WEBP") ||
+    (mimeType === "image/avif" &&
+      bytes.length >= 12 &&
+      String.fromCharCode(...bytes.subarray(4, 8)) === "ftyp" &&
+      ["avif", "avis"].includes(String.fromCharCode(...bytes.subarray(8, 12)))) ||
     (mimeType === "image/x-icon" &&
       isValidIco(bytes));
   if (!valid) fail("ASSET_SIGNATURE_INVALID", "El contenido no coincide con el MIME declarado.");
@@ -1728,41 +1733,73 @@ export class AgentController {
     if (bytes.byteLength > MAX_INBOX_ASSET_BYTES)
       fail("ASSET_TOO_LARGE", "El asset supera el límite permitido.");
     validateImageSignature(params.mimeType, bytes);
-    const dimensions = imageDimensions(params.mimeType, bytes);
-    // Mínimo razonable para evitar imágenes inutilizables en el sitio público.
-    if (dimensions.width < 32 || dimensions.height < 32)
-      fail("ASSET_DIMENSIONS_INVALID", "Las dimensiones del asset no son válidas.");
     const assetId = makeId("asset-agent");
-    const hash = digest(bytes);
-    // El encoder puro-JS disponible sólo redimensiona PNG; otros formatos
-    // conservan únicamente su source original, sin descriptores engañosos.
-    let responsiveSources: Array<{ width: number; source: string }> = [];
-    if (params.mimeType === "image/png" && dimensions.width >= 480) {
+    let persistedBytes = bytes;
+    let asset: ImageAsset;
+    if (params.mimeType === "image/x-icon") {
+      const dimensions = imageDimensions(params.mimeType, bytes);
+      // Mínimo razonable para evitar imágenes inutilizables en el sitio público.
+      if (dimensions.width < 32 || dimensions.height < 32)
+        fail("ASSET_DIMENSIONS_INVALID", "Las dimensiones del asset no son válidas.");
+      let optimized;
       try {
-        const variants = generateResponsiveVariants(bytes);
-        responsiveSources = variants.map((v) => ({
-          width: v.width,
-          source: `data:image/png;base64,${bytesToBase64(v.data)}`,
-        }));
-      } catch {
-        /* mantener vacío si falla el procesamiento */
+        optimized = await optimizeFavicon(bytes, dimensions.width, dimensions.height);
+      } catch (error) {
+        fail(
+          "ASSET_OPTIMIZATION_FAILED",
+          `No se pudo aplicar la receta responsive-alpha-v2 a «${params.name}».`,
+          error instanceof Error ? error.message : undefined,
+        );
       }
+      asset = ImageAssetSchema.parse({
+        kind: "image",
+        id: assetId,
+        name: params.name,
+        alt: params.alt,
+        mimeType: optimized.mimeType,
+        optimizationRecipe: optimized.optimizationRecipe,
+        source: optimized.source,
+        fallbackSource: optimized.fallbackSource,
+        responsiveSources: optimized.responsiveSources,
+        width: optimized.width,
+        height: optimized.height,
+        hash: optimized.hash,
+      });
+      persistedBytes = optimized.primaryBytes;
+    } else {
+      let optimized;
+      try {
+        optimized = await optimizeRasterImage(bytes, params.mimeType);
+      } catch (error) {
+        fail(
+          "ASSET_OPTIMIZATION_FAILED",
+          `No se pudo aplicar la receta responsive-alpha-v2 a «${params.name}».`,
+          error instanceof Error ? error.message : undefined,
+        );
+      }
+      // optimizer devuelve las dimensiones decodificadas; así AVIF no depende
+      // de un parser parcial de ISOBMFF en el host Node.
+      if (optimized.width < 32 || optimized.height < 32)
+        fail("ASSET_DIMENSIONS_INVALID", "Las dimensiones del asset no son válidas.");
+      asset = ImageAssetSchema.parse({
+        kind: "image",
+        id: assetId,
+        name: params.name,
+        alt: params.alt,
+        mimeType: optimized.mimeType,
+        optimizationRecipe: optimized.optimizationRecipe,
+        source: optimized.source,
+        fallbackSource: optimized.fallbackSource,
+        responsiveSources: optimized.responsiveSources,
+        width: optimized.width,
+        height: optimized.height,
+        hash: optimized.hash,
+      });
+      persistedBytes = optimized.primaryBytes;
     }
-    const asset = ImageAssetSchema.parse({
-      kind: "image",
-      id: assetId,
-      name: params.name,
-      alt: params.alt,
-      mimeType: params.mimeType,
-      source: `data:${params.mimeType};base64,${bytesToBase64(bytes)}`,
-      width: dimensions.width,
-      height: dimensions.height,
-      hash,
-      responsiveSources,
-    });
     const bytesPath = join(this.assetsRoot, `${assetId}.bin`);
     const metadataPath = join(this.assetsRoot, `${assetId}.json`);
-    await writeAtomic(bytesPath, bytes);
+    await writeAtomic(bytesPath, persistedBytes);
     await writeAtomic(
       metadataPath,
       `${JSON.stringify({ ...asset, source: undefined }, (_, value) => (value === undefined ? undefined : value), 2)}\n`,
@@ -1770,7 +1807,7 @@ export class AgentController {
     this.stagedAssets.set(assetId, { asset, bytesPath });
     return {
       assetId,
-      bytes: bytes.byteLength,
+      bytes: persistedBytes.byteLength,
       sha256: asset.hash,
       width: asset.width,
       height: asset.height,
