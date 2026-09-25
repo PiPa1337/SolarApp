@@ -459,10 +459,10 @@ test("A21.3 el picker de imagen social cambia el campo y el preview de Open Grap
     imageValues.find(
       (value) => value !== initialSelection && (initialSelection || value !== imageValues[0]),
     ) ?? imageValues[1];
-  expect(selectedAssetValue).toBeTruthy();
+  expect(selectedAssetValue).toMatch(/\S+/);
 
   const initialSrc = await ogImage.getAttribute("src");
-  expect(initialSrc).toBeTruthy();
+  expect(initialSrc).toMatch(/\S+/);
 
   await select.selectOption(selectedAssetValue ?? "");
   await expect(select).toHaveValue(selectedAssetValue ?? "");
@@ -624,7 +624,7 @@ test("A21.7 «Descargar informe» baja el JSON de optimización con el slug de l
   expect(download.suggestedFilename()).toBe(`${DEMO_SLUG}-optimization.json`);
 
   const path = await download.path();
-  expect(path).toBeTruthy();
+  expect(path).toMatch(/\S+/);
   const report = JSON.parse(readFileSync(path ?? "", "utf8")) as {
     score?: number;
     routes?: Array<{ path: string; indexable?: boolean }>;

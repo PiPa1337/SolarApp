@@ -29,7 +29,13 @@ describe("canvas bridge", () => {
       sectionId: "sec",
       rect: { x: 0, y: 0, width: 10, height: 10 },
     });
-    expect(message).toBeDefined();
+    expect(message).toMatchObject({
+      type: "solara-canvas-select",
+      session: "s1",
+      nonce: "n1",
+      editId: "ce-sec-title",
+      sectionId: "sec",
+    });
     const valid = validateCanvasSelection(message as NonNullable<typeof message>, {
       activeSession: "s1",
       manifestEntries: [{ editId: "ce-sec-title", sectionId: "sec", fieldKey: "title" }],

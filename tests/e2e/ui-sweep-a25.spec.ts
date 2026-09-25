@@ -205,7 +205,7 @@ test("el click en la card selecciona, abre el detalle con datos reales y da feed
   await expect(detailPanel(page)).toContainText("Seleccioná una tienda");
 
   const record = await recordById(page, DEMO_STORE_ID);
-  expect(record).toBeTruthy();
+  expect(record).toMatchObject({ id: DEMO_STORE_ID });
   const metrics = metricsOf(record as StoredProjectRecord);
 
   await cardButton(page, DEMO_STORE_NAME).click();
@@ -272,7 +272,7 @@ test("la calculadora simula cantidades sin modificar el catálogo y se adapta a 
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
 
   const before = await recordById(page, DEMO_STORE_ID);
-  expect(before).toBeTruthy();
+  expect(before).toMatchObject({ id: DEMO_STORE_ID });
   const actualMetrics = metricsOf(before as StoredProjectRecord);
   const launcher = detailPanel(page, DEMO_STORE_NAME).getByRole("button", {
     name: "Calculadora",
@@ -376,7 +376,7 @@ test("el botón Abrir tienda del panel abre el editor con el proyecto", async ({
 test("el pin marca la card, agrupa Fijadas y persiste tras recargar", async ({ page }) => {
   await openDashboard(page);
   const record = await recordById(page, DEMO_STORE_ID);
-  expect(record).toBeTruthy();
+  expect(record).toMatchObject({ id: DEMO_STORE_ID });
 
   await cardButton(page, DEMO_STORE_NAME).click();
   const pin = detailPanel(page, DEMO_STORE_NAME).getByTestId("ui-detail-pin");

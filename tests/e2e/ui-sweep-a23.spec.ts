@@ -187,7 +187,7 @@ test("el diálogo precarga el nombre sugerido, enfoca el campo y confirma con En
   await expect(nameInput).toHaveValue("Predeterminado (copia)");
   await expect(nameInput).toBeFocused();
   const originalId = await originalButton.getAttribute("data-store-card-id");
-  expect(originalId).toBeTruthy();
+  expect(originalId).toMatch(/\S+/);
 
   await nameInput.fill("Copia Enter");
   await nameInput.press("Enter");

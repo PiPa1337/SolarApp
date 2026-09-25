@@ -54,15 +54,16 @@ describe("persistencia - atomicidad backup vs site", () => {
     const { persistProjectToDisk } = await import("./localProjectRepository");
     const { saveLocalProject } = await import("./localStorage");
     const result = await persistProjectToDisk(project, 1);
-    expect(result.siteError).toBeDefined();
-    expect(result.siteError).toMatch(/site fail/);
+    expect(result.siteError).toBe("site fail");
     expect(saveLocalProject).toHaveBeenCalledTimes(1);
     // Debe haber guardado el proyecto aunque el site falló: metadata con expectedVersion 1
     const callArgs = (saveLocalProject as any).mock.calls[0];
-    expect(callArgs).toBeDefined();
+    expect(callArgs).toHaveLength(3);
     const metadata = callArgs[0];
     expect(metadata.expectedVersion).toBe(1);
     expect(metadata.projectId).toBe("persist-atomic");
+    expect(callArgs[1]).toBeInstanceOf(Uint8Array);
+    expect(callArgs[2]).toBeUndefined();
   });
   it("INV: backup se verifica antes de guardar (projectId coincide)", async () => {
     const base = buildCatalogModernProject({

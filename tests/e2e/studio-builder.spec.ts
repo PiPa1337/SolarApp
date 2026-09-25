@@ -194,7 +194,7 @@ test("los repetidores completan duplicado, límites, error asociado y foco tras 
   const fieldDescribedBy = await firstName.getAttribute("aria-describedby");
   expect(fieldDescribedBy).toContain(await fieldError.getAttribute("id"));
   const groupDescribedBy = await repeater.getAttribute("aria-describedby");
-  expect(groupDescribedBy).toBeTruthy();
+  expect(groupDescribedBy).toMatch(/\S+/);
   await expect(repeater.locator(`[id="${groupDescribedBy}"]`)).toBeVisible();
   await firstName.fill("Corregido");
   await expect(itemField.getByTestId("ui-field-error")).toHaveCount(0);
@@ -248,7 +248,7 @@ test("agrega, ordena, duplica, oculta, deshace y elimina secciones modernas", as
   const hero = sections.getByRole("listitem").filter({ hasText: "Hero de catálogo" });
   const heroTitle = page.frameLocator("iframe").locator('[data-solara-module="catalog-hero"] h1');
   const initialHeroTitle = await heroTitle.textContent();
-  expect(initialHeroTitle).toBeTruthy();
+  expect(initialHeroTitle).toMatch(/\S+/);
   await hero.getByRole("button", { name: "Ocultar sección" }).click();
   await expect(
     page.frameLocator("iframe").locator('[data-solara-module="catalog-hero"]'),

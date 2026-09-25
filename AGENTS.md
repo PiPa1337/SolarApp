@@ -302,9 +302,8 @@ por sesión → checkpoint y aviso de reanudación.
 
 ## Entrega y Git
 
-- `origin` = `PiPa1337/SolaraCommerce-Fork` (privado): es el repositorio de
-  trabajo donde se sube nuestra versión local, siempre adelantada respecto del
-  upstream.
+- `origin` = `PiPa1337/SolarApp` (público): es el repositorio de trabajo donde
+  se sincroniza y publica esta versión local.
 - `upstream` = `PiPa1337/SolaraCommerce` (público): referencia únicamente. NO
   se hace fetch/pull/merge desde upstream: nuestra versión es un fork propio
   que no debe descargar nada de allí.

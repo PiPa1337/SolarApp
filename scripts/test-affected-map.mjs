@@ -3,6 +3,13 @@
 // Fuente única de verdad: scripts/test-affected-map.test.ts lo cubre.
 const ROOT_ALL = new Set(["package.json", "pnpm-workspace.yaml", "tsconfig.base.json"]);
 
+export function findChangedScriptTests(files) {
+  if (!files) return [];
+  return files.filter((file) =>
+    /^scripts\/.+\.(?:test|spec)\.(?:ts|mjs|js)$/.test(file.replaceAll("\\", "/")),
+  );
+}
+
 function mapE2EToPackages(file) {
   if (file.includes("exported-store") || file.includes("storefront-nojs")) {
     return ["@solara/exporter", "@solara/storefront-runtime"];
@@ -46,7 +53,8 @@ export function mapFilesToPackages(files) {
     else if (f.startsWith("tests/e2e/")) {
       for (const p of mapE2EToPackages(f)) pkgs.add(p);
     }
-    // scripts/, docs/ y otros (CHANGELOG, .cmd, etc.): no disparan tests de paquete
+    // scripts/, docs/ y otros (CHANGELOG, .cmd, etc.): no disparan tests de paquete.
+    // Los tests cambiados bajo scripts/ se ejecutan directamente desde test-affected.mjs.
   }
   if (pkgs.size === 0) return [];
   if (pkgs.size > 4) return null;

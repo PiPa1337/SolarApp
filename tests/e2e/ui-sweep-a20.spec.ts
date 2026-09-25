@@ -434,7 +434,7 @@ test("A20: preview - una escritura tardía de una ruta anterior no pisa el carri
     .toHaveLength(2);
 
   const activeFrame = page.frames().find((candidate) => candidate !== page.mainFrame());
-  expect(activeFrame).toBeDefined();
+  expect(activeFrame?.parentFrame()).toBe(page.mainFrame());
   await activeFrame?.evaluate(
     ({ session, staleCart }) => {
       window.parent.postMessage(

@@ -151,7 +151,7 @@ async function readProject(page: Page, lookup: ProjectLookup): Promise<StoredPro
     )
     .not.toBeNull();
   const project = record?.project;
-  expect(project).toBeTruthy();
+  expect(project?.id).toMatch(/\S+/);
   return project as StoredProjectPayload;
 }
 
@@ -436,7 +436,7 @@ test("vacíos de campos obligatorios: error inline en español sin rechazo globa
   await expect(descriptionError).toContainText("Completá");
   await expect(descriptionInput).toHaveAttribute("aria-invalid", "true");
   const descriptionErrorId = await descriptionError.getAttribute("id");
-  expect(descriptionErrorId).toBeTruthy();
+  expect(descriptionErrorId).toMatch(/\S+/);
   await expect(descriptionInput).toHaveAttribute("aria-describedby", descriptionErrorId as string);
   await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
   await expect
@@ -487,7 +487,7 @@ test("los límites de navegación respetan el schema y anuncian los controles de
   const itemLimit = page.getByTestId("ui-navigation-items-limit");
   await expect(itemLimit).toContainText("20 enlaces");
   const itemLimitId = await itemLimit.getAttribute("id");
-  expect(itemLimitId).toBeTruthy();
+  expect(itemLimitId).toMatch(/\S+/);
   await expect(addLink).toHaveAttribute("aria-describedby", itemLimitId as string);
 
   const firstItem = navItems(page).first();

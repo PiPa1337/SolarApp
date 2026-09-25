@@ -129,7 +129,7 @@ test("duplicar pasa por el diálogo y aplica el nombre elegido", async ({ page }
   const dialog = page.getByRole("dialog", { name: "Duplicar tienda" });
   await expect(dialog).toBeVisible();
   const descriptionId = await dialog.getAttribute("aria-describedby");
-  expect(descriptionId).toBeTruthy();
+  expect(descriptionId).toMatch(/\S+/);
   await expect(dialog.locator(".dashboard-cosmic-dialog__summary")).toHaveAttribute(
     "id",
     descriptionId ?? "missing-description",

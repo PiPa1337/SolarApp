@@ -45,21 +45,17 @@ describe("settingsFields <-> settingsSchema contrato", () => {
     it(`${id}: toda key de settingsFields existe en el schema`, () => {
       const shape = objectShape(module.settingsSchema);
       for (const field of module.settingsFields) {
-        expect(
-          shape[field.key],
-          `${id}: campo '${field.key}' sin clave en el schema`,
-        ).toBeDefined();
+        expect(shape, `${id}: campo '${field.key}' sin clave en el schema`).toHaveProperty(field.key);
         if (field.type === "repeater") {
           const itemShape = arrayItemShape(module.settingsSchema, field.key);
-          expect(
-            itemShape,
-            `${id}: '${field.key}' no es un array de objetos en el schema`,
-          ).toBeDefined();
+          expect(itemShape, `${id}: '${field.key}' no es un array de objetos en el schema`).toEqual(
+            expect.any(Object),
+          );
           for (const item of field.fields) {
             expect(
-              itemShape?.[item.key],
+              itemShape,
               `${id}: campo '${field.key}[].${item.key}' sin clave en el schema`,
-            ).toBeDefined();
+            ).toHaveProperty(item.key);
           }
         }
       }

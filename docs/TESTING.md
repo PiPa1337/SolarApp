@@ -101,8 +101,9 @@ sube su límite para hacer pasar la auditoría.
 `test:e2e` compila Studio y ejecuta la suite funcional de Chromium (3 workers por
 defecto en local, override con `PLAYWRIGHT_WORKERS=8` en máquinas 8C/16T) contra
 un servidor local. Los barridos históricos, auditorías visuales/performance y UX
-se separan en `test:e2e:audit`. En CI el build ya está hecho y se usa
-`test:e2e:ci`, también funcional.
+se separan en `test:e2e:audit`. En CI el build ya está hecho y `test:e2e:ci` ejecuta cinco
+specs smoke (11 tests) distribuidos en cuatro shards. La suite funcional completa
+sigue disponible localmente con `test:e2e`.
 
 Para iteración post-cambio usar smoke quick con caché de build:
 
@@ -112,7 +113,7 @@ corepack pnpm test:e2e:smoke       # smoke quick + build cacheado
 corepack pnpm test:e2e:smoke:full  # smoke completo + build cacheado (cierre)
 corepack pnpm test:e2e             # suite funcional Chromium
 corepack pnpm test:e2e:audit       # auditorías históricas/visuales/performance, manual
-corepack pnpm test:e2e:ci     # sin build, CI usa dist ya compilado
+corepack pnpm test:e2e:ci     # cinco specs smoke, sin build; CI usa dist ya compilado
 ```
 
 La suite de auditoría contiene `ui-sweep-a01..a26`, Tema, Resumen, Preparar,

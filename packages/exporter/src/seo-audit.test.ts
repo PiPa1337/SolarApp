@@ -49,8 +49,10 @@ describe("seo audit", () => {
     expect(ogUrl).toBe("https://example.com/tienda/");
     expect(sitemap).toContain("<loc>https://example.com/tienda/</loc>");
     const ld = extractJsonLd(homeHtml).find((x: any) => x["@type"] === "WebSite");
-    expect(ld).toBeTruthy();
-    expect(ld.url).toBe("https://example.com/tienda");
+    expect(ld).toMatchObject({
+      "@type": "WebSite",
+      url: "https://example.com/tienda",
+    });
   });
 
   it("robots: draft noindex,nofollow, production index para home y noindex para search/cart", () => {
@@ -90,8 +92,11 @@ describe("seo audit", () => {
     const html = getHtml(result.files as any, `productos/${prod.slug}/index.html`);
     const lds = extractJsonLd(html);
     const pg = lds.find((x: any) => x["@type"] === "ProductGroup" || x["@type"] === "Product");
-    expect(pg).toBeTruthy();
+    expect(pg).toMatchObject({
+      "@type": expect.stringMatching(/^(ProductGroup|Product)$/),
+    });
     const offers = pg["@type"] === "ProductGroup" ? pg.hasVariant : [pg];
+    expect(offers.length).toBeGreaterThan(0);
     // Offer price debe ser toFixed(2) siempre
     for (const o of offers) {
       expect(o.offers.price).toMatch(/^\d+\.\d{2}$/);
@@ -199,8 +204,12 @@ describe("seo audit", () => {
     const result = exportProject(store, { mode: "production" });
     const homeHtml = getHtml(result.files as any, "index.html");
     expect(homeHtml).toContain("<title>Tienda &amp; &quot;Especial&quot; &lt;Test&gt;</title>");
-    expect(extractOg(homeHtml, "og:title")).toBeTruthy();
-    expect(extractOg(homeHtml, "og:description")).toBeTruthy();
+    expect(extractOg(homeHtml, "og:title")).toBe(
+      "Tienda &amp; &quot;Especial&quot; &lt;Test&gt;",
+    );
+    expect(extractOg(homeHtml, "og:description")).toBe(
+      "Desc &amp; &lt;b&gt;con &quot;quotes&quot;&lt;/b&gt;",
+    );
     expect(extractOg(homeHtml, "og:image")).toMatch(/^https:\/\//);
     expect(homeHtml).toContain("og:image:alt");
     // no-JS: debe tener contenido visible sin JS

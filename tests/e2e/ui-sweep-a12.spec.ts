@@ -326,7 +326,7 @@ test("fijar marca la card con aria-pressed, la agrupa en Fijadas y persiste tras
   const zetaId = await card(page, "Zeta")
     .locator(".dashboard-store-card__button")
     .getAttribute("data-store-card-id");
-  expect(zetaId).toBeTruthy();
+  expect(zetaId).toMatch(/\S+/);
 
   await zetaPin.click();
   await expect(zetaPin).toHaveAttribute("aria-pressed", "true");

@@ -91,7 +91,12 @@ describe("seguridad del canvas bridge", () => {
       sectionId: '"><svg onload=alert(1)>',
       rect: { x: 0, y: 0, width: 1, height: 1 },
     });
-    expect(message).toBeDefined();
+    expect(message).toMatchObject({
+      type: "solara-canvas-select",
+      session: "s1",
+      nonce: '"><img src=x onerror=alert(1)>',
+      sectionId: '"><svg onload=alert(1)>',
+    });
     // El nonce no está en los pendientes: rechazado antes de tocar el manifest.
     expect(
       validateCanvasSelection(message as NonNullable<typeof message>, optionsFor()),

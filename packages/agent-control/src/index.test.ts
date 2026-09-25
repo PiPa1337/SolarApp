@@ -599,9 +599,11 @@ describe("control nativo del agente", () => {
           const input = inputs[index];
           if (!input) throw new Error("Falta la entrada de prueba.");
           const asset = planned.project?.assets.find((candidate) => candidate.id === stagedAsset.assetId);
-          expect(asset).toBeDefined();
-          expect(asset?.optimizationRecipe).toBe("responsive-alpha-v2");
-          expect(asset?.mimeType).toBe("image/webp");
+          expect(asset).toMatchObject({
+            id: stagedAsset.assetId,
+            optimizationRecipe: "responsive-alpha-v2",
+            mimeType: "image/webp",
+          });
           expect(asset?.source).toMatch(/^data:image\/webp;base64,/);
           expect(asset?.fallbackSource).toMatch(/^data:image\/(?:jpeg|png);base64,/);
           expect(asset?.hash).toBe(createHash("sha256").update(Buffer.from(input.data, "base64")).digest("hex"));
@@ -899,7 +901,7 @@ describe("control nativo del agente", () => {
       });
       expect(replay.version).toBe(finalJob.result.version);
       const current = await storage.readCurrent("store-durable");
-      expect(current).toBeDefined();
+      expect(current?.manifest.current.version).toBe(finalJob.result.version);
 
       const update = await recovered.createPlan({
         storeId: "store-durable",
@@ -1132,7 +1134,7 @@ describe("control nativo del agente", () => {
           operations: [{ type: "store.archive", confirmation: "ARCHIVAR_TIENDA" }],
         });
         const archiveReceipt = await controller.commitPlan({ planId: archivePlan.planId });
-        expect(archiveReceipt.status).toBeDefined();
+        expect(archiveReceipt.status).toBe("site-outdated");
 
         const archived = await controller.getStore({ storeId: "store-archivo" });
         expect(archived.status).toBe("archived");
@@ -1427,7 +1429,6 @@ describe("control nativo del agente", () => {
           },
         ],
       });
-      expect(plan.blockingIssues).toBeDefined();
       expect(Array.isArray(plan.blockingIssues)).toBe(true);
       expect(plan.blockingIssues.some((issue) => issue.code === "product.image")).toBe(true);
     } finally {

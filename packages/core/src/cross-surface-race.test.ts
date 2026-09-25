@@ -424,7 +424,9 @@ describe("N4 Cross-Surface Race Lab", () => {
     "100 seeds x 100 operaciones conservan snapshots, drafts, conflictos y locks",
     { timeout: 180000 },
     () => {
-      for (let seed = 0; seed < 100; seed += 1) runSeed(seed);
+      const startSeed = Number.parseInt(process.env.SOLARA_TEST_SEED ?? "0", 10);
+      if (!Number.isInteger(startSeed)) throw new Error("SOLARA_TEST_SEED debe ser un entero");
+      for (let offset = 0; offset < 100; offset += 1) runSeed(startSeed + offset);
     },
   );
 });

@@ -132,7 +132,7 @@ test("el lanzador persiste el proyecto y el sitio fuera de IndexedDB", async ({ 
       readFileSync(join(applicationRoot, "proyectos", folder, "manifest.json"), "utf8"),
     ) as { current: { version: number }; lastValidSite?: { directoryPath: string } };
     expect(manifest.current.version).toBe(baseVersion + 2);
-    expect(manifest.lastValidSite?.directoryPath).toBeTruthy();
+    expect(manifest.lastValidSite?.directoryPath).toMatch(/\S+/);
     expect(
       existsSync(join(applicationRoot, manifest.lastValidSite?.directoryPath ?? "", "index.html")),
     ).toBe(true);

@@ -9,6 +9,7 @@ import {
 } from "./catalog-modern-guidance";
 import { buildCatalogModernProject } from "./catalog-modern-template";
 import type { StoreProjectV2 } from "./index";
+import { buildModernBaseTemplateProject } from "./modern-base-template";
 
 /** Resuelve un target del checklist en el proyecto real: secciones/páginas/productos por id o kind. */
 function resolveTarget(project: StoreProjectV2, target: string): unknown {
@@ -92,13 +93,24 @@ describe("Catalog Modern guidance", () => {
     expect(clean.assets.every((asset) => isCatalogModernPlaceholderAsset(clean, asset))).toBe(true);
   });
 
+  it("reconoce los nombres específicos de assets de la plantilla base aunque cambie el alt", () => {
+    const template = buildModernBaseTemplateProject();
+    template.assets.forEach((asset) => {
+      asset.alt = "Texto alternativo real";
+    });
+
+    expect(template.assets.every((asset) => isCatalogModernPlaceholderAsset(template, asset))).toBe(
+      true,
+    );
+  });
+
   it("todo target del checklist existe en los seeds con páginas editoriales (sin typos)", () => {
     for (const seed of ["demo", "placeholder"] as const) {
       const project = buildCatalogModernProject({ seed });
       for (const requirement of getCatalogModernContentRequirements(project)) {
         const resolved = resolveTarget(project, requirement.target);
         const message = `${seed}: ${requirement.id} -> ${requirement.target}`;
-        expect(resolved, message).toBeDefined();
+        expect(resolved, message).not.toBeUndefined();
         const expected =
           requirement.target === "whatsapp.phone" && seed === "demo"
             ? requirement.value === ""

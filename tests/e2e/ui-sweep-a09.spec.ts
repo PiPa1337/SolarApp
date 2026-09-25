@@ -361,7 +361,7 @@ test("campos restantes: razón social, teléfono, dirección, saludo, URL y slug
 
   // URL pública inválida: borrador conservado, error visible y sin commit.
   const initialProject = await readStoredProject(page, storeName);
-  expect(initialProject?.baseUrl).toBeTruthy();
+  expect(initialProject?.baseUrl).toMatch(/^https?:\/\//);
   const urlInput = page.getByLabel("URL pública", { exact: true });
   await urlInput.fill("no es una url");
   await expect(page.getByTestId("ui-field-error")).toContainText(

@@ -234,8 +234,7 @@ test("A05: duplicar variante conserva SKU, opciones y precios con id nuevo", asy
   const ids = variants.map((variant) => variant.id);
   expect(new Set(ids).size).toBe(9);
   const duplicated = variants[8];
-  expect(duplicated).toBeDefined();
-  expect(duplicated.id).toMatch(/^variant-/);
+  expect(duplicated?.id).toMatch(/^variant-/);
   expect(duplicated).toMatchObject({
     title: "Negro / S copia",
     sku,

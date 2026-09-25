@@ -104,8 +104,8 @@ describe("tienda base catalog-modern de 50 productos", () => {
       const exportedProject = exportProject(project, { mode: "production" });
       const exportedHome = exportedProject.files.get("index.html");
       const exportedCart = exportedProject.files.get("carrito/index.html");
-      expect(exportedHome).toBeDefined();
-      expect(exportedCart).toBeDefined();
+      expect(typeof exportedHome).toBe("string");
+      expect(typeof exportedCart).toBe("string");
       expectCheckoutContract(String(exportedHome), `${project.name} export home`);
       expectCheckoutContract(String(exportedCart), `${project.name} export carrito`);
 

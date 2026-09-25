@@ -52,7 +52,6 @@ describe("exportHistory", () => {
       score: 71,
       critical: 2,
     });
-    expect(entry?.at).toBeDefined();
     expect(Date.parse(entry?.at ?? "")).not.toBeNaN();
     expect(formatLastExportLabel(readExportHistory("tienda-a"), null, nowIso)).toBe(
       new Date(entry?.at ?? "").toLocaleTimeString("es-AR", {

@@ -313,8 +313,8 @@ test("utilidad: el número y el saludo editados llegan al sitio exportado (diff 
   const afterFallback = waLinks(afterProduct).find((href) =>
     href.startsWith(`https://wa.me/${EDITED_PHONE}?text=`),
   );
-  expect(beforeFallback).toBeDefined();
-  expect(afterFallback).toBeDefined();
+  expect(beforeFallback).toMatch(/^https:\/\/wa\.me\/\d+\?text=/);
+  expect(afterFallback).toMatch(/^https:\/\/wa\.me\/\d+\?text=/);
   expect(decodeURIComponent(afterFallback ?? "")).toContain(EDITED_GREETING);
   expect(decodeURIComponent(afterFallback ?? "")).toContain("Producto: Remera esencial de algodón");
   expect(decodeURIComponent(afterFallback ?? "")).not.toContain("[MS-001-NE-S]");

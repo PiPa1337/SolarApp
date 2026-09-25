@@ -112,7 +112,7 @@ test("cancelar la reubicación conserva selección, foco y descripción del diá
   const dialog = page.getByRole("dialog", { name: "Reubicar categoría" });
   await expect(dialog).toBeVisible();
   const descriptionId = await dialog.getAttribute("aria-describedby");
-  expect(descriptionId).toBeTruthy();
+  expect(descriptionId).toMatch(/\S+/);
   await expect(dialog.locator(".confirm-dialog__body")).toHaveAttribute(
     "id",
     descriptionId ?? "missing-description",

@@ -241,7 +241,7 @@ describe("modelo del dashboard", () => {
     let slow = true;
     const now = () => elapsed;
     const audit = (project: StoredProject["project"]) => {
-      expect(project).toBeDefined();
+      expect(project.id).toBe(catalogModernStore.id);
       if (slow) {
         slow = false;
         elapsed += 400;

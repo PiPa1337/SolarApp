@@ -222,11 +222,7 @@ describe("generateIconPng", () => {
     const second = generateIconPng("tienda-512", 512);
     expect(Buffer.from(first).equals(Buffer.from(second))).toBe(true);
     const parsed = parsePng(first);
-    expect(parsed).toBeDefined();
-    expect(parsed?.width).toBe(512);
-    expect(parsed?.height).toBe(512);
-    expect(parsed?.bitDepth).toBe(8);
-    expect(parsed?.colorType).toBe(3);
+    expect(parsed).toMatchObject({ width: 512, height: 512, bitDepth: 8, colorType: 3 });
     expect(parsed?.interlace).toBe(0);
     expect(parsed?.hasPlte).toBe(true);
     const raw = unzlibSync(parsed?.idat ?? new Uint8Array());
@@ -444,9 +440,7 @@ describe("pwa-png", () => {
       120,
     ]);
     const decoded = decodePngRgba(encodePngRgba(rgba, 3, 2));
-    expect(decoded).toBeDefined();
-    expect(decoded?.width).toBe(3);
-    expect(decoded?.height).toBe(2);
+    expect(decoded).toMatchObject({ width: 3, height: 2 });
     expect([...(decoded?.rgba ?? new Uint8Array())]).toEqual([...rgba]);
   });
 
@@ -470,9 +464,7 @@ describe("pwa-png", () => {
     });
     const png = buildPngTest(ihdrTest(width, height, 8, 6, 0), Uint8Array.from(scanlines));
     const decoded = decodePngRgba(png);
-    expect(decoded).toBeDefined();
-    expect(decoded?.width).toBe(width);
-    expect(decoded?.height).toBe(height);
+    expect(decoded).toMatchObject({ width, height });
     const expected = rows.flatMap((row) => [...row]);
     expect([...(decoded?.rgba ?? new Uint8Array())]).toEqual(expected);
   });
@@ -490,7 +482,7 @@ describe("pwa-png", () => {
     );
     expect(decodePngRgba(deep)).toBeUndefined();
     const valid = buildPngTest(ihdrTest(1, 1, 8, 6, 0), pixel);
-    expect(decodePngRgba(valid)).toBeDefined();
+    expect(decodePngRgba(valid)).toMatchObject({ width: 1, height: 1 });
     expect(decodePngRgba(valid.slice(0, valid.length - 9))).toBeUndefined();
   });
 

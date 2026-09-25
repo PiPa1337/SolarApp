@@ -78,7 +78,7 @@ test("V2-B2: las páginas independientes quedan fuera del export y del header", 
 
 test("V2-B4: la página de producto incluye el detalle del Constructor", async ({ page }) => {
   const product = catalogModernV2Store.products.find((item) => item.status === "active");
-  expect(product).toBeDefined();
+  expect(product?.slug).toMatch(/\S+/);
   const html = await htmlOf(page, `/productos/${product?.slug}/`);
   expect(html).toContain('data-solara-module="catalog-product-detail"');
   expect(html).toContain('data-solara-module="catalog-header"');

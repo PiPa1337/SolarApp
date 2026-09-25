@@ -59,9 +59,11 @@ describe("buildCompareReport", () => {
     expect(report.sectionsOnlyInRight).toEqual([]);
 
     const hero = report.motionDiffs.find((diff) => diff.moduleId === "catalog-hero");
-    expect(hero).toBeDefined();
-    expect(hero?.leftPreset).toBe("fade-up");
-    expect(hero?.rightPreset).toBe("layer-stack");
+    expect(hero).toMatchObject({
+      moduleId: "catalog-hero",
+      leftPreset: "fade-up",
+      rightPreset: "layer-stack",
+    });
   });
 
   test("catalog modern vs referencia difieren en tema e inventario", () => {

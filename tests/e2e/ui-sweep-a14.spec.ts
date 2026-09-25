@@ -251,7 +251,7 @@ test("A14.1 tabs — el click cambia el panel, aria-selected, roving tabindex y 
   // Contrato de datos: la tab activa declara aria-controls = id del tabpanel y
   // el tabpanel declara aria-labelledby = id de la tab activa.
   const paneId = await pane(page).getAttribute("id");
-  expect(paneId).toBeTruthy();
+  expect(paneId).toMatch(/\S+/);
   await expect(tabByName(page, "Catálogo")).toHaveAttribute("aria-controls", String(paneId));
   await expect(pane(page)).toHaveAttribute("aria-labelledby", "studio-tab-catalog");
   await expect(pane(page)).toHaveAttribute("role", "tabpanel");

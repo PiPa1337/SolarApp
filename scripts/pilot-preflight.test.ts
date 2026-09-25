@@ -44,7 +44,7 @@ function assertProductionPackage(project: typeof referenceStore): void {
   for (const product of snapshot.products) {
     const productFile = `${product.canonicalPath.replace(/^\/+/, "")}index.html`;
     const html = result.files.get(productFile);
-    expect(html, `falta el HTML de ${product.canonicalPath}`).toBeDefined();
+    expect(typeof html, `falta el HTML de ${product.canonicalPath}`).toBe("string");
     expect(sitemap).toContain(product.canonicalPath);
   }
 

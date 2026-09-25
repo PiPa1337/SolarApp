@@ -72,7 +72,7 @@ describe("export.worker", () => {
       expect(message.ok).toBeUndefined();
     }
     const final = messages.at(-1);
-    expect(final).toBeDefined();
+    expect(final?.ok).toBe(true);
     const audit = final?.result?.audit ?? [];
     expect(final?.result?.files).toBeInstanceOf(Map);
     expect(final?.result?.optimization?.score).toBeGreaterThanOrEqual(0);
@@ -99,7 +99,7 @@ describe("export.worker", () => {
     const audit = auditMessages.at(-1);
     expect(site?.ok).toBe(true);
     expect(audit?.ok).toBe(true);
-    expect(audit?.result?.criticalCount).toBeDefined();
+    expect(audit?.result?.criticalCount).toBeGreaterThanOrEqual(0);
     expect(site?.result?.criticalCount).toBe(audit?.result?.criticalCount);
   });
 

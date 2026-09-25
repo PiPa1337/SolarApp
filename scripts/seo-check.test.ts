@@ -16,7 +16,7 @@ test("P5-9: JSON-LD valido y con URLs absolutas en las paginas comerciales", () 
     expect(blocks.length, `${path}: sin JSON-LD`).toBeGreaterThan(0);
     for (const block of blocks) {
       const data = JSON.parse(block[1]);
-      expect(data["@type"], `${path}: tipo`).toBeTruthy();
+      expect(String(data["@type"] ?? ""), `${path}: tipo`).toMatch(/\S+/);
       if ("url" in data) {
         expect(data.url, `${path}: url absoluta`).toMatch(/^https:\/\//);
       }

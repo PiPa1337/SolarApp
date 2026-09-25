@@ -13,8 +13,8 @@ cambio, y cómo las piezas se conectan entre sí.
 ## Setup inicial
 
 ```bash
-git clone https://github.com/PiPa1337/SolaraCommerce-Fork.git
-cd SolaraCommerce-Fork
+git clone https://github.com/PiPa1337/SolarApp.git
+cd SolarApp
 corepack pnpm install --frozen-lockfile
 corepack pnpm build
 corepack pnpm dev          # abre Studio en http://localhost:4173

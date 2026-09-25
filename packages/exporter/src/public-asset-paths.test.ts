@@ -18,7 +18,7 @@ function expectMapMatchesFiles(project: StoreProjectV1, semanticNames: boolean):
   expect(paths.size).toBeGreaterThan(0);
   for (const [id, path] of paths) {
     const file = result.files.get(path);
-    expect(file, `falta el archivo mapeado ${path} (${id})`).toBeDefined();
+    expect(file, `falta el archivo mapeado ${path} (${id})`).toBeInstanceOf(Uint8Array);
     if (typeof file === "string") throw new Error(`Se esperaba binario en ${path}.`);
     const entity = [...project.assets, ...project.videos].find((item) => item.id === id);
     const original = dataUrlBytes(entity?.source ?? "");

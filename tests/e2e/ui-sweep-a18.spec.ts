@@ -593,7 +593,7 @@ test("A18 T13: el diálogo expone aria-labelledby hacia su título y el botón X
   const { dialog, deleteBtn } = await openAssetDeleteDialog(page);
 
   const labelledBy = await dialog.getAttribute("aria-labelledby");
-  expect(labelledBy, "aria-labelledby presente").toBeTruthy();
+  expect(labelledBy, "aria-labelledby presente").toMatch(/\S+/);
   const labelText = await page.evaluate(
     (id) => document.getElementById(id as string)?.textContent?.trim() ?? "",
     labelledBy,

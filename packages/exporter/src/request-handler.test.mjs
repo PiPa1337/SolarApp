@@ -101,7 +101,9 @@ describe("handler: retiro de referencias legacy", () => {
       ]);
       await expect(handler.storage.readCurrent("store-modo-sur")).resolves.toBeUndefined();
       await expect(handler.storage.readCurrent("store-modo-sur-demo-v1")).resolves.toBeUndefined();
-      await expect(handler.storage.readCurrent("store-de-usuario")).resolves.toBeDefined();
+      await expect(handler.storage.readCurrent("store-de-usuario")).resolves.toMatchObject({
+        manifest: { slug: "store-de-usuario" },
+      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

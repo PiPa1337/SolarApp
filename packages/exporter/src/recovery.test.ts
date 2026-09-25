@@ -217,7 +217,10 @@ describe("restoreAssetSources", () => {
     const used = publicMediaUsage(referenceStore);
     const { slimProject } = splitSlimProject(referenceStore, used);
     const ref = slimProject.assets.find((asset) => asset.source.startsWith(REF_PREFIX));
-    expect(ref).toBeDefined();
+    expect(ref).toMatchObject({
+      id: expect.any(String),
+      source: expect.stringContaining(REF_PREFIX),
+    });
     expect(() => restoreAssetSources(slimProject, new Map())).toThrow(ref?.id);
   });
 });

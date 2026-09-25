@@ -255,16 +255,18 @@ describe("almacenamiento local de proyectos", () => {
       const listing = await storage.list();
       expect(listing.projects[0]).toMatchObject({ version: 2, siteVersion: 1, siteOutdated: true });
       expect(
-        await stat(
-          join(
-            root,
-            "proyectos",
-            listing.projects[0].folder,
-            "respaldos",
-            `${firstReceipt.key}.solara.json`,
-          ),
-        ),
-      ).toBeTruthy();
+        (
+          await stat(
+            join(
+              root,
+              "proyectos",
+              listing.projects[0].folder,
+              "respaldos",
+              `${firstReceipt.key}.solara.json`,
+            ),
+          )
+        ).isFile(),
+      ).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -891,8 +893,10 @@ describe("almacenamiento local de proyectos", () => {
 
       const listing = await storage.list();
       const report = listing.recovery.find((r) => r.folder === "tienda-enlazada");
-      expect(report).toBeDefined();
-      expect(report.message).toMatch(/enlace simbólico|junction/i);
+      expect(report).toMatchObject({
+        folder: "tienda-enlazada",
+        message: expect.stringMatching(/enlace simbólico|junction/i),
+      });
       expect(listing.projects.some((p) => p.folder === "tienda-enlazada")).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -926,7 +930,7 @@ describe("almacenamiento local de proyectos", () => {
 
       const projectsRoot = join(root, "proyectos");
       const [folder] = (await readdir(projectsRoot)).filter((name) => name.startsWith("prueba-"));
-      expect(folder).toBeDefined();
+      expect(folder).toMatch(/^prueba-/);
       const orphans = await readdir(join(projectsRoot, folder, "actual"));
       expect(orphans.filter((name) => name.endsWith(".solara.json"))).toEqual([]);
       await storage.abort(attempt.transactionId);

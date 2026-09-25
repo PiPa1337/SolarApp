@@ -248,7 +248,6 @@ test("el checklist posterior persiste los toggles, navega a SEO y el historial r
   await expect(history.getByTestId("ui-export-history-item")).toContainText("Salud");
 
   const stored = await page.evaluate((key) => localStorage.getItem(key), HISTORY_KEY);
-  expect(stored).toBeTruthy();
   const parsed: unknown = stored ? JSON.parse(stored) : [];
   expect(Array.isArray(parsed)).toBe(true);
   expect((parsed as Array<{ mode: string }>)[0]?.mode).toBe("draft");

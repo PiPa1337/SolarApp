@@ -294,7 +294,11 @@ describe("official module system", () => {
 
   it("preserves compatible hero settings when replacing its visual treatment", () => {
     const hero = referenceStore.sections.find((section) => section.moduleId === "hero-media");
-    expect(hero).toBeDefined();
+    expect(hero).toMatchObject({
+      id: "section-hero",
+      slot: "hero",
+      moduleId: "hero-media",
+    });
     const source = {
       ...hero,
       settings: { ...hero?.settings, editorOnlyValue: "remove-me" },
@@ -310,7 +314,11 @@ describe("official module system", () => {
 
   it("preserves compatible grid settings in both replacement directions", () => {
     const catalog = referenceStore.sections.find((section) => section.slot === "catalog");
-    expect(catalog).toBeDefined();
+    expect(catalog).toMatchObject({
+      id: "section-products",
+      slot: "catalog",
+      moduleId: "compact-product-grid",
+    });
     const source = {
       ...catalog,
       moduleId: "editorial-product-grid",
@@ -326,7 +334,11 @@ describe("official module system", () => {
 
   it("drops incompatible settings and applies target defaults", () => {
     const content = referenceStore.sections[0];
-    expect(content).toBeDefined();
+    expect(content).toMatchObject({
+      id: "section-announcement",
+      slot: "announcement",
+      moduleId: "announcement-bar",
+    });
     const source = {
       ...content,
       slot: "content",
@@ -2076,7 +2088,7 @@ describe("auditoría Resumen — fixes Ola 3 (navegación y footer moderno)", ()
     const baseRule = styles.match(
       /\.catalog-mega-menu__all \{[^}]*text-decoration: none;[^}]*\}/,
     )?.[0];
-    expect(baseRule).toBeDefined();
+    expect(baseRule).toContain("text-decoration: none;");
     expect(baseRule).not.toContain("border-top");
     expect(v2Styles).toContain(".cm.v2 .catalog-mega-menu__all::after");
     expect(v2Styles).toContain(".cm.v2 .catalog-mega-menu__all:hover::after");

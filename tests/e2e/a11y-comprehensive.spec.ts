@@ -122,7 +122,7 @@ test("a11y: cart drawer focus trap y Escape", async ({ page }) => {
     await page.keyboard.press("Tab");
     // still inside?
     const inside = await drawer.evaluate((el) => el.contains(document.activeElement));
-    expect(inside).toBeTruthy();
+    expect(inside).toBe(true);
     // Escape should close and return focus
     await page.keyboard.press("Escape");
     await expect(drawer).toHaveAttribute("aria-hidden", "true");
@@ -189,12 +189,12 @@ test("a11y: variant selector y form labels", async ({ page }) => {
     // variant select has label
     const variantSelect = page.locator("[data-variant-select]");
     const variantId = await variantSelect.getAttribute("id");
-    expect(variantId).toBeTruthy();
+    expect(variantId).toMatch(/\S+/);
     const label = page.locator(`label[for="${variantId}"]`);
     await expect(label).toBeVisible();
     // quantity has label
     const qtyId = await page.locator('input[name="quantity"]').getAttribute("id");
-    expect(qtyId).toBeTruthy();
+    expect(qtyId).toMatch(/\S+/);
     await expect(page.locator(`label[for="${qtyId}"]`)).toBeVisible();
     // gallery thumbs have aria-label and aria-current
     const thumb = page.locator("[data-gallery-thumb]").first();
@@ -225,14 +225,14 @@ test("a11y: zoom 200% y viewport estrecho sin overflow", async ({ page }) => {
     const overflow320 = await page.evaluate(
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 2,
     );
-    expect(overflow320).toBeTruthy();
+    expect(overflow320).toBe(true);
     // 1280 with zoom 200% simulated as 640 viewport (200% zoom = half viewport)
     await page.setViewportSize({ width: 640, height: 800 });
     await page.goto(`${base}/`, { waitUntil: "load" });
     const overflow640 = await page.evaluate(
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 2,
     );
-    expect(overflow640).toBeTruthy();
+    expect(overflow640).toBe(true);
     // 400% as 320
     await page.setViewportSize({ width: 320, height: 800 });
     await page.evaluate(() => {
@@ -241,7 +241,7 @@ test("a11y: zoom 200% y viewport estrecho sin overflow", async ({ page }) => {
     const overflow400 = await page.evaluate(
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 5,
     );
-    expect(overflow400).toBeTruthy();
+    expect(overflow400).toBe(true);
   } finally {
     await new Promise<void>((r) => server.close(() => r()));
   }
@@ -262,7 +262,7 @@ test("a11y: reduced motion desactiva autoplay", async ({ page }) => {
       const autoplayDisabled = await page.evaluate(
         () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
       );
-      expect(autoplayDisabled).toBeTruthy();
+      expect(autoplayDisabled).toBe(true);
     }
   } finally {
     await new Promise<void>((r) => server.close(() => r()));

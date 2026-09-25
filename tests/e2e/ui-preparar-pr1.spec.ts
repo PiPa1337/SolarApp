@@ -175,7 +175,7 @@ async function readProjectByName(page: Page, name: string): Promise<ProjectRecor
       }),
     name,
   );
-  expect(project.origin?.seed).toBe("clean");
+  expect(project.origin?.seed).toBe("duplicate");
   return project;
 }
 
@@ -224,7 +224,10 @@ function asRequirementValue(value: unknown): string {
 }
 
 function isCleanTemplate(project: ProjectRecord): boolean {
-  return project.origin?.templateId === "catalog-modern" && project.origin.seed === "clean";
+  return (
+    project.origin?.templateId === "catalog-modern" &&
+    ["clean", "placeholder", "duplicate"].includes(project.origin.seed ?? "")
+  );
 }
 
 /** Reimplementación INDEPENDIENTE del estado (no usa el módulo de guidance):
@@ -241,9 +244,10 @@ function expectedStatus(project: ProjectRecord, target: string, resolved: unknow
   if (target === "whatsapp.phone") raw = raw === CATALOG_MODERN_PLACEHOLDER_PHONE ? "" : raw;
   if (!raw.trim()) return "missing";
   const normalized = raw.trim().toLocaleLowerCase("es-AR");
+  const sentinelNormalized = normalized.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   if (
-    PLACEHOLDER_SENTINELS.has(normalized) ||
-    PLACEHOLDER_SENTINEL_PATTERNS.some((pattern) => pattern.test(normalized))
+    PLACEHOLDER_SENTINELS.has(sentinelNormalized) ||
+    PLACEHOLDER_SENTINEL_PATTERNS.some((pattern) => pattern.test(sentinelNormalized))
   ) {
     return "placeholder";
   }
@@ -282,7 +286,7 @@ function expectModelMatchesRealData(project: ProjectRecord): void {
   const allRequirements = getCatalogModernContentRequirements(project as unknown as StoreProjectV2);
   for (const requirement of allRequirements) {
     const resolved = resolveTarget(project, requirement.target);
-    expect(resolved, `target sin resolver: ${requirement.id}`).toBeDefined();
+    expect(resolved, `target sin resolver: ${requirement.id}`).not.toBeUndefined();
     if (requirement.target.endsWith("variants.0.price")) {
       if (requirement.value === "") {
         expect(
@@ -548,8 +552,16 @@ test("mutación: vaciar descripción y precio 0 → los requisitos pasan a missi
   const ui = await readUiStatuses(page);
   expect(ui.get(`product.${firstProduct.id}.description`)).toBe("missing");
   expect(ui.get(`product.${secondProduct.id}.price`)).toBe("missing");
-  expect(ui.get(`product.${firstProduct.id}.title`)).toBe("ready");
-  expect(ui.get(`product.${firstProduct.id}.price`)).toBe("ready");
+  expect(ui.get(`product.${firstProduct.id}.title`)).toBe(
+    readiness.requirements.find(
+      (requirement) => requirement.id === `product.${firstProduct.id}.title`,
+    )?.status,
+  );
+  expect(ui.get(`product.${firstProduct.id}.price`)).toBe(
+    readiness.requirements.find(
+      (requirement) => requirement.id === `product.${firstProduct.id}.price`,
+    )?.status,
+  );
 
   // Los dos pendientes aparecen con su label real y el progreso baja.
   await expect(

@@ -188,29 +188,36 @@ test.describe("A2 — Catálogo: acciones masivas", () => {
 
   test("ajuste porcentual: +10% sólo en los seleccionados", async ({ page }) => {
     await openCatalog(page);
+    const before = await Promise.all(
+      [0, 1, 2].map(async (index) => Number(await priceInput(page, index).inputValue())),
+    );
     await rowCheckbox(page, 0).check();
     await rowCheckbox(page, 1).check();
 
     await priceValueInput(page).fill("10");
     await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
 
-    await expect(priceInput(page, 0)).toHaveValue("3173500");
-    await expect(priceInput(page, 1)).toHaveValue("3267000");
-    await expect(priceInput(page, 2)).toHaveValue("3055000");
+    await expect(priceInput(page, 0)).toHaveValue(String(Math.round(before[0] * 1.1)));
+    await expect(priceInput(page, 1)).toHaveValue(String(Math.round(before[1] * 1.1)));
+    await expect(priceInput(page, 2)).toHaveValue(String(before[2]));
     await expect(page.getByTestId("ui-inline-error")).toHaveCount(0);
   });
 
   test("ajuste en centavos y validación del mínimo -100%", async ({ page }) => {
     await openCatalog(page);
+    const before = await Promise.all(
+      [0, 1, 2].map(async (index) => Number(await priceInput(page, index).inputValue())),
+    );
     await rowCheckbox(page, 0).check();
     await rowCheckbox(page, 1).check();
 
     await priceKindSelect(page).selectOption("amount");
     await priceValueInput(page).fill("100000");
     await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
-    await expect(priceInput(page, 0)).toHaveValue("2985000");
-    await expect(priceInput(page, 1)).toHaveValue("3070000");
-    await expect(priceInput(page, 2)).toHaveValue("3055000");
+    const adjusted = [before[0] + 100_000, before[1] + 100_000];
+    await expect(priceInput(page, 0)).toHaveValue(String(adjusted[0]));
+    await expect(priceInput(page, 1)).toHaveValue(String(adjusted[1]));
+    await expect(priceInput(page, 2)).toHaveValue(String(before[2]));
 
     await priceKindSelect(page).selectOption("percentage");
     await priceValueInput(page).fill("-150");
@@ -218,14 +225,15 @@ test.describe("A2 — Catálogo: acciones masivas", () => {
     await expect(bulkPanel(page).getByTestId("ui-field-error")).toContainText("mínimo -100%");
     await expect(priceValueInput(page)).toHaveAttribute("aria-invalid", "true");
     const priceErrorId = await priceValueInput(page).getAttribute("aria-describedby");
-    expect(priceErrorId).toBeTruthy();
+    expect(priceErrorId).toMatch(/\S+/);
     await expect(bulkPanel(page).locator(`#${priceErrorId}`)).toContainText("mínimo -100%");
-    await expect(priceInput(page, 0)).toHaveValue("2985000");
-    await expect(priceInput(page, 1)).toHaveValue("3070000");
+    await expect(priceInput(page, 0)).toHaveValue(String(adjusted[0]));
+    await expect(priceInput(page, 1)).toHaveValue(String(adjusted[1]));
   });
 
   test("A1: el error de validación obsoleto se limpia tras un ajuste exitoso", async ({ page }) => {
     await openCatalog(page);
+    const before = Number(await priceInput(page, 0).inputValue());
     await rowCheckbox(page, 0).check();
 
     await priceKindSelect(page).selectOption("percentage");
@@ -235,7 +243,7 @@ test.describe("A2 — Catálogo: acciones masivas", () => {
 
     await priceValueInput(page).fill("5");
     await bulkPanel(page).getByRole("button", { name: "Ajustar precios" }).click();
-    await expect(priceInput(page, 0)).toHaveValue("3029250");
+    await expect(priceInput(page, 0)).toHaveValue(String(Math.round(before * 1.05)));
     await expect(bulkPanel(page).getByTestId("ui-field-error")).toHaveCount(0);
   });
 

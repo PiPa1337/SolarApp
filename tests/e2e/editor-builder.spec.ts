@@ -84,7 +84,7 @@ test("la sección seleccionada y sus acciones exponen el contexto accesible", as
   const describedBy = await hero
     .getByRole("button", { name: "Duplicar sección" })
     .getAttribute("aria-describedby");
-  expect(describedBy).toBeTruthy();
+  expect(describedBy).toMatch(/\S+/);
   await expect(page.locator(`#${describedBy}`)).toHaveText("Hero de catálogo");
 });
 

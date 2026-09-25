@@ -9,7 +9,10 @@ import {
 
 describe("registro de migraciones", () => {
   it("resuelve por migrationId y rechaza IDs desconocidos", () => {
-    expect(resolveMigration("catalog-modern.template-upgrade")).toBeDefined();
+    expect(resolveMigration("catalog-modern.template-upgrade")).toMatchObject({
+      migrationId: "catalog-modern.template-upgrade",
+      scope: "catalog-modern",
+    });
     expect(resolveMigration("no-existe")).toBeUndefined();
     expect(migrationApplies("no-existe", catalogModernStore)).toBe(false);
   });

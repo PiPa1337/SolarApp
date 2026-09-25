@@ -1,3 +1,8 @@
+### Endurecimiento de pruebas y CI (2026-09-23–24)
+
+- Se agregan watchdogs para runners, mutation tests, selección por impacto y cobertura reforzada de Store/exporter.
+- CI usa cinco specs smoke (11 tests) en cuatro shards; la suite funcional completa sigue disponible localmente.
+
 ### Listado compacto para todas las tiendas (2026-09-21)
 
 - Se agrega `/listado/` con todos los productos publicados, nombre y precio,

@@ -338,7 +338,7 @@ describe("repositorio local", () => {
     const cached = await getCachedAsset("hash-asset");
     expect(cached?.cacheKey).toBe(createAssetCacheKey("hash-asset"));
     expect(cached?.recipeVersion).toBe(ASSET_CACHE_RECIPE_VERSION);
-    expect(cached?.lastUsedAt).toBeTruthy();
+    expect(Date.parse(cached?.lastUsedAt ?? "")).not.toBeNaN();
     expect(await getCachedAsset("hash-asset", ASSET_CACHE_RECIPE_VERSION + 1)).toBeUndefined();
   });
 
@@ -446,7 +446,9 @@ describe("repositorio local", () => {
     const cleaned = await getProject(SCALE_DEMO_PROJECT_ID);
     expect(cleaned?.origin?.seed).toBe("placeholder");
     expect(cleaned?.products).toHaveLength(33);
-    expect(await getCachedAsset("remote-unsplash-about-hero")).toBeDefined();
+    expect((await getCachedAsset("remote-unsplash-about-hero"))?.hash).toBe(
+      "remote-unsplash-about-hero",
+    );
   });
 
   it("construye Predeterminado directamente con Editorial V2", () => {
@@ -688,12 +690,12 @@ describe("repositorio local", () => {
     expect(await getProject("store-extra")).toBeUndefined();
     expect(await getRecoveryDraft("store-extra")).toBeUndefined();
     expect(await getProjectMigration("store-extra")).toBeUndefined();
-    expect(localStorage.getItem(DEMO_ONLY_PURGE_SENTINEL)).toBeTruthy();
+    expect(localStorage.getItem(DEMO_ONLY_PURGE_SENTINEL)).toBe("3");
 
     expect(await purgeNonDemoStores()).toBe(false);
     await saveProject(StoreProjectV1Schema.parse({ ...extraStore, id: "store-nueva" }));
     expect(await purgeNonDemoStores()).toBe(false);
-    expect(await getProject("store-nueva")).toBeDefined();
+    expect((await getProject("store-nueva"))?.id).toBe("store-nueva");
   });
 
   it("retira las referencias V1 sin tocar tiendas del usuario", async () => {

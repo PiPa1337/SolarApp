@@ -426,7 +426,6 @@ describe("pausa y reanudación del runtime (contrato A3↔A4)", () => {
 
   it("registra los listeners de scroll como pasivos", () => {
     const registration = STOREFRONT_RUNTIME_JS.match(/addEventListener\("scroll",[^;]*\)/)?.[0];
-    expect(registration).toBeDefined();
     expect(registration).toContain("{ passive: true }");
   });
 

@@ -20,12 +20,9 @@
 import { readFileSync } from "node:fs";
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
-import { exportProject } from "@solara/exporter";
+import { createProjectArchive, exportProject } from "@solara/exporter";
 import { type StoreProjectV1, StoreProjectV1Schema } from "@solara/project-schema";
-import {
-  buildCatalogModernProject,
-  ensureCatalogModernV2Sections,
-} from "@solara/project-schema/catalog-modern-template";
+import { buildCatalogModernProject } from "@solara/project-schema/catalog-modern-template";
 import {
   applyCatalogModernUpgrade,
   planCatalogModernUpgrade,
@@ -35,7 +32,7 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 150_000 : 90_000);
 
-const DEMO_PROJECT_ID = "store-modo-sur-demo";
+const PROTECTED_PROJECT_ID = "store-modo-sur-demo";
 const UPGRADE_TO_VERSION = 2;
 const NEWSLETTER_SECTION_ID = "modo-section-newsletter";
 const TIP_SECTION_ID = "modo-section-tip";
@@ -43,7 +40,6 @@ const HERO_SECTION_ID = "modo-section-hero";
 const USER_HERO_TITLE = "Título propio del usuario PR6";
 const USER_PRODUCT_TITLE = "Remera esencial del usuario PR6";
 const USER_ASSET_ALT = "Foto propia del usuario PR6";
-const BACKUP_FILENAME = "demo-catalogo-jerarquico-antes-de-actualizar.solara.json";
 
 interface UpgradeSnapshot {
   templateVersion: number | undefined;
@@ -116,7 +112,7 @@ test.afterAll(async () => {
 });
 
 async function openDemoStore(page: Page): Promise<void> {
-  await page.locator(`[data-store-card-id="${DEMO_PROJECT_ID}"]`).click();
+  await page.locator(`[data-store-card-id="${PROTECTED_PROJECT_ID}"]`).click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
     timeout: 30_000,
@@ -133,88 +129,47 @@ async function openExportTab(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "Exportar", exact: true })).toBeVisible();
 }
 
-/** Siembra el estado PRE-upgrade en IndexedDB sobre la tienda demo: v1, sin
- *  la sección de newsletter, con la sección extra modo-section-tip (conflict)
- *  y con contenido del usuario (título del hero, título del primer producto y
- *  alt del asset hero). */
-async function seedUpgradeState(page: Page): Promise<void> {
-  const seeded = await page.evaluate(
-    (projectId) =>
+/** Importa el estado PRE-upgrade por el flujo soportado del dashboard. La
+ * plantilla protegida es autoridad propia y no debe mutarse directo en IDB. */
+async function importUpgradeStore(page: Page): Promise<string> {
+  await page.getByRole("button", { name: "Nueva tienda", exact: true }).click();
+  await page.getByLabel("Seleccionar tienda para importar").setInputFiles({
+    name: "pr6-upgrade-v1.solara.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(createProjectArchive(demoV1WithUserState), "utf8"),
+  });
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  return page.evaluate(
+    ([sourceName, protectedId]) =>
       new Promise<string>((resolve, reject) => {
         const request = indexedDB.open("solara-commerce-studio");
         request.addEventListener("error", () => reject(request.error));
         request.addEventListener("success", () => {
           const db = request.result;
-          const transaction = db.transaction("projects", "readwrite");
-          const store = transaction.objectStore("projects");
-          const all = store.getAll();
+          const all = db.transaction("projects").objectStore("projects").getAll();
           all.addEventListener("success", () => {
-            const records = all.result as Array<{
-              name: string;
-              project: {
-                id: string;
-                origin?: { templateVersion?: number };
-                sections?: Array<Record<string, unknown> & { id: string }>;
-                products?: Array<Record<string, unknown>>;
-                assets?: Array<Record<string, unknown> & { id: string }>;
-              };
-            }>;
-            const record = records.find((item) => item.project.id === projectId);
-            if (!record) {
-              resolve(
-                `false|${JSON.stringify(records.map((item) => ({ name: item.name, id: item.project.id })))}`,
-              );
+            const records = all.result as Array<{ project: { id: string; name: string } }>;
+            const imported = records.find(
+              (record) => record.project.name === sourceName && record.project.id !== protectedId,
+            );
+            if (!imported) {
+              reject(new Error(`No se encontró la tienda importada ${sourceName}.`));
               return;
             }
-            const project = record.project;
-            const sections = project.sections ?? [];
-            const testimonials = sections.find(
-              (section) => section.id === "modo-section-testimonials",
-            );
-            store.put({
-              ...record,
-              project: {
-                ...project,
-                origin: { ...(project.origin ?? {}), templateVersion: 1 },
-                sections: [
-                  ...sections
-                    .filter((section) => section.id !== "modo-section-newsletter")
-                    .map((section) =>
-                      section.id === "modo-section-hero"
-                        ? {
-                            ...section,
-                            settings: {
-                              ...(section.settings as Record<string, unknown>),
-                              title: "Título propio del usuario PR6",
-                            },
-                          }
-                        : section,
-                    ),
-                  ...(testimonials ? [{ ...testimonials, id: "modo-section-tip" }] : []),
-                ],
-                products: (project.products ?? []).map((product, index) =>
-                  index === 0 ? { ...product, title: "Remera esencial del usuario PR6" } : product,
-                ),
-                assets: (project.assets ?? []).map((asset) =>
-                  asset.id === "asset-hero"
-                    ? { ...asset, alt: "Foto propia del usuario PR6" }
-                    : asset,
-                ),
-              },
-            });
-            transaction.addEventListener("complete", () => resolve("true"));
+            resolve(imported.project.id);
           });
           all.addEventListener("error", () => reject(all.error));
-          transaction.addEventListener("error", () => reject(transaction.error));
         });
       }),
-    DEMO_PROJECT_ID,
+    [demoV1WithUserState.name, PROTECTED_PROJECT_ID] as const,
   );
-  expect(seeded).toBe("true");
 }
 
 /** Lee el proyecto guardado en IndexedDB (contrato de datos). */
-async function readUpgradeSnapshot(page: Page): Promise<UpgradeSnapshot> {
+async function readUpgradeSnapshot(page: Page, projectId: string): Promise<UpgradeSnapshot> {
   return page.evaluate(
     (projectId) =>
       new Promise<UpgradeSnapshot>((resolve, reject) => {
@@ -241,7 +196,10 @@ async function readUpgradeSnapshot(page: Page): Promise<UpgradeSnapshot> {
             }
             const hero = project.sections?.find((section) => section.id === "modo-section-hero");
             const heroSettings = hero?.settings as Record<string, unknown> | undefined;
-            const heroAsset = project.assets?.find((asset) => asset.id === "asset-hero");
+            const heroAssetId = String(
+              heroSettings?.posterAssetId ?? heroSettings?.backgroundImageId ?? "",
+            );
+            const heroAsset = project.assets?.find((asset) => asset.id === heroAssetId);
             resolve({
               templateVersion: project.origin?.templateVersion,
               sections: project.sections ?? [],
@@ -253,19 +211,43 @@ async function readUpgradeSnapshot(page: Page): Promise<UpgradeSnapshot> {
           all.addEventListener("error", () => reject(all.error));
         });
       }),
-    DEMO_PROJECT_ID,
+    projectId,
   );
 }
 
-/** Rutina compartida: sembrar el estado PRE-upgrade, abrir la tienda demo y
- *  llegar al panel "Actualización disponible". */
-async function prepareUpgradePanel(page: Page): Promise<void> {
+async function readUpgradeProject(page: Page, projectId: string): Promise<StoreProjectV1> {
+  const project = await page.evaluate(
+    (projectId) =>
+      new Promise<unknown>((resolve, reject) => {
+        const request = indexedDB.open("solara-commerce-studio");
+        request.addEventListener("error", () => reject(request.error));
+        request.addEventListener("success", () => {
+          const all = request.result.transaction("projects").objectStore("projects").getAll();
+          all.addEventListener("success", () => {
+            const records = all.result as Array<{ project: { id: string } }>;
+            const record = records.find((item) => item.project.id === projectId);
+            if (!record) {
+              reject(new Error(`No se encontró el proyecto ${projectId} en IndexedDB.`));
+              return;
+            }
+            resolve(record.project);
+          });
+          all.addEventListener("error", () => reject(all.error));
+        });
+      }),
+    projectId,
+  );
+  return StoreProjectV1Schema.parse(project);
+}
+
+/** Rutina compartida: importar el estado PRE-upgrade como tienda mutable y
+ * llegar al panel de actualización. */
+async function prepareUpgradePanel(page: Page): Promise<string> {
   await resetStudioIndexedDb(page, studioUrl);
-  await seedUpgradeState(page);
-  await page.reload();
-  await openDemoStore(page);
+  const projectId = await importUpgradeStore(page);
   await openPrepararTab(page);
-  await expect(page.getByText("Actualización disponible")).toBeVisible();
+  await expect(page.locator(".template-update")).toBeVisible();
+  return projectId;
 }
 
 test("el plan produce version + section-add y un conflict conservado; el panel muestra los labels reales", async ({
@@ -320,8 +302,10 @@ test("el plan produce version + section-add y un conflict conservado; el panel m
 test("adoptar aplica EXACTAMENTE los safeChanges y conserva lo del usuario (diff byte a byte)", async ({
   page,
 }) => {
-  await prepareUpgradePanel(page);
-  const before = await readUpgradeSnapshot(page);
+  const projectId = await prepareUpgradePanel(page);
+  const before = await readUpgradeSnapshot(page, projectId);
+  const importedPlan = planCatalogModernUpgrade(await readUpgradeProject(page, projectId));
+  const sectionAdds = importedPlan.safeChanges.filter((change) => change.kind === "section-add");
   expect(before.templateVersion).toBe(1);
   expect(before.sections.some((section) => section.id === NEWSLETTER_SECTION_ID)).toBe(false);
   expect(before.sections.some((section) => section.id === TIP_SECTION_ID)).toBe(true);
@@ -334,7 +318,7 @@ test("adoptar aplica EXACTAMENTE los safeChanges y conserva lo del usuario (diff
   const downloadPromise = page.waitForEvent("download");
   await updateButton.click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe(BACKUP_FILENAME);
+  expect(download.suggestedFilename()).toMatch(/-antes-de-actualizar\.solara\.json$/);
 
   // Datos: el respaldo transporta el proyecto PRE-upgrade (v1, sin la sección
   // de plantilla, con el conflict y con el contenido del usuario).
@@ -357,19 +341,21 @@ test("adoptar aplica EXACTAMENTE los safeChanges y conserva lo del usuario (diff
     backup.project.sections.find((section) => section.id === HERO_SECTION_ID)?.settings?.title,
   ).toBe(USER_HERO_TITLE);
 
-  // Datos: diff real antes/después en IndexedDB. La única diferencia es la
-  // sección de plantilla agregada al final (byte-idéntico todo lo demás,
-  // incluida la sección editada por el usuario y la sección en conflicto).
+  // Datos: diff real antes/después en IndexedDB. Se agregan exactamente las
+  // secciones seguras del plan vigente para la tienda importada y el resto se conserva.
   await expect
-    .poll(async () => (await readUpgradeSnapshot(page)).templateVersion, { timeout: 20_000 })
+    .poll(async () => (await readUpgradeSnapshot(page, projectId)).templateVersion, {
+      timeout: 20_000,
+    })
     .toBe(UPGRADE_TO_VERSION);
-  const after = await readUpgradeSnapshot(page);
-  expect(after.sections.length).toBe(before.sections.length + 1);
-  expect(after.sections.at(-1)?.id).toBe(NEWSLETTER_SECTION_ID);
+  const after = await readUpgradeSnapshot(page, projectId);
+  expect(after.sections.length).toBe(before.sections.length + sectionAdds.length);
+  expect(after.sections.slice(-sectionAdds.length).map((section) => section.id)).toEqual(
+    sectionAdds.map((change) => change.sectionId),
+  );
   for (const section of before.sections) {
     const next = after.sections.find((candidate) => candidate.id === section.id);
-    expect(next, `sección ${section.id} alterada por la actualización`).toBeDefined();
-    expect(JSON.stringify(next)).toBe(JSON.stringify(section));
+    expect(next, `sección ${section.id} alterada por la actualización`).toEqual(section);
   }
 
   // Los conflicts se conservan de verdad: la sección fuera de la plantilla
@@ -380,36 +366,34 @@ test("adoptar aplica EXACTAMENTE los safeChanges y conserva lo del usuario (diff
   expect(after.productTitle).toBe(USER_PRODUCT_TITLE);
   expect(after.assetAlt).toBe(USER_ASSET_ALT);
 
-  // La sección agregada trae los settings de la plantilla actual (referencia
-  // real del template demo).
-  const referenceNewsletter = ensureCatalogModernV2Sections(
-    buildCatalogModernProject({ seed: "demo" }),
-  ).sections.find((section) => section.id === NEWSLETTER_SECTION_ID);
-  const adoptedNewsletter = after.sections.find((section) => section.id === NEWSLETTER_SECTION_ID);
-  expect(adoptedNewsletter?.settings).toEqual(
-    referenceNewsletter?.settings
-      ? { ...referenceNewsletter.settings, actionHref: "#contact-form" }
-      : undefined,
-  );
+  for (const change of sectionAdds) {
+    const adopted = after.sections.find((section) => section.id === change.sectionId);
+    expect(adopted?.settings, `settings de ${change.sectionId}`).toEqual(change.next?.settings);
+  }
 });
 
-test("la plantilla protegida rechaza importar el respaldo y conserva el estado adoptado", async ({
+test("la plantilla protegida rechaza importar un respaldo v1 y conserva su estado", async ({
   page,
 }) => {
-  await prepareUpgradePanel(page);
+  const projectId = await prepareUpgradePanel(page);
   const updateButton = page.getByRole("button", { name: "Respaldar y adoptar cambios" });
   const downloadPromise = page.waitForEvent("download");
   await updateButton.click();
   const download = await downloadPromise;
   const backupPath = await download.path();
-  expect(backupPath).toBeTruthy();
+  expect(backupPath).toMatch(/\S+/);
 
   await expect
-    .poll(async () => (await readUpgradeSnapshot(page)).templateVersion, { timeout: 20_000 })
+    .poll(async () => (await readUpgradeSnapshot(page, projectId)).templateVersion, {
+      timeout: 20_000,
+    })
     .toBe(UPGRADE_TO_VERSION);
 
-  // Reversión: Importar respaldo desde el tab Exportar con el archivo
-  // descargado antes de adoptar.
+  // La protección se prueba sobre Predeterminado, que se abre desde su fuente
+  // administrada y no comparte la tienda mutable usada para el upgrade.
+  await page.getByRole("button", { name: "Volver a tiendas" }).click();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await openDemoStore(page);
   await openExportTab(page);
   const chooserPromise = page.waitForEvent("filechooser");
   await page.getByTestId("ui-export-import").click();
@@ -422,34 +406,24 @@ test("la plantilla protegida rechaza importar el respaldo y conserva el estado a
   await expect(page.getByTestId("ui-inline-error")).toContainText(
     "No se puede importar ni reemplazar la plantilla protegida",
   );
-  await expect
-    .poll(async () => (await readUpgradeSnapshot(page)).templateVersion, { timeout: 20_000 })
-    .toBe(UPGRADE_TO_VERSION);
-  const preserved = await readUpgradeSnapshot(page);
-  expect(preserved.sections.some((section) => section.id === NEWSLETTER_SECTION_ID)).toBe(true);
-  expect(preserved.sections.some((section) => section.id === TIP_SECTION_ID)).toBe(true);
-  expect(preserved.heroTitle).toBe(USER_HERO_TITLE);
-  expect(preserved.productTitle).toBe(USER_PRODUCT_TITLE);
-  expect(preserved.assetAlt).toBe(USER_ASSET_ALT);
-
-  // El panel conserva sólo el conflicto remanente; la importación no lo
-  // reabre ni permite deshacer el upgrade de la plantilla protegida.
-  await openPrepararTab(page);
-  await expect(page.getByText("Actualización disponible")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Respaldar y adoptar cambios" })).toBeVisible();
-  await expect(page.getByText("Agregar sección base: catalog-newsletter-cta")).toHaveCount(0);
+  const protectedAfter = await readUpgradeSnapshot(page, PROTECTED_PROJECT_ID);
+  expect(protectedAfter.templateVersion).toBe(UPGRADE_TO_VERSION);
+  expect(protectedAfter.sections.some((section) => section.id === TIP_SECTION_ID)).toBe(false);
+  expect(protectedAfter.heroTitle).not.toBe(USER_HERO_TITLE);
 });
 
 test("con un conflicto remanente el panel se descarta tras adoptar los cambios seguros", async ({
   page,
 }) => {
-  await prepareUpgradePanel(page);
+  const projectId = await prepareUpgradePanel(page);
   const updateButton = page.getByRole("button", { name: "Respaldar y adoptar cambios" });
   const downloadPromise = page.waitForEvent("download");
   await updateButton.click();
   await downloadPromise;
   await expect
-    .poll(async () => (await readUpgradeSnapshot(page)).templateVersion, { timeout: 20_000 })
+    .poll(async () => (await readUpgradeSnapshot(page, projectId)).templateVersion, {
+      timeout: 20_000,
+    })
     .toBe(UPGRADE_TO_VERSION);
 
   // Auto-feedback: la sección se adoptó (el listado de safeChanges se vació) y

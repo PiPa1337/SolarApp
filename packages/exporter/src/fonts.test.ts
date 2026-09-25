@@ -12,7 +12,7 @@ describe("fonts", () => {
       expect(option.license).toBe("OFL-1.1");
       expect(option.woff2Path).toBe(`assets/fonts/${option.family.toLowerCase()}.woff2`);
       const bytes = fontFilesFor(option.stack, option.stack).get(option.woff2Path);
-      expect(bytes).toBeDefined();
+      expect(bytes).toBeInstanceOf(Uint8Array);
       expect([...(bytes?.subarray(0, 4) ?? new Uint8Array())]).toEqual(WOFF2_MAGIC);
       expect(bytes?.length).toBeLessThan(60 * 1024);
     }

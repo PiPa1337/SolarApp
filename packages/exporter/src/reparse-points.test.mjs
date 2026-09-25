@@ -29,8 +29,10 @@ describe.runIf(process.platform === "win32")("reparse points en Windows", () => 
       // El junction no es una tienda: se reporta en recovery para que el
       // usuario lo vea y lo reemplace por una carpeta real.
       const report = listing.recovery.find((r) => r.folder === "escapada");
-      expect(report).toBeDefined();
-      expect(report.message).toMatch(/enlace simbólico|junction/i);
+      expect(report).toMatchObject({
+        folder: "escapada",
+        message: expect.stringMatching(/enlace simbólico|junction/i),
+      });
       await expect(assertNoReparsePoints(projects, escaped)).rejects.toThrow(/enlace simbólico/i);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -52,8 +54,10 @@ describe.runIf(process.platform !== "win32")("symlinks en POSIX", () => {
       const listing = await storage.list();
       expect(listing.projects).toHaveLength(0);
       const report = listing.recovery.find((r) => r.folder === "escapada");
-      expect(report).toBeDefined();
-      expect(report.message).toMatch(/enlace simbólico|junction/i);
+      expect(report).toMatchObject({
+        folder: "escapada",
+        message: expect.stringMatching(/enlace simbólico|junction/i),
+      });
       await expect(assertNoReparsePoints(projects, escaped)).rejects.toThrow(/enlace simbólico/i);
     } finally {
       await rm(root, { recursive: true, force: true });

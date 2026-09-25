@@ -126,7 +126,7 @@ test("elegir un módulo lo agrega al slot indicado y el preview lo refleja", asy
   await expect(page.locator(".inspector header span")).toHaveText("Catálogo");
 
   const addedId = await added.locator(".section-select").getAttribute("data-section-select");
-  expect(addedId).toBeTruthy();
+  expect(addedId).toMatch(/\S+/);
   await expect(
     previewFrame(page).locator(
       `[data-solara-section="${addedId}"][data-solara-module="catalog-category-bento"]`,

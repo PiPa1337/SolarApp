@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { mapFilesToPackages } from "./test-affected-map.mjs";
+import { findChangedScriptTests, mapFilesToPackages } from "./test-affected-map.mjs";
 
 describe("mapFilesToPackages post-cambio", () => {
   test("un archivo de core mapea solo a core", () => {
@@ -11,8 +11,11 @@ describe("mapFilesToPackages post-cambio", () => {
     expect(mapFilesToPackages(["scripts/check-quick.mjs"])).toEqual([]);
   });
 
-  test("scripts/*.test.ts no dispara todos los paquetes", () => {
+  test("scripts/*.test.ts no dispara paquetes y se detecta para ejecución directa", () => {
     expect(mapFilesToPackages(["scripts/enganches.test.ts"])).toEqual([]);
+    expect(findChangedScriptTests(["scripts/enganches.test.ts", "scripts/check-quick.mjs"])).toEqual([
+      "scripts/enganches.test.ts",
+    ]);
   });
 
   test("tests/e2e mapea al paquete relacionado, no a todos", () => {

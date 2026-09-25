@@ -92,10 +92,10 @@ test("service worker: cache v3 y asset cache separada, no fixtures", async ({ pa
     const hasFixture = reqs.some((r) => r.url.includes("/fixtures/"));
     return { keys, hasV3, hasAsset, hasV2, hasFixture };
   });
-  expect(swInfo.hasV3).toBeTruthy();
-  expect(swInfo.hasAsset).toBeTruthy();
-  expect(swInfo.hasV2).toBeFalsy();
-  expect(swInfo.hasFixture).toBeFalsy();
+  expect(swInfo.hasV3).toBe(true);
+  expect(swInfo.hasAsset).toBe(true);
+  expect(swInfo.hasV2).toBe(false);
+  expect(swInfo.hasFixture).toBe(false);
 });
 
 test("PWA: manifest instalable y service worker controlan Studio", async ({ page }) => {

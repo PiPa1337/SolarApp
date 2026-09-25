@@ -124,8 +124,8 @@ describe("seo deep audit", () => {
     const r = exportProject(s, { mode: "production" });
     const h = html(r.files as any, "index.html");
     expect(h).toContain("<title>A &amp; B &quot;C&quot; &lt;D&gt;</title>");
-    expect(og(h, "og:title")).toBeTruthy();
-    expect(og(h, "og:description")).toBeTruthy();
+    expect(og(h, "og:title")).toBe("A &amp; B &quot;C&quot; &lt;D&gt;");
+    expect(og(h, "og:description")).toBe("Desc &amp; &lt;b&gt;&quot;X&quot;&lt;/b&gt;");
     expect(og(h, "og:image")).toMatch(/^https:\/\//);
     expect(h).toContain("og:image:alt");
   });

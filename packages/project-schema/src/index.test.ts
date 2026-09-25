@@ -68,7 +68,7 @@ describe("StoreProjectV2Schema", () => {
 
     expect(roots).toHaveLength(8);
     roots.forEach((category) => {
-      expect(category.imageId, category.id).toBeDefined();
+      expect(category.imageId, category.id).toMatch(/\S+/);
       expect(assetIds.has(category.imageId ?? ""), category.id).toBe(true);
     });
 

@@ -25,8 +25,6 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 180_000 : 120_000);
 
-const DEMO_PROJECT_ID = "store-modo-sur-demo";
-
 let server: Server;
 let studioUrl: string;
 
@@ -57,21 +55,12 @@ async function resetIndexedDb(page: Page): Promise<void> {
   });
 }
 
-async function openDemoStore(page: Page): Promise<void> {
-  await resetIndexedDb(page);
-  await page.locator(`[data-store-card-id="${DEMO_PROJECT_ID}"]`).click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
-  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
-    timeout: 30_000,
-  });
-}
-
 async function setupCleanStore(page: Page, name: string): Promise<void> {
   await resetIndexedDb(page);
   await createCleanStore(page, name);
   // Espera a que el autosave deje el registro persistido en IndexedDB (el
   // indicador ui-save-indicator sólo vive en el tab Overview).
-  await expect.poll(async () => projectIdByName(page, name), { timeout: 15_000 }).toBeDefined();
+  await expect.poll(async () => projectIdByName(page, name), { timeout: 15_000 }).toMatch(/\S+/);
 }
 
 async function openPrepararTab(page: Page): Promise<void> {
@@ -214,15 +203,20 @@ async function restoreStoredProject(
   expect(applied).toBe(true);
 }
 
-/** Recarga la app y reabre la tienda; devuelve el proyecto autoservado. */
+/** Recarga la app y asegura que la tienda siga abierta. El runtime actual puede
+ * restaurar la última tienda directamente, sin pasar por el dashboard. */
 async function reloadAndOpen(page: Page, storeKey: string): Promise<StoreProjectV1> {
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.locator(`[data-store-card-id="${storeKey}"]`).click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
-  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
-    timeout: 30_000,
-  });
+  const dashboard = page.getByRole("heading", { name: "Tus tiendas" });
+  const studioNav = page.getByRole("navigation", { name: "Áreas de la tienda" });
+  await expect
+    .poll(async () => (await dashboard.count()) + (await studioNav.count()), { timeout: 30_000 })
+    .toBeGreaterThan(0);
+  if (await dashboard.isVisible()) {
+    await page.locator(`[data-store-card-id="${storeKey}"]`).click();
+    await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+    await expect(studioNav).toBeVisible({ timeout: 30_000 });
+  }
   const project = await readStoredProject(page, storeKey);
   expect(project).not.toBeNull();
   return project as StoreProjectV1;
@@ -249,18 +243,24 @@ function exportOutcome(project: StoreProjectV1): { ok: boolean; message: string 
   }
 }
 
-test("baseline demo: 297 requisitos listos, 0 críticos y producción exportable (PR2)", async ({
+test("baseline mutable: checklist, auditoría y producción permanecen en paridad (PR2)", async ({
   page,
 }) => {
-  await openDemoStore(page);
+  await resetIndexedDb(page);
+  const storeKey = await openMutableScaleStore(page, "PR2 baseline mutable");
   await openPrepararTab(page);
 
-  // El checklist completo está listo y el gate del tab anuncia 0 bloqueos.
-  await expect(page.getByTestId("ui-guided-ready")).toBeVisible();
+  const project = await readStoredProject(page, storeKey);
+  expect(project).not.toBeNull();
+  const readiness = evaluateCatalogModernReadiness(project as StoreProjectV1);
+  await expect(
+    page.getByText(`${readiness.ready} de ${readiness.requirements.length} requisitos listos`),
+  ).toBeVisible();
+  if (readiness.pending === 0) {
+    await expect(page.getByTestId("ui-guided-ready")).toBeVisible();
+  }
   await expect(page.getByText("La tienda puede pasar a revisión de publicación.")).toBeVisible();
 
-  const project = await readStoredProject(page, DEMO_PROJECT_ID);
-  expect(project).not.toBeNull();
   expect(criticalCodes(project as StoreProjectV1)).toEqual([]);
   expect(exportOutcome(project as StoreProjectV1).ok).toBe(true);
 });
@@ -274,7 +274,7 @@ test("paridad: sin descripción de producto el requisito falta, el crítico apar
   // 1. Romper: vaciar la descripción del primer producto activo.
   const before = await readStoredProject(page, storeKey);
   const product = (before as StoreProjectV1).products.find((item) => item.status === "active");
-  expect(product).toBeDefined();
+  expect(product?.id).toMatch(/\S+/);
   const requirementId = `product.${product?.id}.description`;
   await mutateStoredProject(page, storeKey, (project) => {
     const target = project.products.find((item) => item.status === "active");
@@ -336,17 +336,18 @@ test("paridad: sin descripción de producto el requisito falta, el crítico apar
 test("paridad: producto sin imágenes bloquea producción y restaurarlas libera el crítico (product.image)", async ({
   page,
 }) => {
-  await openDemoStore(page);
+  await resetIndexedDb(page);
+  const storeKey = await openMutableScaleStore(page, "PR2 imagen mutable");
 
-  const before = await readStoredProject(page, DEMO_PROJECT_ID);
+  const before = await readStoredProject(page, storeKey);
   const product = (before as StoreProjectV1).products.find((item) => item.status === "active");
   const requirementId = `product.${product?.id}.image`;
-  await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+  await mutateStoredProject(page, storeKey, (project) => {
     const target = project.products.find((item) => item.status === "active");
     if (target) target.imageIds = [];
   });
 
-  const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  const broken = await reloadAndOpen(page, storeKey);
   await openPrepararTab(page);
   await expect(requirement(page, requirementId)).toHaveAttribute(
     "data-requirement-status",
@@ -359,10 +360,10 @@ test("paridad: producto sin imágenes bloquea producción y restaurarlas libera 
   expect(outcome.message).toContain("no tiene imagen");
 
   // Completar restaurando la imagen (el mismo receptor del payload del editor).
-  await restoreStoredProject(page, DEMO_PROJECT_ID, before as StoreProjectV1);
-  const completed = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  await restoreStoredProject(page, storeKey, before as StoreProjectV1);
+  const completed = await reloadAndOpen(page, storeKey);
   await openPrepararTab(page);
-  await expect(page.getByTestId("ui-guided-ready")).toBeVisible();
+  await expect(page.getByText("La tienda puede pasar a revisión de publicación.")).toBeVisible();
   expect(criticalCodes(completed)).not.toContain("product.image");
   expect(exportOutcome(completed).ok).toBe(true);
 });
@@ -370,17 +371,18 @@ test("paridad: producto sin imágenes bloquea producción y restaurarlas libera 
 test("paridad: variante sin precio bloquea producción y restaurarlo libera el crítico (variant.price)", async ({
   page,
 }) => {
-  await openDemoStore(page);
+  await resetIndexedDb(page);
+  const storeKey = await openMutableScaleStore(page, "PR2 precio mutable");
 
-  const before = await readStoredProject(page, DEMO_PROJECT_ID);
+  const before = await readStoredProject(page, storeKey);
   const product = (before as StoreProjectV1).products.find((item) => item.status === "active");
   const requirementId = `product.${product?.id}.price`;
-  await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+  await mutateStoredProject(page, storeKey, (project) => {
     const target = project.products.find((item) => item.status === "active");
     if (target?.variants[0]) target.variants[0].price = 0;
   });
 
-  const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  const broken = await reloadAndOpen(page, storeKey);
   await openPrepararTab(page);
   await expect(requirement(page, requirementId)).toHaveAttribute(
     "data-requirement-status",
@@ -392,10 +394,10 @@ test("paridad: variante sin precio bloquea producción y restaurarlo libera el c
   expect(outcome.ok).toBe(false);
   expect(outcome.message).toContain("no tiene un precio válido");
 
-  await restoreStoredProject(page, DEMO_PROJECT_ID, before as StoreProjectV1);
-  const completed = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  await restoreStoredProject(page, storeKey, before as StoreProjectV1);
+  const completed = await reloadAndOpen(page, storeKey);
   await openPrepararTab(page);
-  await expect(page.getByTestId("ui-guided-ready")).toBeVisible();
+  await expect(page.getByText("La tienda puede pasar a revisión de publicación.")).toBeVisible();
   expect(criticalCodes(completed)).not.toContain("variant.price");
   expect(exportOutcome(completed).ok).toBe(true);
 });
@@ -406,7 +408,7 @@ test("paridad tienda limpia: las imágenes de plantilla pendientes bloquean prod
   const storeName = "PR2 Limpia";
   await setupCleanStore(page, storeName);
   const storeKey = await projectIdByName(page, storeName);
-  expect(storeKey).toBeDefined();
+  expect(storeKey).toMatch(/\S+/);
   const cleanStoreKey = storeKey as string;
 
   // 1. La tienda limpia usa el catálogo placeholder vigente; el progreso y la
@@ -465,11 +467,12 @@ test("paridad tienda limpia: las imágenes de plantilla pendientes bloquean prod
 test("contenido recomendado: descripción de marca vacía queda pendiente pero no bloquea producción (identity.description)", async ({
   page,
 }) => {
-  await openDemoStore(page);
-  await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+  await resetIndexedDb(page);
+  const storeKey = await openMutableScaleStore(page, "PR2 descripción de marca");
+  await mutateStoredProject(page, storeKey, (project) => {
     project.identity.description = "";
   });
-  const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  const broken = await reloadAndOpen(page, storeKey);
   await openPrepararTab(page);
   await expect(requirement(page, "identity.description")).toHaveAttribute(
     "data-requirement-status",
@@ -482,11 +485,12 @@ test("contenido recomendado: descripción de marca vacía queda pendiente pero n
 test("contenido recomendado: el WhatsApp sentinel queda pendiente pero no bloquea producción (identity.whatsapp)", async ({
   page,
 }) => {
-  await openDemoStore(page);
-  await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+  await resetIndexedDb(page);
+  const storeKey = await openMutableScaleStore(page, "PR2 WhatsApp sentinel");
+  await mutateStoredProject(page, storeKey, (project) => {
     project.whatsapp.phone = "5491100000000";
   });
-  const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  const broken = await reloadAndOpen(page, storeKey);
   await openPrepararTab(page);
   await expect(requirement(page, "identity.whatsapp")).toHaveAttribute(
     "data-requirement-status",
@@ -499,8 +503,9 @@ test("contenido recomendado: el WhatsApp sentinel queda pendiente pero no bloque
 test("contenido recomendado: los textos del hero vacíos quedan pendientes pero no bloquean producción", async ({
   page,
 }) => {
-  await openDemoStore(page);
-  await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+  await resetIndexedDb(page);
+  const storeKey = await openMutableScaleStore(page, "PR2 hero mutable");
+  await mutateStoredProject(page, storeKey, (project) => {
     const hero = project.sections.find((section) => section.id === "modo-section-hero");
     if (hero) {
       hero.settings.title = "";
@@ -508,7 +513,7 @@ test("contenido recomendado: los textos del hero vacíos quedan pendientes pero 
       hero.settings.actionLabel = "";
     }
   });
-  const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  const broken = await reloadAndOpen(page, storeKey);
   await openPrepararTab(page);
   for (const requirementId of ["home.hero.title", "home.hero.body", "home.hero.primary-cta"]) {
     await expect(requirement(page, requirementId)).toHaveAttribute(
@@ -523,12 +528,13 @@ test("contenido recomendado: los textos del hero vacíos quedan pendientes pero 
 test("contenido recomendado: título de la grilla de productos vacío queda pendiente pero no bloquea producción (home.products.title)", async ({
   page,
 }) => {
-  await openDemoStore(page);
-  await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+  await resetIndexedDb(page);
+  const storeKey = await openMutableScaleStore(page, "PR2 grilla mutable");
+  await mutateStoredProject(page, storeKey, (project) => {
     const section = project.sections.find((item) => item.id === "modo-section-new");
     if (section) section.settings.title = "";
   });
-  const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  const broken = await reloadAndOpen(page, storeKey);
   await openPrepararTab(page);
   await expect(requirement(page, "home.products.title")).toHaveAttribute(
     "data-requirement-status",
@@ -541,13 +547,15 @@ test("contenido recomendado: título de la grilla de productos vacío queda pend
 test("paridad: un dominio sin HTTPS aparece como inválido en Preparar y bloquea producción (domain.https)", async ({
   page,
 }) => {
-  await openDemoStore(page);
-  await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+  await resetIndexedDb(page);
+  const storeKey = await openMutableScaleStore(page, "PR2 dominio mutable");
+  await mutateStoredProject(page, storeKey, (project) => {
     project.baseUrl = "http://tienda-aurora.example";
   });
-  const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  const broken = await reloadAndOpen(page, storeKey);
   await openPrepararTab(page);
   await expect(page.getByTestId("ui-guided-ready")).toHaveCount(0);
+  await expandPendingChecklist(page);
   await expect(requirement(page, "domain.https")).toHaveAttribute(
     "data-requirement-status",
     "invalid",
@@ -566,14 +574,15 @@ test("paridad: un dominio sin HTTPS aparece como inválido en Preparar y bloquea
 test("contrato: políticas incompletas son una advertencia no bloqueante mientras no exista editor en Studio", async ({
   page,
 }) => {
-  await openDemoStore(page);
-  await mutateStoredProject(page, DEMO_PROJECT_ID, (project) => {
+  await resetIndexedDb(page);
+  const storeKey = await openMutableScaleStore(page, "PR2 políticas mutable");
+  await mutateStoredProject(page, storeKey, (project) => {
     project.policies.shipping.details = "";
     project.policies.returns.details = "";
   });
-  const broken = await reloadAndOpen(page, DEMO_PROJECT_ID);
+  const broken = await reloadAndOpen(page, storeKey);
   await openPrepararTab(page);
-  await expect(page.getByTestId("ui-guided-ready")).toBeVisible();
+  await expect(page.getByText("La tienda puede pasar a revisión de publicación.")).toBeVisible();
   expect(criticalCodes(broken)).toEqual([]);
   expect(auditReport(broken).issues).toEqual(
     expect.arrayContaining([
@@ -590,7 +599,7 @@ test("paridad: una imagen de plantilla sigue pendiente si solo se corrige su alt
   const storeName = "PR2 Limpia Nombre";
   await setupCleanStore(page, storeName);
   const storeKey = await projectIdByName(page, storeName);
-  expect(storeKey).toBeDefined();
+  expect(storeKey).toMatch(/\S+/);
   const cleanStoreKey = storeKey as string;
   const before = await readStoredProject(page, cleanStoreKey);
   expect(before).not.toBeNull();

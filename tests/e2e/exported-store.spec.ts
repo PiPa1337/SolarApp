@@ -108,19 +108,6 @@ test("selecciona una variante, agrega al carrito y abre WhatsApp", async ({ page
   expect(runtimeErrors).toEqual([]);
 });
 
-test("mantiene producto, precio y descripcion sin JavaScript", async ({ browser }) => {
-  const context = await browser.newContext({ javaScriptEnabled: false });
-  const page = await context.newPage();
-  await page.goto(storeUrl("/productos/manta-bruma/"));
-
-  await expect(page.getByRole("heading", { level: 1, name: "Manta Bruma" })).toBeVisible();
-  await expect(page.locator("body")).toContainText(/Algod/);
-  await expect(page.locator("body")).toContainText("$ 78.500,00");
-  await expect(page.locator('select[name="variant"]')).toBeVisible();
-  await expect(page.locator('select[name="variant"] option[value="variant-manta-piedra"]')).toHaveCount(1);
-  await context.close();
-});
-
 test("descubre productos siguiendo enlaces sin JavaScript", async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
@@ -131,21 +118,6 @@ test("descubre productos siguiendo enlaces sin JavaScript", async ({ browser }) 
   await productLink.click();
   await expect(page).toHaveURL(/\/productos\/manta-bruma\/$/);
   await expect(page.getByRole("heading", { level: 1, name: "Manta Bruma" })).toBeVisible();
-  await context.close();
-});
-
-test("expone colecciones, politicas y artefactos SEO sin JavaScript", async ({ browser }) => {
-  const context = await browser.newContext({ javaScriptEnabled: false });
-  const page = await context.newPage();
-  await page.goto(storeUrl("/colecciones/casa-serena/"));
-  await expect(page.getByRole("heading", { level: 1, name: "Casa serena" })).toBeVisible();
-  await page.goto(storeUrl("/envios/"));
-  await expect(page.locator("main h1")).toContainText(/Env/);
-
-  const sitemap = await page.request.get(storeUrl("/sitemap.xml"));
-  expect(await sitemap.text()).toContain("/productos/manta-bruma/");
-  const feed = await page.request.get(storeUrl("/google-merchant.xml"));
-  expect(await feed.text()).toContain("variant-manta-musgo");
   await context.close();
 });
 

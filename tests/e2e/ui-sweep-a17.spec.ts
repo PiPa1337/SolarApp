@@ -639,7 +639,7 @@ test("video real (WebM grabado en el navegador): se agrega con metadata y estado
   const posterSelect = videoItem.locator("select");
   await expect(posterSelect).toBeVisible();
   const posterValue = await posterSelect.locator("option").nth(1).getAttribute("value");
-  expect(posterValue).toBeTruthy();
+  expect(posterValue).toMatch(/\S+/);
   await posterSelect.selectOption(posterValue ?? "");
   await expect(posterSelect).toHaveValue(posterValue ?? "");
 });

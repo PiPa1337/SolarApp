@@ -576,7 +576,7 @@ test("el ConfirmDialog de eliminar enlace enfoca, atrapa el foco, cancela con Es
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveAttribute("data-testid", "ui-confirm-dialog");
   const descriptionId = await dialog.getAttribute("aria-describedby");
-  expect(descriptionId).toBeTruthy();
+  expect(descriptionId).toMatch(/\S+/);
   await expect(dialog.locator(".confirm-dialog__body")).toHaveAttribute("id", descriptionId ?? "");
 
   const cancel = dialog.getByRole("button", { name: "Cancelar" });
@@ -702,7 +702,7 @@ test("el selector de módulos es modal, enfoca la búsqueda y atrapa el foco (ST
   await expect(picker).toHaveAttribute("aria-modal", "true");
   await expect(addButton).toHaveAttribute("aria-haspopup", "dialog");
   const pickerId = await picker.getAttribute("id");
-  expect(pickerId).toBeTruthy();
+  expect(pickerId).toMatch(/\S+/);
   await expect(addButton).toHaveAttribute("aria-controls", pickerId ?? "");
   await expect(picker.getByLabel("Buscar módulo")).toBeFocused();
 

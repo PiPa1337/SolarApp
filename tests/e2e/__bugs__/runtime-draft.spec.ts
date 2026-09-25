@@ -7,7 +7,7 @@ test("draft: runtime marcado como debuggeable", () => {
   const runtimePath = [...result.files.keys()].find((path) =>
     /^assets\/storefront\.[a-f0-9]+\.js$/i.test(path),
   );
-  expect(runtimePath).toBeDefined();
+  expect(runtimePath).toMatch(/^assets\/storefront\.[a-f0-9]+\.js$/i);
   const js = String(result.files.get(runtimePath ?? ""));
   expect(js).toContain("// DEBUG: modo draft");
 });
@@ -17,7 +17,7 @@ test("production: runtime inline serializado sin sourcemap", () => {
   const runtimePath = [...result.files.keys()].find((path) =>
     /^assets\/storefront\.[a-f0-9]+\.js$/i.test(path),
   );
-  expect(runtimePath).toBeDefined();
+  expect(runtimePath).toMatch(/^assets\/storefront\.[a-f0-9]+\.js$/i);
   const js = String(result.files.get(runtimePath ?? ""));
   expect(js).not.toContain("sourceMappingURL");
 });

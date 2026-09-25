@@ -148,7 +148,7 @@ describe("buildVideoAsset", () => {
         throw new Error("codec no soportado");
       },
     });
-    expect(built.video).toBeDefined();
+    expect(built.video.kind).toBe("video");
     expect(built.posterImage).toBeUndefined();
     expect(built.video.posterAssetId).toBeUndefined();
   });
@@ -160,7 +160,7 @@ describe("applyVideoToSection", () => {
     const section = project.sections.find(
       (candidate) => candidate.moduleId === "catalog-hero" && candidate.enabled !== false,
     );
-    expect(section).toBeDefined();
+    expect(section).toMatchObject({ moduleId: "catalog-hero", enabled: true });
     const video: VideoAsset = {
       kind: "video",
       id: "video-atomic-test" as VideoAsset["id"],

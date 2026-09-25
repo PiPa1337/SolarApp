@@ -209,8 +209,8 @@ describe("metadata del editor (Live Canvas)", () => {
     ]);
     for (const moduleId of presentModuleIds) {
       const item = coverage.find((candidate) => candidate.moduleId === moduleId);
-      expect(item, `falta cobertura para ${moduleId}`).toBeDefined();
-      expect(item?.editable || item?.reason).toBeTruthy();
+      expect(item, `falta cobertura para ${moduleId}`).toMatchObject({ moduleId });
+      expect(item?.editable === true || Boolean(item?.reason)).toBe(true);
     }
   });
 
