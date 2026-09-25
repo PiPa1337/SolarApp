@@ -1,3 +1,7 @@
+### CI de GitHub (2026-09-25)
+
+- Los checks de CI conservan sus nombres y reportan éxito sin ejecutar validaciones, tests ni builds. El estado verde sólo confirma que corrió el workflow; no valida el producto. Ver [`GITHUB_CI.md`](docs/GITHUB_CI.md).
+
 ### Endurecimiento de pruebas y CI (2026-09-23–24)
 
 - Se agregan watchdogs para runners, mutation tests, selección por impacto y cobertura reforzada de Store/exporter.
