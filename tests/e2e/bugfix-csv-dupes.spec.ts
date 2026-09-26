@@ -5,6 +5,7 @@
  */
 import type { Server } from "node:http";
 import { expect, test } from "@playwright/test";
+import { openStudioDashboard } from "./studio-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 120_000 : 60_000);
@@ -23,7 +24,7 @@ test.afterAll(async () => {
 });
 
 async function openDemoCatalog(page: import("@playwright/test").Page) {
-  await page.goto(studioUrl);
+  await openStudioDashboard(page, studioUrl);
   await page.evaluate(
     () =>
       new Promise<void>((resolveDelete, reject) => {
@@ -33,9 +34,12 @@ async function openDemoCatalog(page: import("@playwright/test").Page) {
       }),
   );
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await openStudioDashboard(page, studioUrl);
+  await page.locator(".dashboard-store-card__button").first().click();
+  await page
+    .getByRole("region", { name: /Tienda seleccionada:/ })
+    .getByRole("button", { name: "Abrir tienda", exact: true })
+    .click();
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
 }
@@ -93,7 +97,7 @@ test("slugs duplicados: errores por fila, catálogo intacto y app viva", async (
   await expect(errors.getByText(/Fila 3/)).toBeVisible();
   await expect(errors.getByText(/taza-repetida/)).toHaveCount(2);
   await expect(page.getByRole("button", { name: "Reemplazar catálogo" })).toHaveCount(0);
-  await expect(page.getByText("50 productos y 60 variantes.")).toBeVisible();
+  await expect(page.getByText("33 productos y 41 variantes.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Algo salió mal" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
 });
@@ -120,6 +124,6 @@ test("variantes duplicadas dentro de un producto: errores por fila sin recargar"
   await expect(errors.getByText(/Fila 3/)).toBeVisible();
   await expect(errors.getByText(/v-3/)).toHaveCount(2);
   await expect(page.getByRole("button", { name: "Reemplazar catálogo" })).toHaveCount(0);
-  await expect(page.getByText("50 productos y 60 variantes.")).toBeVisible();
+  await expect(page.getByText("33 productos y 41 variantes.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Algo salió mal" })).toHaveCount(0);
 });

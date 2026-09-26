@@ -79,7 +79,7 @@ describe("export.worker", () => {
     expect(final?.result?.criticalCount).toBe(
       audit.filter((issue) => issue.severity === "critical").length,
     );
-  });
+  }, 30_000);
 
   it("reporta el mismo conteo de críticos que la auditoría para el mismo proyecto", async () => {
     const siteMessages = await send({

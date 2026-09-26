@@ -17,9 +17,16 @@ test.afterAll(async () => {
 });
 
 async function openCleanStore(page: import("@playwright/test").Page): Promise<void> {
+  await page.setViewportSize({ width: 1920, height: 912 });
   await page.goto(studioUrl);
   await createCleanStore(page, "Canvas verificable");
-  await expect(page.locator('iframe[title="Vista previa desktop"]')).toBeVisible();
+  await page.getByRole("button", { name: "Cerrar panel de edición" }).click();
+  const desktop = page.getByRole("button", { name: "Vista de escritorio" });
+  await expect(desktop).toBeEnabled();
+  await desktop.click();
+  await expect(desktop).toHaveAttribute("aria-pressed", "true");
+  const frame = page.frameLocator('iframe[title="Vista previa desktop"]');
+  await expect(frame.locator("html[data-store-id]")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("ui-canvas-toggle")).toBeVisible();
 }
 
@@ -29,6 +36,8 @@ test("Ctrl+clic selecciona un binding, edita texto y conserva undo/redo", async 
   const frame = page.frameLocator('iframe[title="Vista previa desktop"]');
   const title = frame.locator('[data-canvas-edit="ce-modo-section-hero-title"]');
   await expect(title).toBeVisible({ timeout: 20_000 });
+  const initialTitle = (await title.textContent())?.trim() ?? "";
+  expect(initialTitle).not.toBe("");
   // El header V2 es sticky; centrar el binding evita que el scroll automático
   // de Playwright lo deje debajo de la navegación antes del Ctrl+clic.
   await title.evaluate((element) => element.scrollIntoView({ block: "center", inline: "nearest" }));
@@ -37,7 +46,7 @@ test("Ctrl+clic selecciona un binding, edita texto y conserva undo/redo", async 
 
   const popover = page.getByRole("dialog", { name: "Editar Título del hero" });
   await expect(popover).toBeVisible();
-  await expect(popover.getByRole("textbox")).toHaveValue("Titulo del hero");
+  await expect(popover.getByRole("textbox")).toHaveValue(initialTitle);
   await popover.getByRole("textbox").fill("Título escrito desde Canvas");
   await popover.getByRole("button", { name: "Aplicar" }).click();
 
@@ -47,10 +56,9 @@ test("Ctrl+clic selecciona un binding, edita texto y conserva undo/redo", async 
   );
   await expect(page.getByRole("button", { name: "Deshacer" })).toBeEnabled();
   await page.getByRole("button", { name: "Deshacer" }).click();
-  await expect(frame.locator('[data-solara-module="catalog-hero"] h1')).toContainText(
-    "Titulo del hero",
-    { timeout: 20_000 },
-  );
+  await expect(frame.locator('[data-solara-module="catalog-hero"] h1')).toContainText(initialTitle, {
+    timeout: 20_000,
+  });
   await page.getByRole("button", { name: "Rehacer" }).click();
   await expect(frame.locator('[data-solara-module="catalog-hero"] h1')).toContainText(
     "Título escrito desde Canvas",

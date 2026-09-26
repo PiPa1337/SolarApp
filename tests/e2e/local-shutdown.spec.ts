@@ -1,7 +1,9 @@
+import { mkdtemp, rm } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { createServer } from "node:net";
-import { resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
@@ -35,12 +37,21 @@ async function waitForServer(url: string): Promise<void> {
 }
 
 test("el dashboard puede detener el servidor iniciado por el lanzador", async ({ page }) => {
+  test.setTimeout(90_000);
   const port = await findFreePort();
   const token = randomBytes(24).toString("base64url");
   const url = `http://127.0.0.1:${port}`;
+  // El servidor ejecuta limpiezas al iniciar; nunca debe apuntar a proyectos/ real.
+  const applicationRoot = await mkdtemp(join(tmpdir(), "solara-shutdown-e2e-"));
   const serverProcess = spawn(
     process.execPath,
-    ["packages/exporter/scripts/serve.mjs", resolve("apps/studio/dist"), String(port), token],
+    [
+      "packages/exporter/scripts/serve.mjs",
+      resolve("apps/studio/dist"),
+      String(port),
+      token,
+      applicationRoot,
+    ],
     { cwd: resolve("."), stdio: "ignore" },
   );
 
@@ -69,7 +80,11 @@ test("el dashboard puede detener el servidor iniciado por el lanzador", async ({
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(page.locator(".shutdown-status")).toContainText("Servidor local detenido");
   } finally {
-    if (serverProcess.exitCode === null) serverProcess.kill();
+    if (serverProcess.exitCode === null) {
+      serverProcess.kill();
+      await new Promise<void>((resolveExit) => serverProcess.once("exit", () => resolveExit()));
+    }
+    await rm(applicationRoot, { recursive: true, force: true });
   }
 });
 

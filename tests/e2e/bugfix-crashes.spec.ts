@@ -8,6 +8,7 @@
  */
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(process.env.CI ? 240_000 : 180_000);
@@ -27,28 +28,7 @@ test.afterAll(async () => {
 
 async function openDemoStore(page: Page): Promise<void> {
   await page.goto(studioUrl);
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
-    timeout: 30_000,
-  });
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolveDelete, reject) => {
-        const request = indexedDB.deleteDatabase("solara-commerce-studio");
-        request.addEventListener("success", () => resolveDelete());
-        request.addEventListener("error", () => reject(request.error));
-      }),
-  );
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
-    timeout: 30_000,
-  });
-  const card = page.locator('article:has([data-store-card-id="store-modo-sur-demo"])');
-  await card.locator(".dashboard-store-card__button").click();
-  await page
-    .getByRole("region", { name: /Tienda seleccionada:/ })
-    .getByRole("button", { name: "Abrir tienda", exact: true })
-    .click();
-  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+  await openMutableScaleStore(page, "Tienda de categorías protegidas");
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
 }
@@ -63,12 +43,11 @@ test("no permite reubicar una categoría con hijos bajo otra raíz y la app sigu
   await expect(tree).toBeVisible();
 
   const categorySelect = tree.getByRole("combobox", { name: "Categoría a reubicar" });
-  await categorySelect.selectOption({ value: "category-remeras" });
+  await categorySelect.selectOption({ label: "Casa" });
 
   const parentSelect = tree.getByRole("combobox", { name: "Nuevo padre" });
   await expect(parentSelect).toBeEnabled();
-  await expect(parentSelect.locator('option[value="category-abrigos"]')).toBeDisabled();
-  await expect(parentSelect.locator("option").filter({ hasText: "Abrigos" })).toBeDisabled();
+  await expect(parentSelect.locator("option").filter({ hasText: "Cocina" })).toBeDisabled();
 
   const confirmButton = tree.getByRole("button", { name: "Reubicar categoría" });
   await expect(confirmButton).toBeDisabled();

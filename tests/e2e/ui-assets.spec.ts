@@ -44,7 +44,7 @@ async function replaceSelectedAsset(
     mimeType: "image/png",
     buffer: PIXEL_TEAL_PNG,
   });
-  await expect(page.locator("output").filter({ hasText: "Imagen reemplazada" })).toBeVisible({
+  await expect(page.getByTestId("ui-asset-detail")).toContainText("2 × 2", {
     timeout: 15_000,
   });
 }
@@ -104,9 +104,9 @@ test("reemplazar un asset en uso conserva usos y el guard de borrado lo bloquea"
   await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
   await openAssetsTab(page);
 
-  // El hero de la demo usa posterAssetId "asset-hero".
+  // catalogScaleStore usa asset-hero en el hero y lo nombra "Mesa de referencia".
   const heroAsset = page.locator(".asset-item").filter({
-    has: page.locator('input[value="Campaña de temporada"]'),
+    has: page.locator('input[value="Mesa de referencia"]'),
   });
   await expect(heroAsset).toBeVisible();
   await heroAsset.getByTestId("ui-asset-detail-open").click();
@@ -116,11 +116,13 @@ test("reemplazar un asset en uso conserva usos y el guard de borrado lo bloquea"
   await replaceSelectedAsset(page, "pixel-teal.png");
 
   await expect(detail).toContainText("2 × 2");
-  await expect(detail.getByRole("heading")).toHaveText("Campaña de temporada");
-  await expect(heroAsset.locator("input").first()).toHaveValue("Campaña de temporada");
+  await expect(detail.getByRole("heading")).toHaveText("Mesa de referencia");
+  await expect(heroAsset.locator("input").first()).toHaveValue("Mesa de referencia");
 
   // El ID se conserva: los usos del hero siguen vivos y el borrado queda bloqueado.
-  await expect(detail).toContainText("catalog-hero");
+  await expect(
+    detail.getByTestId("ui-asset-use").filter({ hasText: "Sección hero" }),
+  ).toBeVisible();
   await expect(page.getByTestId("ui-asset-delete")).toBeDisabled();
   await expect(page.getByTestId("ui-asset-delete")).toHaveAttribute(
     "title",

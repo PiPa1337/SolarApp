@@ -3,8 +3,7 @@ import { expect, test } from "@playwright/test";
 import { exportProductsCsv, generatePerformanceFixture } from "@solara/core";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
-const performanceCsv = exportProductsCsv(generatePerformanceFixture(1_000).products);
-const selectionCsv = exportProductsCsv(generatePerformanceFixture(120).products);
+const selectionCsv = exportProductsCsv(generatePerformanceFixture(60).products);
 let server: Server;
 let studioUrl: string;
 
@@ -56,19 +55,6 @@ async function uploadCsv(page: import("@playwright/test").Page, csv: string, nam
 async function clickDom(locator: import("@playwright/test").Locator) {
   await locator.evaluate((element: HTMLElement) => element.click());
 }
-
-test("importa y pagina 1.000 productos", async ({ page }) => {
-  test.setTimeout(150_000);
-  await openCatalog(page);
-  await uploadCsv(page, performanceCsv, "catalogo-1000.csv");
-  await clickDom(page.getByRole("button", { name: "Reemplazar catálogo" }));
-  await expect(page.getByText("1000 productos y 2000 variantes.")).toBeVisible({
-    timeout: 30_000,
-  });
-  await expect(page.locator("tbody tr")).toHaveCount(50);
-
-  expect(await page.locator("tbody tr").count()).toBeLessThanOrEqual(100);
-});
 
 test("edita variantes y conserva el último cambio al volver, recargar y reabrir", async ({
   page,
@@ -126,28 +112,28 @@ test("edita variantes y conserva el último cambio al volver, recargar y reabrir
 test("previsualiza, cancela y edita en masa entre páginas", async ({ page }) => {
   test.setTimeout(90_000);
   await openCatalog(page);
-  await uploadCsv(page, selectionCsv, "catalogo-120.csv");
+  await uploadCsv(page, selectionCsv, "catalogo-60.csv");
 
   const review = page.locator(".import-review");
-  await expect(review.getByText("120", { exact: true })).toBeVisible();
+  await expect(review.getByText("60", { exact: true })).toBeVisible();
   await expect(review).toContainText("Nuevos");
   await clickDom(page.getByRole("button", { name: "Cancelar" }));
   // La tienda derivada arranca con la misma base neutral: 33 productos y 41 variantes.
   await expect(page.getByText("33 productos y 41 variantes.")).toBeVisible();
 
-  await uploadCsv(page, selectionCsv, "catalogo-120.csv");
+  await uploadCsv(page, selectionCsv, "catalogo-60.csv");
   await clickDom(page.getByRole("button", { name: "Reemplazar catálogo" }));
-  await expect(page.getByText("120 productos y 240 variantes.")).toBeVisible({
+  await expect(page.getByText("60 productos y 120 variantes.")).toBeVisible({
     timeout: 30_000,
   });
   await expect(page.locator("tbody tr")).toHaveCount(50);
 
   await clickDom(page.getByTestId("select-filtered-products"));
-  await expect(page.getByText("120 seleccionados")).toBeVisible();
+  await expect(page.getByText("60 seleccionados")).toBeVisible();
   // T4.3: la paginación nativa se reemplazó por el componente Pagination
   // compartido (T1.3), que no expone el testid anterior.
   await clickDom(page.getByRole("button", { name: "Siguiente", exact: true }));
-  await expect(page.getByText("120 seleccionados")).toBeVisible();
+  await expect(page.getByText("60 seleccionados")).toBeVisible();
   await expect(page.locator('thead input[type="checkbox"]')).toBeChecked();
 
   await page.getByRole("combobox", { name: "Estado", exact: true }).selectOption("archived");

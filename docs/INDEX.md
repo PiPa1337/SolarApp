@@ -12,6 +12,9 @@ Los documentos históricos/auditorías cerradas viven en `docs/archive/`.
 | `DATA_MODEL.md` | Contrato StoreProjectV2 y migraciones | Tocar schema o persistencia |
 | `MEDIA_OPTIMIZATION.md` | Receta WebP/responsive y baseline de resolución | Optimizar o auditar imágenes |
 | `TESTING.md` | Gates, budgets y convenciones de test | Correr o agregar tests |
+| `TEST_SUITE_SCOPE_2026-09-26.md` | Snapshot de cargas y frecuencia tras la poda | Dimensionar la suite; refrescar conteos Playwright después de cambios |
+| `TEST_SUITE_REDUCTION_2026-09-25.md` | Snapshot histórico del recorte E2E inicial | Consultar antecedentes del recorte |
+| `TEST_SUITE_PRUNING_PLAN_2026-09-26.md` | Poda profunda aplicada, impacto por carga y siguiente fase E2E | Revisar qué se retiró, qué se conserva y los riesgos de cobertura |
 | `TECHNICAL_DEBT.md` | Deuda abierta/resuelta con evidencia | Antes de reportar un bug conocido |
 | `INTEGRATIONS.md` | Servidor local, hash sha256 y compatibilidad legacy ZIP | Tocar persistencia o endpoints |
 | `LOCAL_OPERATION.md` | Ejecución local Node/navegador, backups y layout | Mover, respaldar o diagnosticar una instalación |

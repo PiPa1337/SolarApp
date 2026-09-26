@@ -66,6 +66,8 @@ export async function openMutableScaleStore(
   if (!id) throw new Error(`No se pudo identificar la copia mutable "${name}".`);
   await copy.locator(".dashboard-store-card__button").click();
   await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
-  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
+    timeout: 20_000,
+  });
   return id;
 }

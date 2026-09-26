@@ -6,10 +6,9 @@
   "scripts": {
     "build": "vite build --configLoader runner && node ../../scripts/dedup-studio-css.mjs",
     "dev": "vite --host 0.0.0.0 --configLoader runner",
-    "test": "vitest run --configLoader runner --pool=threads --maxWorkers=8 --minWorkers=8 --exclude src/lib/fuzz-navigation.test.ts --exclude src/lib/projectArchive.stress.test.ts",
-    "test:ci": "vitest run --configLoader runner --pool=threads --maxWorkers=2 --minWorkers=2 --exclude src/lib/fuzz-navigation.test.ts --exclude src/lib/projectArchive.stress.test.ts",
+    "test": "vitest run --configLoader runner --pool=threads --maxWorkers=8 --minWorkers=8 --exclude src/lib/fuzz-navigation.test.ts",
+    "test:ci": "vitest run --configLoader runner --pool=threads --maxWorkers=2 --minWorkers=2 --exclude src/lib/fuzz-navigation.test.ts",
     "test:fuzz": "vitest run --configLoader runner --no-file-parallelism src/lib/fuzz-navigation.test.ts",
-    "test:stress": "vitest run --configLoader runner --no-file-parallelism src/lib/projectArchive.stress.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

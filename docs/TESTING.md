@@ -24,8 +24,9 @@ corepack pnpm --filter @solara/storefront-runtime test
 
 `corepack pnpm check` es el alias rápido de `check:fast`: ejecuta repository scan,
 formato, typecheck y tests diarios de todos los paquetes con concurrencia acotada.
-`check:full` agrega fuzz, stress, QA, gates lentos, benchmark, build y el check
-post-build para cierre/CI.
+`check:full` agrega mutation, fuzz reducido, QA representativo, gates de
+corrección, build y check post-build. Los perfiles de memoria extrema quedan
+fuera del cierre habitual.
 
 Para iteración post-cambio usar `check:micro` — diff + repository + typecheck/test
 solo de paquetes afectados (mapeo en `scripts/test-affected-map.mjs`).
@@ -47,30 +48,34 @@ que consumen decenas de segundos o cientos de MiB mantienen cobertura explícita
 
 ```powershell
 corepack pnpm test:fuzz       # carreras/fuzz de Core + navegación de Studio
-corepack pnpm test:stress     # archivos > límite de string de V8 (Studio + Exporter)
-corepack pnpm test:qa         # creación masiva de tiendas por el canal oficial
-corepack pnpm test:extended   # fuzz + stress + QA; incluido en check:full
+corepack pnpm test:stress     # serialización/hash >536 MB; sólo manual
+corepack pnpm test:qa         # 3 tiendas representativas por el canal oficial
+corepack pnpm test:extended   # mutation + fuzz reducido + QA; incluido en check:full
 corepack pnpm test:diagnostic # dump manual de placeholders; no corre en cierre
 corepack pnpm test:postbuild  # verifica lazy fixture contra dist de Studio
 ```
 
-Core conserva `fuzz-comprehensive.test.ts` en el test diario; sólo los fuzz largos
-se separan. Studio usa hasta 4 workers en local y 2 en `test:ci`. Exporter también
-usa 2 workers en `test:ci`; el caso JSON de más de 536 MB se ejecuta en `test:stress`.
+Core excluye de `test` los cuatro archivos fuzz y los ejecuta mediante
+`test:fuzz`. Studio usa 8 workers locales y 2 en `test:ci`. Exporter también
+usa 2 workers en `test:ci`; el caso JSON de más de 536 MB y el hash de snapshot
+sobre un payload equivalente se reservan a `test:stress` manual.
 `fixture-lazy.test.ts` queda fuera de la suite unitaria y se ejecuta después de
 `build` dentro de `check:full`.
+
+El [snapshot de alcance y cargas](TEST_SUITE_SCOPE_2026-09-26.md) registra los
+archivos excluidos, el tamaño real de fixtures y la frecuencia por comando. Es una
+fotografía fechada que puede cambiar al editar tests o scripts.
 
 ### Exportación y presupuestos
 
 ```powershell
-corepack pnpm benchmark:export
 corepack pnpm check:budgets
 corepack pnpm check:optimization
 ```
 
 Los fixtures pequeños verifican render visual; `catalogScaleStore` verifica 50
-productos, jerarquía y 60 variantes; el benchmark de core exporta
-`catalog-modern-v2` con 2.000 productos sin versionar un fixture masivo.
+productos, jerarquía y 60 variantes. El renderer también conserva pruebas de
+producción y paridad preview/export en esa escala.
 
 ### Auditoría read-only de RM Descartables
 
@@ -93,17 +98,21 @@ requests, imágenes, long tasks, CDP, heap, RSS, CPU de Node, storage de lectura
 reaperturas y reposo visible/oculto. Antes y después compara hash SHA-256,
 tamaño, versión, fechas y el inventario metadata-only de RM. Una optimización
 posterior debe repetir el mismo instrumento y demostrar paridad antes de
-considerarse segura. `benchmark:export` sigue siendo un gate separado: no se
-sube su límite para hacer pasar la auditoría.
+considerarse segura.
 
 ### Playwright
 
-`test:e2e` compila Studio y ejecuta la suite funcional de Chromium (3 workers por
-defecto en local, override con `PLAYWRIGHT_WORKERS=8` en máquinas 8C/16T) contra
-un servidor local. Los barridos históricos, auditorías visuales/performance y UX
-se separan en `test:e2e:audit`. En CI el build ya está hecho y `test:e2e:ci` ejecuta cinco
-specs smoke (11 tests) distribuidos en cuatro shards. La suite funcional completa
-sigue disponible localmente con `test:e2e`.
+`test:e2e` compila Studio y ejecuta la suite funcional de Chromium (74 specs y
+450 casos enumerados el 26/09/2026; 3 workers por defecto en local,
+override con `PLAYWRIGHT_WORKERS=8` en máquinas 8C/16T) contra
+un servidor local. Las cinco auditorías manuales retenidas se
+separan en `test:e2e:audit`. El comando `test:e2e:ci` sigue disponible para uso
+manual; GitHub Actions no ejecuta sus cinco specs smoke ni valida el producto.
+La suite funcional completa sigue disponible localmente con `test:e2e`.
+
+El recorte del 2026-09-25 retiró 81 de 161 specs E2E activos (50,3%). El inventario
+completo, los criterios y el conjunto retenido están en
+[`TEST_SUITE_REDUCTION_2026-09-25.md`](TEST_SUITE_REDUCTION_2026-09-25.md).
 
 Para iteración post-cambio usar smoke quick con caché de build:
 
@@ -112,13 +121,23 @@ corepack pnpm playwright:install:chromium
 corepack pnpm test:e2e:smoke       # smoke quick + build cacheado
 corepack pnpm test:e2e:smoke:full  # smoke completo + build cacheado (cierre)
 corepack pnpm test:e2e             # suite funcional Chromium
-corepack pnpm test:e2e:audit       # auditorías históricas/visuales/performance, manual
-corepack pnpm test:e2e:ci     # cinco specs smoke, sin build; CI usa dist ya compilado
+corepack pnpm test:e2e:audit       # cinco auditorías manuales, sin gate diario
+corepack pnpm test:e2e:ci     # cinco specs / 13 casos, sin build
 ```
 
-La suite de auditoría contiene `ui-sweep-a01..a26`, Tema, Resumen, Preparar,
-`__vision__`, visuales dedicados, performance, `ux-audit` y los barridos pesados
-`axe-app`, `axe-site`, `cdp-site`, `editor-responsive`, `layout-fit` y `ui-export`.
+La enumeración del 26/09/2026 registró smoke quick con 13 casos en 5 specs,
+smoke full con 109 casos en 15 specs y auditoría manual con 33 casos en 5 specs.
+La matriz release enumera 505 casos en local (483 Chromium y 11 en cada uno de
+Firefox y WebKit) y 479 con `CI=true` (457 Chromium y 11 por navegador). CI omite
+`__vision__/alignment`, `__vision__/storefront-alignment` y `visual-break`.
+Playwright puede repetir intentos fallidos con el retry configurado en CI. El
+desglose y la fecha de enumeración están en
+[`TEST_SUITE_SCOPE_2026-09-26.md`](TEST_SUITE_SCOPE_2026-09-26.md).
+
+La auditoría manual actual contiene `calculator-visual-audit`, `__vision__/alignment`,
+`__vision__/storefront-alignment`, `ui-export` y `visual-break`. Los barridos
+históricos de controles, auditorías report-only y benchmarks E2E se retiraron
+del árbol activo en el recorte del 2026-09-25.
 `ui-sweep-a27..a30` permanece en la suite funcional porque forma parte del
 contrato actual de smoke full.
 
@@ -228,23 +247,23 @@ del draft lo requiere (la validación actual exige sólo la marca DEBUG).
 
 ## Qué probar ante cada tipo de cambio
 
-> Validación post-cambio = `check:micro` + `test:e2e:smoke`. Cierre/CI = `check:full` + `test:e2e:smoke:full` + `test:e2e` funcional. `test:e2e:audit` queda manual/on-demand. `benchmark:export` ya forma parte de `check:full`. Release de navegador (3 browsers) queda on-demand; Node 24.x es el único runtime soportado.
+> Validación post-cambio = `check:micro` + `test:e2e:smoke`. Cierre = `check:full` + smoke full + E2E funcional. `test:e2e:audit` y `test:stress` quedan manual/on-demand. El comando `release` reutiliza el build de `check:full` y ejecuta una sola vez la matriz completa; Node 24.x es el único runtime soportado.
 
 | Cambio | Mínimo (post-cambio) | Cierre recomendado |
 | --- | --- | --- |
 | Schema/migración | `check:micro` + tests de schema | `check:full`, `build`, E2E persistencia |
-| Reducer/CSV | `check:micro` + tests de `core` | benchmark de catálogo |
+| Reducer/CSV | `check:micro` + tests de `core` | `check:full`; benchmark sólo si se fija un SLA de producto |
 | Módulo/estilo público | `check:micro` + tests de módulo | `test:e2e:smoke:full` + E2E responsive |
 | Preview/Studio | `check:micro` (typecheck) | `test:e2e:smoke:full` / `test:e2e` |
 | Guardado local | `check:micro` | ciclo real launcher + `test:e2e` |
-| SEO/exporter | `check:micro` + tests de exporter | `benchmark:export`, E2E sin JS |
+| SEO/exporter | `check:micro` + tests de exporter | `check:budgets`, E2E sin JS |
 
 ## Diagnóstico
 
 - Un test E2E fallido deja reportes en `playwright-report/` y traces según la
   configuración de Playwright.
-- Fuera de CI, `check:quick` y `benchmark:export` operan automáticamente en modo
-  `advisory`: los diagnósticos de formato y el exceso de bytes se informan sin
+- Fuera de CI, `check:quick` opera automáticamente en modo `advisory`: los
+  diagnósticos de formato y el exceso de bytes se informan sin
   bloquear el flujo. `CI=true` o `SOLARA_VALIDATION_MODE=strict` conserva el
   gate estricto.
 - `test:e2e:release` requiere Node 24.x y los navegadores instalados. La salida
@@ -270,20 +289,15 @@ del draft lo requiere (la validación actual exige sólo la marca DEBUG).
 - `scripts/seo-check.test.ts`: JSON-LD válido con URLs absolutas en páginas
   comerciales.
 - `scripts/recursos-check.test.ts`: duplicación CSS V2 y videos con poster.
-- `scripts/audit-scale.test.ts`: el audit del catálogo grande no degrada
-  (regresión de O(n²)).
-- `tests/e2e/axe-site.spec.ts`: axe-core en las rutas de los 3 fixtures
-  (reference, catalogModern, catalogScale) — 0 violaciones.
+- `packages/exporter/src/scale.test.ts`: producción, paginación y paridad del
+  renderer con la fixture compartida de 50 productos.
 - `tests/e2e/nojs-coverage.spec.ts`: 6 rutas × 2 fixtures × con/sin JS, con
   contenido útil y 0 errores de consola/red.
 - `tests/e2e/focus-visible.spec.ts`: el foco del teclado es visible.
 - `tests/e2e/interacciones.spec.ts`: agregar al carrito → carrito → checkout
   sin errores de consola.
-- `tests/e2e/lcp-cold.spec.ts`: LCP con navegador frío (3 corridas, mediana).
-- `tests/e2e/cdp-site.spec.ts`: long tasks/rAF del sitio exportado.
-- `tests/e2e/qa-visual-sweep.spec.ts` y `qa-visual-modern.spec.ts`: capturas
-  para barrido visual con la skill de visión (requieren `SOLARA_QA_VISUAL=1`
-  para el sweep).
+- La lista completa de E2E manuales retirados y retenidos figura en
+  [`TEST_SUITE_REDUCTION_2026-09-25.md`](TEST_SUITE_REDUCTION_2026-09-25.md).
 - `scripts/dedup-studio-css.mjs`: elimina reglas duplicadas exactas del CSS
   del Studio al construir (postbuild de `@solara/studio`).
 

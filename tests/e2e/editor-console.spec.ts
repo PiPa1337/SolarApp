@@ -88,11 +88,11 @@ test("el editor recorre dashboard, tabs y acciones clave sin errores de consola"
 
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
-  await page
-    .getByPlaceholder("Buscar por producto, marca o estado")
-    .fill("Remera esencial de algodón");
-  await expect(page.getByLabel("Nombre de Remera esencial de algodón")).toBeVisible();
-  await page.getByPlaceholder("Buscar por producto, marca o estado").fill("");
+  const firstProductTitle = await page.locator('tbody input[aria-label^="Nombre de "]').first().inputValue();
+  const catalogSearch = page.getByPlaceholder("Buscar por producto, marca o estado");
+  await catalogSearch.fill(firstProductTitle);
+  await expect(page.getByLabel(`Nombre de ${firstProductTitle}`)).toBeVisible();
+  await catalogSearch.fill("");
 
   await page.getByRole("button", { name: "Agregar producto" }).first().click();
   const dialog = page.locator("dialog.product-dialog");
@@ -126,7 +126,11 @@ test("el editor recorre dashboard, tabs y acciones clave sin errores de consola"
   await routeInput.fill("/buscar/");
   await routeInput.press("Enter");
   await expect(page.locator('iframe[title="Vista previa tablet"]')).toBeVisible();
-  await page.getByRole("button", { name: "Vista de escritorio" }).click();
+  await expect(page.getByRole("button", { name: "Vista de escritorio", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "Cerrar panel de edición", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Vista de escritorio", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator('iframe[title="Vista previa desktop"]')).toBeVisible();
 
   await page.getByRole("button", { name: "Volver a tiendas" }).click();
@@ -156,7 +160,7 @@ test("el dashboard busca, selecciona y respalda sin errores de consola", async (
   await expect(detail).toBeVisible();
 
   const downloadPromise = page.waitForEvent("download");
-  await detail.getByRole("button", { name: "Respaldo ahora" }).click();
+  await detail.getByRole("button", { name: "Respaldar ahora" }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/\.solara\.json$/);
 

@@ -1012,7 +1012,7 @@ function StudioShell() {
               type="button"
               aria-label="Ajustar animación del fondo"
               aria-expanded={gravitySettingsOpen}
-              aria-controls={gravitySettingsPanelId}
+              aria-controls={gravitySettingsOpen ? gravitySettingsPanelId : undefined}
               title="Ajustar animación del fondo"
               onClick={() => setGravitySettingsOpen((open) => !open)}
             >

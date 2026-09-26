@@ -194,6 +194,7 @@ async function readTemplateVersion(page: Page, name: string): Promise<number | u
 }
 
 test("Respaldar y adoptar cambios aplica la actualización y persiste (H8-24)", async ({ page }) => {
+  test.setTimeout(60_000);
   const storeName = "Tienda actualizable";
   await setupCleanStore(page, storeName);
 
@@ -213,7 +214,8 @@ test("Respaldar y adoptar cambios aplica la actualización y persiste (H8-24)", 
     .click();
 
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
-  await expect(page.getByText("Actualización disponible")).toBeVisible();
+  const updateNotice = page.getByRole("region", { name: "Catalog Modern 2" });
+  await expect(updateNotice).toBeVisible();
 
   const updateButton = page.getByRole("button", { name: "Respaldar y adoptar cambios" });
   await expect(updateButton).toBeVisible();
@@ -222,7 +224,7 @@ test("Respaldar y adoptar cambios aplica la actualización y persiste (H8-24)", 
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/-antes-de-actualizar\.solara\.json$/);
 
-  await expect(page.getByText("Actualización disponible")).toHaveCount(0);
+  await expect(updateNotice).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Respaldar y adoptar cambios" })).toHaveCount(0);
 
   await expect.poll(async () => readTemplateVersion(page, storeName), { timeout: 10_000 }).toBe(2);
@@ -236,5 +238,5 @@ test("Respaldar y adoptar cambios aplica la actualización y persiste (H8-24)", 
     .getByRole("button", { name: "Abrir tienda", exact: true })
     .click();
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
-  await expect(page.getByText("Actualización disponible")).toHaveCount(0);
+  await expect(updateNotice).toHaveCount(0);
 });

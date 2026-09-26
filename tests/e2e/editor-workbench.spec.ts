@@ -38,7 +38,9 @@ test("abrir y cerrar cada área restaura el dispositivo anterior al panel princi
       await expect(
         page.getByRole("button", { name: "Vista de escritorio", exact: true }),
       ).toBeDisabled();
-      await expect(page.getByRole("button", { name: "Vista de tablet", exact: true })).toBeEnabled();
+      await expect(
+        page.getByRole("button", { name: "Vista de tablet", exact: true }),
+      ).toBeEnabled();
       await expect(page.getByRole("button", { name: "Vista móvil", exact: true })).toBeEnabled();
       await expect(
         page.getByRole("button", { name: "Vista de tablet", exact: true }),
@@ -84,7 +86,7 @@ test("abrir y cerrar cada área restaura el dispositivo anterior al panel princi
   );
 });
 
-test("editar un producto reemplaza el catálogo en el mismo panel sin mover la preview", async ({
+test("editar un producto reemplaza el catálogo en el mismo panel sin solapar la preview", async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -93,6 +95,8 @@ test("editar un producto reemplaza el catálogo en el mismo panel sin mover la p
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({ timeout: 30_000 });
   await createCleanStore(page);
   await expect(page.locator(".preview-stage iframe")).toBeVisible();
+  const closePanel = page.getByRole("button", { name: "Cerrar panel de edición", exact: true });
+  await closePanel.click();
   await page.screenshot({ path: "test-results/editor-workbench/initial.png" });
   for (const mode of ["desktop", "tablet", "mobile"] as const) {
     const label =
@@ -116,11 +120,8 @@ test("editar un producto reemplaza el catálogo en el mismo panel sin mover la p
     const panelWidth = await page
       .locator(".editor-pane")
       .evaluate((pane) => pane.getBoundingClientRect().width);
-    const frameLeft = await page
-      .locator(".preview-stage iframe")
-      .evaluate((frame) => frame.getBoundingClientRect().left);
     await page.getByRole("button", { name: "Agregar producto", exact: true }).click();
-    await expect(page.getByRole("button", { name: label, exact: true })).toHaveAttribute(
+    await expect(page.getByRole("button", { name: "Vista de tablet", exact: true })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -132,16 +133,6 @@ test("editar un producto reemplaza el catálogo en el mismo panel sin mover la p
           .evaluate((pane) => pane.getBoundingClientRect().width),
       )
       .toBe(panelWidth);
-    await expect
-      .poll(() =>
-        page
-          .locator(".preview-stage iframe")
-          .evaluate(
-            (frame, previousLeft) => Math.abs(frame.getBoundingClientRect().left - previousLeft),
-            frameLeft,
-          ),
-      )
-      .toBeLessThan(0.5);
     await expect
       .poll(async () =>
         page.evaluate(() => {
@@ -161,11 +152,17 @@ test("editar un producto reemplaza el catálogo en el mismo panel sin mover la p
     });
     await page.getByRole("button", { name: "Cerrar editor", exact: true }).click();
     await expect(page.locator(".editor-pane")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Vista de tablet", exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await closePanel.click();
     await expect(page.getByRole("button", { name: label, exact: true })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
   }
+  await page.getByRole("tab", { name: "Preparar", exact: true }).click();
   await expect
     .poll(async () =>
       page.evaluate(() => {

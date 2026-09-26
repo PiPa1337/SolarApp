@@ -59,7 +59,7 @@ async function openStore(page: Page, tab: string, mutable = false) {
 test("las filas del catálogo y las cards del dashboard responden al hover (T5.1)", async ({
   page,
 }) => {
-  await openStore(page, "Catálogo");
+  await openStore(page, "Catálogo", true);
   const rows = page.locator("tbody tr");
   await expect(rows).toHaveCount(50);
 
@@ -148,8 +148,7 @@ test("el indicador de guardado pulsa mientras guarda y anima el check al confirm
   page,
 }) => {
   await openStore(page, "Constructor", true);
-  const hero = page.getByRole("listitem").filter({ hasText: "Hero de catálogo" });
-  await hero.getByRole("button").first().click();
+  await page.getByRole("button", { name: "Portada Hero audiovisual", exact: true }).click();
 
   await page.evaluate(() => {
     const probe = window as Window & { __solaraSawSaving?: boolean };
@@ -185,7 +184,7 @@ test("el indicador de guardado pulsa mientras guarda y anima el check al confirm
 test("el catálogo con 50 productos renderiza la tabla dentro del presupuesto (T5.4)", async ({
   page,
 }) => {
-  await openStore(page, "Resumen");
+  await openStore(page, "Resumen", true);
   const elapsed = await page.evaluate(async () => {
     const waitFor = async (predicate: () => boolean, timeoutMs = 30_000): Promise<boolean> => {
       const deadline = performance.now() + timeoutMs;

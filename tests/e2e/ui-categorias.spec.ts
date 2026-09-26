@@ -5,6 +5,7 @@
  */
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
+import { openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 let server: Server;
@@ -23,8 +24,7 @@ test.afterAll(async () => {
 async function openCatalog(page: Page) {
   await page.goto(studioUrl);
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await page.locator('[data-store-card-id="store-modo-sur-demo"]').click();
-  await page.getByRole("button", { name: "Abrir tienda", exact: true }).click();
+  await openMutableScaleStore(page, "Tienda de categorías mutable");
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible();
   await expect(page.getByRole("list", { name: "Categorías ordenadas" })).toBeVisible();

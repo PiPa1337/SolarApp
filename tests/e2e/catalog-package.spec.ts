@@ -29,7 +29,9 @@ test("importa una carpeta comercial con imagen y crea categorías faltantes", as
       }),
   );
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 15_000,
+  });
   await createCleanStore(page, "Tienda de importación");
   await page.getByRole("tab", { name: /Cat/ }).click();
   const catalogDescription = page.getByText(/^\d+ productos y \d+ variantes\.$/);

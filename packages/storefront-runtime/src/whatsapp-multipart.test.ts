@@ -134,7 +134,7 @@ describe("WhatsApp multiparte - split", () => {
     }
   });
   it("tope de 12 partes: el excedente vuelve a renglon de resumen", () => {
-    const lines = Array.from({ length: 2000 }, (_, i) =>
+    const lines = Array.from({ length: 601 }, (_, i) =>
       makeProduct({
         productId: `q${i}`,
         variantId: `w${i}`,

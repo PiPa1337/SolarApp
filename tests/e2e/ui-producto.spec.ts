@@ -130,7 +130,7 @@ test("guardar persiste el producto en la fila y en la vista previa", async ({ pa
   const routeInput = page.getByTestId("ui-preview-route");
   await routeInput.fill("/productos/remera-h4audit/");
   await routeInput.press("Enter");
-  const previewBody = page.frameLocator('iframe[title="Vista previa desktop"]').locator("body");
+  const previewBody = page.frameLocator("iframe").locator("body");
   await expect(previewBody).toContainText("Remera H4AUDIT", { timeout: 20_000 });
 });
 

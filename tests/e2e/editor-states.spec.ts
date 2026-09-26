@@ -37,7 +37,9 @@ async function openStore(page: Page): Promise<void> {
       }),
   );
   await page.goto(studioUrl);
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
+    timeout: 20_000,
+  });
   const card = page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }).first();
   await card.locator(".dashboard-store-card__button").click();
   const baseDetail = page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" });
@@ -55,16 +57,22 @@ async function openStore(page: Page): Promise<void> {
     .click();
   await expect(
     page.getByRole("region", { name: "Tienda seleccionada: Tienda estados mutable" }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 20_000 });
 }
 
-async function openStudio(page: Page): Promise<void> {
-  await openStore(page);
+async function openSelectedStudio(page: Page): Promise<void> {
   await page
     .getByRole("region", { name: "Tienda seleccionada: Tienda estados mutable" })
     .getByRole("button", { name: "Abrir tienda" })
     .click();
-  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
+    timeout: 30_000,
+  });
+}
+
+async function openStudio(page: Page): Promise<void> {
+  await openStore(page);
+  await openSelectedStudio(page);
 }
 
 function styleOf(locator: Locator) {
@@ -127,6 +135,10 @@ function hoverSignature(locator: Locator) {
 }
 
 async function expectHoverChange(element: Locator, label: string) {
+  await element.evaluate((node) => {
+    if (node instanceof HTMLElement) node.blur();
+  });
+  await element.page().mouse.move(0, 0);
   const before = await hoverSignature(element);
   await element.hover();
   await expect
@@ -170,11 +182,12 @@ test("el dashboard distingue estados en sus controles", async ({ page }) => {
 });
 
 test("el detalle de tienda y el Studio distinguen disabled, hover y focus", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1920, height: 912 });
   await openStore(page);
 
   const detail = page.getByRole("region", { name: "Tienda seleccionada: Tienda estados mutable" });
-  const backup = detail.getByRole("button", { name: "Respaldo ahora" });
+  const backup = detail.getByRole("button", { name: "Respaldar ahora" });
   await expectEnabledButton(backup, "Respaldo ahora");
   await expectFocusRing(backup, "Respaldo ahora");
   await expectHoverChange(backup, "Respaldo ahora");
@@ -182,7 +195,7 @@ test("el detalle de tienda y el Studio distinguen disabled, hover y focus", asyn
   const archive = detail.getByRole("button", { name: "Archivar" });
   await expectHoverChange(archive, "Archivar");
 
-  await openStudio(page);
+  await openSelectedStudio(page);
 
   await expectDisabledButton(page.getByRole("button", { name: "Deshacer" }), "Deshacer inicial");
   await expectDisabledButton(page.getByRole("button", { name: "Rehacer" }), "Rehacer inicial");
@@ -238,6 +251,7 @@ test("el catálogo y el exportador muestran estados disabled y loading", async (
 test("el inventario ui-* mantiene estilos coherentes por estado en todas las pantallas", async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(studioUrl);
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
@@ -294,6 +308,7 @@ test("el inventario ui-* mantiene estilos coherentes por estado en todas las pan
   }
 
   await page.getByRole("tab", { name: "Constructor", exact: true }).click();
+  await page.locator(".section-stack .section-select").first().click();
   const inspectorInput = page.locator(".inspector input, .inspector select").first();
   await expectFocusRing(inspectorInput, "Input del inspector");
 });
@@ -409,10 +424,14 @@ test("el formulario de Resumen valida con errores inline y aria-describedby (T6.
 test("los destinos de navegación validan el borrador con error inline y no commitean valores inválidos (F3)", async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStudio(page);
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Navegación y textos", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Navegación y textos" })).toBeVisible();
+  await page.getByRole("button", { name: "Añadir enlace de catálogo", exact: true }).click();
 
   const fieldsetOf = (input: Locator) =>
     input.locator("xpath=ancestor::fieldset[contains(@class, 'field')]");

@@ -6,17 +6,11 @@ import { defineConfig, devices } from "@playwright/test";
 // accidente el gate release ni convierta diferencias del browser del Studio en
 // supuestas regresiones del storefront.
 const publicStorefrontSpecs = /[/\\](exported-store|exporter-sentinel|storefront-nojs)\.spec\.ts$/;
-const ciVisualSpecs = [
-  /[/\\]__vision__[/\\]/,
-  /[/\\](?:qa-visual(?:-[^/\\]+)?|quality-forge-visual|studio-visual|theme-preset-visual|visual-break)\.spec\.ts$/,
-];
+const ciVisualSpecs = [/[/\\]__vision__[/\\]/, /[/\\]visual-break\.spec\.ts$/];
 const auditSpecs = [
   /[/\\]__vision__[/\\].+\.spec\.ts$/,
-  /[/\\]ui-sweep-a(?:0[1-9]|1\d|2[0-6])\.spec\.ts$/,
-  /[/\\]ui-(?:tema-t|resumen-r|preparar-pr)\d+\.spec\.ts$/,
-  /[/\\](?:qa-visual(?:-[^/\\]+)?|quality-forge-visual|studio-visual|theme-preset-visual|visual-break)\.spec\.ts$/,
-  /[/\\](?:editor-perf|lcp-cold|perf-app|perf-idle|rm-performance|ux-audit)\.spec\.ts$/,
-  /[/\\](?:axe-app|axe-site|cdp-site|editor-responsive|layout-fit|ui-export)\.spec\.ts$/,
+  /[/\\]calculator-visual-audit\.spec\.ts$/,
+  /[/\\](?:ui-export|visual-break)\.spec\.ts$/,
 ];
 const requestedE2eMode = process.env.SOLARA_E2E_MODE?.trim().toLowerCase();
 const e2eMode =
@@ -27,8 +21,8 @@ const testIgnore =
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  // El gate normal conserva contratos funcionales. Barridos históricos,
-  // auditorías visuales y performance se ejecutan sólo en modo audit/all.
+  // El gate normal conserva contratos funcionales. Las cinco auditorías
+  // manuales seleccionadas se ejecutan sólo en modo audit/all.
   testMatch,
   testIgnore,
   fullyParallel: false,

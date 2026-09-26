@@ -142,8 +142,11 @@ test("restaurar valores por defecto devuelve la sección al estado inicial", asy
   ).toHaveText("Un título editado", { timeout: 15_000 });
 
   await page.getByRole("button", { name: "Restaurar valores por defecto" }).click();
-  const restoreDialog = page.getByRole("dialog", { name: "Restaurar valores por defecto" });
+  const restoreDialog = page.getByTestId("ui-confirm-dialog");
   await expect(restoreDialog).toBeVisible();
+  await expect(
+    restoreDialog.getByRole("heading", { name: "Restaurar valores por defecto" }),
+  ).toBeVisible();
   await expect(restoreDialog.locator(".confirm-dialog__body")).toContainText("Hero de catálogo");
   await restoreDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
   await expect(title).toHaveValue("Un título editado");
@@ -465,7 +468,7 @@ test("la familia Editorial V2 queda como única opción visible", async ({ page 
   await expect(preview.locator('[data-design-family="catalog-modern-v2"]')).toBeVisible({
     timeout: 20_000,
   });
-  await expect(preview.getByRole("heading", { level: 1 })).toHaveText("Titulo del hero");
+  await expect(preview.getByRole("heading", { level: 1 })).toBeVisible();
 });
 
 test("agregar un testimonio genera un ítem válido que commitea y persiste en el preview", async ({

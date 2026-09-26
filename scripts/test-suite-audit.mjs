@@ -3,20 +3,6 @@ import { existsSync, readFileSync } from "node:fs";
 
 const TEST_FILE = /\.(?:test|spec)\.(?:[cm]?js|tsx?)$/i;
 const EXCLUDED_PATHS = ["/node_modules/", "/dist/", "/back up/", "/.local-backups/"];
-const INTENTIONAL_NO_ASSERTION = new Set([
-  "/scripts/audit-2000.test.ts",
-  "/scripts/audit-2000-repeat.test.ts",
-  "/scripts/perf-benchmark.test.ts",
-  "/scripts/perf-detailed.test.ts",
-  "/scripts/perf-flows.test.ts",
-  "/tests/e2e/__vision__/store-metrics.spec.ts",
-  "/tests/e2e/cdp-site.spec.ts",
-  "/tests/e2e/lcp-cold.spec.ts",
-  "/tests/e2e/perf-app.spec.ts",
-  "/tests/e2e/qa-visual-modern.spec.ts",
-  "/tests/e2e/qa-visual-sweep.spec.ts",
-  "/tests/e2e/theme-preset-visual.spec.ts",
-]);
 const DAILY_SMOKE_E2E = new Set([
   "/tests/e2e/exported-store.spec.ts",
   "/tests/e2e/storefront-nojs.spec.ts",
@@ -84,7 +70,6 @@ const rows = files.map((pathname) => {
   const assertions = expects + count(source, /\bassert(?:\.|\s*\()/g);
   return {
     pathname,
-    diagnosticOnly: INTENTIONAL_NO_ASSERTION.has(normalized(pathname)),
     layer: layer(pathname),
     lines: source.split(/\r?\n/).length,
     tests,
@@ -116,8 +101,7 @@ const duplicates = [...duplicateTitles.entries()]
   .sort((a, b) => b.locations.length - a.locations.length || a.title.localeCompare(b.title));
 
 const noAssertions = rows.filter((row) => row.tests > 0 && row.assertions === 0);
-const unexpectedNoAssertions = noAssertions.filter((row) => !row.diagnosticOnly);
-const diagnosticNoAssertions = noAssertions.filter((row) => row.diagnosticOnly);
+const unexpectedNoAssertions = noAssertions;
 const focused = rows.filter((row) => row.focused > 0);
 const waits = rows.filter((row) => row.waits > 0).sort((a, b) => b.waits - a.waits);
 const dailySmokeWaits = waits.filter((row) => DAILY_SMOKE_E2E.has(normalized(row.pathname)));
@@ -138,12 +122,6 @@ console.log(
     `skip/todo=${rows.reduce((sum, row) => sum + row.skipped, 0)}, snapshots=${rows.reduce((sum, row) => sum + row.snapshots, 0)}`,
 );
 
-if (diagnosticNoAssertions.length) {
-  console.log("[test-audit] diagnósticos/benchmarks sin assertion (intencional):");
-  for (const row of diagnosticNoAssertions) {
-    console.log(`  - ${row.pathname} (${row.tests} casos)`);
-  }
-}
 if (unexpectedNoAssertions.length) {
   console.log("[test-audit] ERROR: tests funcionales sin assertion detectable:");
   for (const row of unexpectedNoAssertions) {

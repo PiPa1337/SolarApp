@@ -54,7 +54,7 @@ test("recorre el editor de punta a punta: tabs, producto, sección, exportación
   }
 
   await expect(page.getByTestId("ui-status-bar")).toContainText("Esquema v2");
-  await expect(page.locator('iframe[title="Vista previa desktop"]')).toBeVisible();
+  await expect(page.locator('iframe[title^="Vista previa "]')).toBeVisible();
   await expect(page.locator(".preview-toolbar")).toBeVisible();
 
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
@@ -74,8 +74,7 @@ test("recorre el editor de punta a punta: tabs, producto, sección, exportación
 
   await page.getByRole("tab", { name: "Constructor", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
-  const hero = page.getByRole("listitem").filter({ hasText: "Hero de catálogo" });
-  await hero.getByRole("button").first().click();
+  await page.getByRole("button", { name: "Portada Hero audiovisual", exact: true }).click();
   await expect(page.getByRole("complementary", { name: "Inspector de sección" })).toBeVisible();
   const title = page
     .getByRole("complementary", { name: "Inspector de sección" })

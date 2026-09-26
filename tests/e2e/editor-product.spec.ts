@@ -60,14 +60,18 @@ test("valida slug duplicado, precio inválido y opciones repetidas con errores i
   const slugInput = dialog.getByRole("textbox", { name: "Slug" });
   const slugField = fieldOf(slugInput);
 
-  await titleInput.fill("Remera esencial de algodón");
-  await expect(slugInput).toHaveValue("remera-esencial-de-algodon");
+  const existingTitle = await page
+    .locator('tbody input[aria-label^="Nombre de "]')
+    .first()
+    .inputValue();
+  await titleInput.fill(existingTitle);
+  await expect(slugInput).not.toHaveValue("");
   await expect(slugInput).toHaveAttribute("aria-invalid", "true");
   await expect(slugField.getByTestId("ui-field-error")).toContainText(
     "Ya existe otro producto con este slug.",
   );
 
-  await slugInput.fill("manta-niebla");
+  await slugInput.fill("e2e-slug-disponible");
   await expect(slugInput).not.toHaveAttribute("aria-invalid", "true");
   await expect(slugField.getByTestId("ui-field-error")).toHaveCount(0);
   await expect(slugField.getByText("Disponible", { exact: true })).toBeVisible();
@@ -119,7 +123,7 @@ test("duplica, reordena y elimina variantes sin bajar del mínimo", async ({ pag
   await expect(variants.nth(0).getByRole("textbox", { name: "Nombre" })).toHaveValue("Arena copia");
 
   await variants.nth(0).getByRole("button", { name: "Eliminar Arena copia" }).click();
-  const deleteDialog = dialog.getByRole("dialog", { name: "Eliminar variante" });
+  const deleteDialog = page.getByRole("dialog", { name: "Eliminar variante" });
   await expect(deleteDialog).toBeVisible();
   await deleteDialog.getByRole("button", { name: "Cancelar", exact: true }).click();
   await expect(variants).toHaveCount(3);
@@ -129,7 +133,7 @@ test("duplica, reordena y elimina variantes sin bajar del mínimo", async ({ pag
   await expect(variants).toHaveCount(2);
 
   await variants.nth(0).getByRole("button", { name: "Eliminar Única" }).click();
-  await dialog
+  await page
     .getByRole("dialog", { name: "Eliminar variante" })
     .getByRole("button", { name: "Eliminar variante", exact: true })
     .click();

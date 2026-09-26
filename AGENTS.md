@@ -227,13 +227,13 @@ corepack pnpm check:quick        # cierre o cambio amplio (todos los paquetes, c
 corepack pnpm test:e2e:smoke   # post-cambio: smoke quick con build cacheado
 corepack pnpm test:e2e:smoke:full  # cierre o cambio en exporter/storefront/Preview
 corepack pnpm check             # alias de check:fast
-corepack pnpm check:full        # tests extendidos + gates lentos + build/post-build, cierre/CI
+corepack pnpm check:full        # tests extendidos + gates de corrección + build/post-build
 corepack pnpm build
-corepack pnpm benchmark:export
-corepack pnpm test:extended     # fuzz + stress + QA pesados; incluido en check:full
+corepack pnpm test:extended     # mutation + fuzz reducido + QA de 3 tiendas; incluido en check:full
+corepack pnpm test:stress       # serialización/hash >536 MB; sólo manual/on-demand
 corepack pnpm test:diagnostic   # diagnóstico manual de placeholders
 corepack pnpm test:e2e          # suite funcional Chromium
-corepack pnpm test:e2e:audit    # históricos/visuales/performance, manual
+corepack pnpm test:e2e:audit    # cinco auditorías manuales de visión, export y responsive
 corepack pnpm test:e2e:release       # Node 24 + navegadores instalados (solo on-demand)
 ```
 

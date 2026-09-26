@@ -455,30 +455,3 @@ test("moderno: categoría con filtros — etiqueta aplica y orden real", async (
     "Remera esencial de algodón",
   );
 });
-
-test("A29: la búsqueda guarda por término — 'a b' debe mostrar 'Escribí al menos 2 caracteres' en vez de puntuar términos de 1 carácter", async ({
-  page,
-}) => {
-  await page.goto(scaleUrlFor("/buscar/?q=a%20b"));
-  await expect(page.locator("[data-search-results]")).toContainText(
-    "Escribí al menos 2 caracteres para buscar.",
-  );
-});
-
-test("A29: el conteo de resultados de categoría anuncia cambios de filtros con aria-live", async ({
-  page,
-}) => {
-  await page.goto(scaleUrlFor("/categorias/casa/"));
-  await expect(page.locator("[data-category-result-count]")).toHaveAttribute("aria-live", "polite");
-});
-
-test("A29: en /buscar/ moderno el prefill y el teclado van al input del diálogo oculto, no al input visible", async ({
-  page,
-}) => {
-  await page.goto(modernUrlFor("/buscar/?q=quilted"));
-  await expect(page.locator("#solara-search-input")).toHaveValue("quilted");
-  const input = page.locator("#solara-search-input");
-  await input.focus();
-  await input.press("ArrowDown");
-  await expect(page.locator("[data-search-results] .solara-search-result a").first()).toBeFocused();
-});

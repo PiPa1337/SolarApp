@@ -7,6 +7,8 @@ import { startStudioServer, stopStudioServer } from "./studio-server";
 const VIEWPORT = { width: 1920, height: 912 };
 const VISUAL_DIR = process.env.SOLARA_VISUAL_DIR ?? "test-results";
 
+test.setTimeout(60_000);
+
 let server: Server;
 let url: string;
 

@@ -6,6 +6,7 @@
  */
 import { X } from "@phosphor-icons/react";
 import { type ReactNode, useEffect, useId, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "./Ui";
 
 export function ConfirmDialog({
@@ -77,7 +78,7 @@ export function ConfirmDialog({
     };
   }, [danger]);
 
-  return (
+  const dialog = (
     <dialog
       className="confirm-dialog"
       ref={dialogRef}
@@ -119,4 +120,6 @@ export function ConfirmDialog({
       </div>
     </dialog>
   );
+
+  return createPortal(dialog, document.body);
 }

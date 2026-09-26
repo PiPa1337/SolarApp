@@ -1,5 +1,6 @@
 import type { Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
+import { openStudioDashboard } from "./studio-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 /**
@@ -23,8 +24,7 @@ test.afterAll(async () => {
 test.setTimeout(120_000);
 
 async function openDemoDetail(page: Page) {
-  await page.goto(studioUrl);
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await openStudioDashboard(page, studioUrl);
   const card = page.locator(".dashboard-store-card").filter({ hasText: "Predeterminado" }).first();
   await card.locator(".dashboard-store-card__button").click();
   return page.getByRole("region", { name: "Tienda seleccionada: Predeterminado" });
@@ -227,8 +227,7 @@ test("el modo comparar exige dos tiendas y muestra los diffs de secciones y moti
 
 test("respaldar todo está deshabilitado en modo navegador con un aviso", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(studioUrl);
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
+  await openStudioDashboard(page, studioUrl);
 
   const bulk = page.getByRole("button", { name: "Respaldar todo" });
   await expect(bulk).toBeDisabled();

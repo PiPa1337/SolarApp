@@ -90,21 +90,21 @@ test("selecciona una variante, agrega al carrito y abre WhatsApp", async ({ page
   await page.getByLabel(/Codigo postal|Código postal/).fill("9100");
   await page.getByLabel(/Notas/).fill("Entregar por la tarde");
   await page.evaluate(() => {
-    const originalOpen = window.open.bind(window);
-    window.open = ((url, target, features) => {
+    window.open = ((url) => {
       document.documentElement.dataset.solaraWhatsappUrl = String(url ?? "");
-      return originalOpen(url, target, features);
+      return { opener: null } as WindowProxy;
     }) as typeof window.open;
   });
-  const whatsappPopupPromise = page.waitForEvent("popup");
   await page.getByRole("button", { name: "Continuar por WhatsApp" }).click();
 
-  const whatsappPopup = await whatsappPopupPromise;
   await expect(page.locator("[data-whatsapp-link]")).toHaveCount(0);
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-solara-whatsapp-url",
+    /https:\/\/wa\.me\/5491123456789\?text=/,
+  );
   const openedUrl = await page.locator("html").getAttribute("data-solara-whatsapp-url");
   expect(openedUrl).toContain("https://wa.me/5491123456789?text=");
   expect(decodeURIComponent(openedUrl ?? "")).toContain("2x Manta Bruma (Piedra)");
-  await whatsappPopup.close();
   expect(runtimeErrors).toEqual([]);
 });
 

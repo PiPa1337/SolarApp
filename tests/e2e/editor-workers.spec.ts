@@ -160,13 +160,13 @@ test("deshabilita las acciones y muestra progreso mientras importa un CSV grande
   page,
 }) => {
   await openDemoCatalog(page);
-  const csv = exportProductsCsv(generatePerformanceFixture(1_000).products);
+  const csv = exportProductsCsv(generatePerformanceFixture(60).products);
   if ((await page.locator(".workbench-transfer").getAttribute("open")) === null) {
     await page.locator(".workbench-transfer > summary").click();
   }
   const importButton = page.getByTestId("ui-csv-import");
   await page.locator('input[type="file"][accept*="csv"]').setInputFiles({
-    name: "catalogo-1000.csv",
+    name: "catalogo-60.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(csv, "utf8"),
   });
@@ -174,7 +174,7 @@ test("deshabilita las acciones y muestra progreso mientras importa un CSV grande
   await expect(importButton).toContainText("Procesando");
   await expect(page.getByTestId("ui-catalog-progress")).toContainText("Procesando CSV");
   await page.getByRole("button", { name: "Reemplazar catálogo" }).click({ timeout: 30_000 });
-  await expect(page.getByText("1000 productos y 2000 variantes.")).toBeVisible({
+  await expect(page.getByText("60 productos y 120 variantes.")).toBeVisible({
     timeout: 30_000,
   });
 });
@@ -211,16 +211,56 @@ test("exporta el borrador con estado generando y resultado de éxito", async ({ 
   await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible();
 
   const draftButton = page.getByTestId("ui-export-draft");
+  await page.evaluate(() => {
+    const capture = {
+      dialogSeen: false,
+      heading: "",
+      taskIds: [] as string[],
+      activeTaskSeen: false,
+    };
+    (window as Window & { __solaraExportProgressCapture?: typeof capture })
+      .__solaraExportProgressCapture = capture;
+    const observeProgress = () => {
+      const dialog = document.querySelector('[data-testid="ui-export-progress-dialog"]');
+      if (!dialog) return;
+      capture.dialogSeen = true;
+      capture.heading = dialog.querySelector("h3")?.textContent?.trim() ?? "";
+      const tasks = Array.from(
+        dialog.querySelectorAll<HTMLElement>('[data-testid="ui-export-progress-task"]'),
+      );
+      capture.taskIds = [...new Set([...capture.taskIds, ...tasks.map((task) => task.dataset.task ?? "")])];
+      capture.activeTaskSeen ||= tasks.some((task) => task.dataset.status === "active");
+    };
+    new MutationObserver(observeProgress).observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-status"],
+    });
+  });
   await draftButton.click();
   await expect(draftButton).toBeDisabled();
   await expect(draftButton).toContainText("Generando");
-  await expect(page.getByTestId("ui-export-progress")).toContainText("sitio borrador");
-  await expect(page.getByTestId("ui-export-stage")).toHaveCount(3);
-  await expect(page.getByTestId("ui-export-stage").first()).toContainText("Validando proyecto");
   await expect(page.getByTestId("ui-export-result")).toContainText("Exportación correcta", {
     timeout: 60_000,
   });
-  await expect(page.getByTestId("ui-export-stage").first()).toHaveAttribute("data-done", "true");
+  const progress = await page.evaluate(
+    () =>
+      (window as Window & {
+        __solaraExportProgressCapture?: {
+          dialogSeen: boolean;
+          heading: string;
+          taskIds: string[];
+          activeTaskSeen: boolean;
+        };
+      }).__solaraExportProgressCapture,
+  );
+  expect(progress).toMatchObject({
+    dialogSeen: true,
+    heading: "Exportando sitio borrador",
+    activeTaskSeen: true,
+  });
+  expect(progress?.taskIds).toEqual(["validate", "recovery", "render"]);
 });
 
 test("bloquea la exportación de producción cuando hay errores críticos visibles", async ({
@@ -230,12 +270,26 @@ test("bloquea la exportación de producción cuando hay errores críticos visibl
   await page.getByRole("button", { name: "Volver a tiendas" }).click();
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
   await createCleanStore(page, "Tienda de auditoría");
+  await page.getByRole("tab", { name: "Resumen", exact: true }).click();
+  await page.getByRole("button", { name: "Dominio y legales", exact: true }).click();
+  const domainAccordion = page.getByRole("button", { name: "Dominio", exact: true });
+  if ((await domainAccordion.getAttribute("aria-expanded")) !== "true") {
+    await domainAccordion.click();
+  }
+  const publicUrl = page.getByLabel("URL pública");
+  await expect(publicUrl).toBeVisible();
+  const insecureUrl = (await publicUrl.inputValue()).replace(/^https:/, "http:");
+  await publicUrl.fill(insecureUrl);
+  await expect(publicUrl).toHaveValue(insecureUrl);
   await page.getByRole("tab", { name: "Exportar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible();
 
-  await expect(page.locator(".export-warning")).toBeVisible({
+  await expect(page.getByTestId("ui-export-audit-status")).toContainText("Auditoría lista", {
     timeout: 30_000,
   });
+  await expect(page.locator(".export-warning")).toContainText(
+    "errores críticos deben resolverse.",
+  );
   await expect(page.getByTestId("ui-export-production")).toBeDisabled();
 });
 

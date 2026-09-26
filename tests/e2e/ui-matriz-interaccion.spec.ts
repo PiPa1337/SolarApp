@@ -58,7 +58,7 @@ async function openDemoTab(page: Page, tab: string, heading: string): Promise<vo
 const sectionsList = (page: Page) => page.getByRole("list", { name: "Secciones de la tienda" });
 
 async function selectHero(page: Page): Promise<void> {
-  const hero = page.getByRole("listitem").filter({ hasText: "Hero de catálogo" });
+  const hero = page.getByRole("listitem").filter({ hasText: "Hero audiovisual" });
   await hero.getByRole("button").first().click();
 }
 
@@ -108,6 +108,7 @@ test.describe("Builder", () => {
       .getByTestId("ui-module-picker")
       .getByRole("button", { name: /Testimonios/ })
       .click();
+    await page.getByRole("button", { name: "Volver a Constructor" }).click();
     await expect(sections.getByRole("listitem")).toHaveCount(initialCount + 1);
     const lastRow = sections.getByRole("listitem").last();
     await expect(lastRow.locator(".section-select span")).toHaveText("Contenido");
@@ -119,9 +120,10 @@ test.describe("Builder", () => {
     await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
     await expect(
       page
-        .frameLocator('iframe[title="Vista previa desktop"]')
-        .locator('[data-solara-module="catalog-hero"] h1'),
+        .frameLocator("iframe")
+        .getByRole("heading", { name: "Título Matriz F14", exact: true }),
     ).toHaveText("Título Matriz F14", { timeout: 15_000 });
+    await page.getByRole("button", { name: "Volver a Constructor" }).click();
 
     // Duplicar: la copia aparece y queda seleccionada.
     const countAfterAdd = await sections.getByRole("listitem").count();
@@ -130,6 +132,7 @@ test.describe("Builder", () => {
       .first()
       .getByRole("button", { name: "Duplicar sección" })
       .click();
+    await page.getByRole("button", { name: "Volver a Constructor" }).click();
     await expect(sections.getByRole("listitem")).toHaveCount(countAfterAdd + 1);
     await expect(sections.getByRole("listitem").nth(1)).toHaveAttribute("data-selected", "true");
 
@@ -266,6 +269,11 @@ test.describe("Catálogo", () => {
 test.describe("Producto", () => {
   test("guardar persiste en fila y preview; cancelar descarta", async ({ page }) => {
     await openCatalog(page);
+    const originalTitle = await page
+      .locator("tbody tr")
+      .first()
+      .getByRole("textbox", { name: /^Nombre de / })
+      .inputValue();
 
     const dialog = await openCreateDialog(page);
     await dialog.getByRole("textbox", { name: "Título" }).fill("Remera Matriz F14");
@@ -283,10 +291,9 @@ test.describe("Producto", () => {
     await page.getByTestId("ui-preview-route").fill("/productos/remera-matriz-f14/");
     await page.getByTestId("ui-preview-route").press("Enter");
     await expect(
-      page.frameLocator('iframe[title="Vista previa desktop"]').locator("body"),
+      page.frameLocator("iframe").locator("body"),
     ).toContainText("Remera Matriz F14", { timeout: 20_000 });
 
-    const originalTitle = "Camisa Rayas Finas";
     await searchBox(page).fill(originalTitle);
     const rows = page.locator("tbody tr");
     await expect(rows).toHaveCount(1);
@@ -336,9 +343,7 @@ test.describe("Assets", () => {
       mimeType: "image/png",
       buffer: PIXEL_TEAL_PNG,
     });
-    await expect(page.locator("output").filter({ hasText: "Imagen reemplazada" })).toBeVisible({
-      timeout: 15_000,
-    });
+    await expect(detail).toContainText("2 × 2", { timeout: 15_000 });
 
     await expect(detail).toContainText("2 × 2");
     await expect(detail.getByRole("heading")).toHaveText("pixel");
@@ -360,7 +365,7 @@ test.describe("Assets", () => {
     await expect(page.getByRole("heading", { name: "Recursos" })).toBeVisible();
 
     const heroAsset = page.locator(".asset-item").filter({
-      has: page.locator('input[value="Campaña de temporada"]'),
+      has: page.locator('input[value="Imagen de plantilla - portada"]'),
     });
     await heroAsset.getByTestId("ui-asset-detail-open").click();
     const detail = page.getByTestId("ui-asset-detail");
@@ -378,40 +383,90 @@ test.describe("Export", () => {
   test("el borrador exporta por etapas de a una y produce el aviso", async ({ page }) => {
     test.setTimeout(150_000);
     await openDemoTab(page, "Exportar", "Exportar");
-    await page.getByTestId("ui-export-draft").click();
-    await expect(page.getByTestId("ui-export-stage")).toHaveCount(3);
-
-    await page.waitForFunction(
-      () => {
-        const stages = Array.from(
-          document.querySelectorAll<HTMLElement>('[data-testid="ui-export-stage"]'),
+    await page.evaluate(() => {
+      const capture = {
+        dialogSeen: false,
+        heading: "",
+        taskIds: [] as string[],
+        activeTaskSeen: false,
+        maxActiveTasks: 0,
+      };
+      (window as Window & { __solaraExportProgressCapture?: typeof capture })
+        .__solaraExportProgressCapture = capture;
+      const observeProgress = () => {
+        const dialog = document.querySelector('[data-testid="ui-export-progress-dialog"]');
+        if (!dialog) return;
+        capture.dialogSeen = true;
+        capture.heading = dialog.querySelector("h3")?.textContent?.trim() ?? "";
+        const tasks = Array.from(
+          dialog.querySelectorAll<HTMLElement>('[data-testid="ui-export-progress-task"]'),
         );
-        const done = (id: string) =>
-          stages.find((node) => node.dataset.stage === id)?.dataset.done === "true";
-        return done("validate") && !done("render");
-      },
-      undefined,
-      { timeout: 60_000 },
-    );
-
+        capture.taskIds = [
+          ...new Set([...capture.taskIds, ...tasks.map((task) => task.dataset.task ?? "")]),
+        ];
+        const activeCount = tasks.filter((task) => task.dataset.status === "active").length;
+        capture.activeTaskSeen ||= activeCount > 0;
+        capture.maxActiveTasks = Math.max(capture.maxActiveTasks, activeCount);
+      };
+      new MutationObserver(observeProgress).observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["data-status"],
+      });
+    });
+    const draftButton = page.getByTestId("ui-export-draft");
+    await draftButton.click();
+    await expect(draftButton).toBeDisabled();
+    await expect(draftButton).toContainText("Generando");
     await expect(page.getByTestId("ui-export-result")).toContainText("Exportación correcta", {
       timeout: 90_000,
     });
-    for (const stage of ["validate", "render", "package"]) {
-      await expect(
-        page.locator(`[data-testid="ui-export-stage"][data-stage="${stage}"]`),
-      ).toHaveAttribute("data-done", "true");
-    }
+    const progress = await page.evaluate(
+      () =>
+        (window as Window & {
+          __solaraExportProgressCapture?: {
+            dialogSeen: boolean;
+            heading: string;
+            taskIds: string[];
+            activeTaskSeen: boolean;
+            maxActiveTasks: number;
+          };
+        }).__solaraExportProgressCapture,
+    );
+    expect(progress).toMatchObject({
+      dialogSeen: true,
+      heading: "Exportando sitio borrador",
+      activeTaskSeen: true,
+      maxActiveTasks: 1,
+    });
+    expect(progress?.taskIds).toEqual(["validate", "recovery", "render"]);
   });
 
   test("la producción queda bloqueada cuando hay errores críticos", async ({ page }) => {
     await resetStudioIndexedDb(page, studioUrl);
     await createCleanStore(page, "Tienda export crítica");
+    await page.getByRole("tab", { name: "Resumen", exact: true }).click();
+    await page.getByRole("button", { name: "Dominio y legales", exact: true }).click();
+    const domainAccordion = page.getByRole("button", { name: "Dominio", exact: true });
+    if ((await domainAccordion.getAttribute("aria-expanded")) !== "true") {
+      await domainAccordion.click();
+    }
+    const publicUrl = page.getByLabel("URL pública");
+    await expect(publicUrl).toBeVisible();
+    const insecureUrl = (await publicUrl.inputValue()).replace(/^https:/, "http:");
+    await publicUrl.fill(insecureUrl);
+    await expect(publicUrl).toHaveValue(insecureUrl);
+
     await page.getByRole("tab", { name: "Exportar", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible();
+    await expect(page.getByTestId("ui-export-audit-status")).toContainText("Auditoría lista", {
+      timeout: 30_000,
+    });
 
     const block = page.locator(".export-warning");
     await expect(block).toBeVisible({ timeout: 30_000 });
+    await expect(block).toContainText("errores críticos deben resolverse.");
     await expect(page.getByTestId("ui-export-production")).toBeDisabled();
     const blockCount = Number(
       (await block.innerText()).match(/(\d+) errores críticos/)?.[1] ?? "0",
@@ -511,16 +566,15 @@ test.describe("SEO y Tema", () => {
     await resetStudioIndexedDb(page, studioUrl);
     await createCleanStore(page, "Tienda tema matriz");
     const previewBackground = () =>
-      page
-        .frameLocator('iframe[title="Vista previa desktop"]')
-        .locator("html")
-        .evaluate((element) => getComputedStyle(element).backgroundColor);
+      page.frameLocator("iframe").locator("html").evaluate((element) =>
+        getComputedStyle(element).backgroundColor,
+      );
 
     await page.getByRole("tab", { name: "Tema de la tienda", exact: true }).click();
     await expect(
       page.getByRole("heading", { name: "Tema de la tienda", exact: true }),
     ).toBeVisible();
-    await expect.poll(previewBackground, { timeout: 15_000 }).toBe("rgb(252, 252, 251)");
+    await expect.poll(previewBackground, { timeout: 15_000 }).toBe("rgb(247, 245, 240)");
 
     // Preset: aplica la paleta real a los campos y al preview.
     await page.getByRole("button", { name: "Aplicar paleta Terracota solar" }).click();

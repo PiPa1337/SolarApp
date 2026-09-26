@@ -2,10 +2,10 @@ import { spawn } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
-// e2e-smoke — smoke quick post-cambio (5 specs, ~20-40s) con cache de build Studio
+// e2e-smoke — smoke quick post-cambio (5 specs, ~1 min) con cache de build Studio
 // Valida flujos criticos sin compilar Studio si no hay cambios.
 // Uso: corepack pnpm test:e2e:smoke [-- args extra para playwright]
-//   --smoke-full: 15 specs de cierre (catalog-modern-v2, sentinel, scale, sweeps, axe...)
+//   --smoke-full: 15 specs de cierre (catálogo, export, storefront, accesibilidad y editor)
 //   --full: solo build cacheado, no ejecuta specs (lo usa test:e2e antes del full)
 
 const smokeSpecs = [
@@ -196,16 +196,20 @@ if (isFull) {
 }
 // Construir comando playwright con workers acotados (3 por defecto, env override)
 // y solo Chromium (smoke no necesita Firefox/WebKit). Quick usa retries 0 y 0 trace para ahorrar ~10s.
-const smokeMode = isQuick ? "quick (5 specs, ~20-40s)" : "full (15 specs, cierre)";
+const smokeMode = isQuick ? "quick (5 specs, ~1 min)" : "full (15 specs, cierre)";
 console.log(`[smoke] ▶ modo ${smokeMode}`);
-const playwrightArgs = ["exec", "playwright", "test", ...activeSpecs, ...extraArgs];
+const playwrightArgs = ["test", ...activeSpecs, ...extraArgs];
 if (isQuick && !extraArgs.includes("--retries")) playwrightArgs.push("--retries", "0");
 if (isQuick && !extraArgs.includes("--trace")) playwrightArgs.push("--trace", "off");
-console.log(`[smoke] ▶ corepack pnpm ${playwrightArgs.join(" ")}`);
+console.log(`[smoke] ▶ node scripts/playwright-limited.mjs ${playwrightArgs.join(" ")}`);
 const env = isQuick
   ? { ...process.env, PLAYWRIGHT_WORKERS: process.env.PLAYWRIGHT_WORKERS ?? "3" }
   : undefined;
-const code = await spawnCmd("corepack", ["pnpm", ...playwrightArgs], env ? { env } : {});
+const code = await spawnCmd(
+  process.execPath,
+  [resolve("scripts/playwright-limited.mjs"), ...playwrightArgs],
+  env ? { env } : {},
+);
 if (code !== 0) {
   console.error(`[smoke] ✖ smoke fallo con codigo ${code}`);
   process.exit(code ?? 1);

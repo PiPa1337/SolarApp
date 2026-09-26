@@ -6090,6 +6090,14 @@ tbody tr[data-selected="true"] {
   overflow: hidden;
 }
 
+@media (max-height: 820px) {
+  .dashboard-gargantua.dashboard-cosmic .dashboard-store-detail.is-open {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
 /* La inclinación de la card necesita poder sobresalir del borde izquierdo de
  * la grilla sin quedar recortada por sus dos contenedores de resultados. */
 .dashboard-gargantua .dashboard-cosmic-results,
@@ -7225,7 +7233,9 @@ tbody tr[data-selected="true"] {
   .compare-dialog {
     width: calc(100% - 16px);
     max-height: calc(100dvh - 16px);
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 12px;
   }
 

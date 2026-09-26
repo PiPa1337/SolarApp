@@ -1,6 +1,34 @@
+### Poda extrema de la suite (2026-09-26)
+
+- Se borran cinco perfiles manuales sin aserciones, dos benchmarks de catálogo
+  de 2.000 productos y el stress redundante del archive de 600 MB. Tras retirar
+  17 microtests visuales y 8 registros E2E duplicados, el árbol queda en 245
+  archivos de test; el alcance actualizado y los motivos están en
+  `docs/TEST_SUITE_SCOPE_2026-09-26.md` y
+  `docs/TEST_SUITE_PRUNING_PLAN_2026-09-26.md`.
+- La fábrica QA baja de 20 tiendas / 1.086 productos a 3 / 156; las tres cargas
+  de Core y el worker CSV bajan de 1.000 a 50 y 60 productos. Fuzz determinista
+  pasa de 29.750 a 3.850 operaciones; visual-break de 53 a 18 casos.
+- WhatsApp conserva el pedido de 60 líneas en dos partes (50+10) y reduce la
+  prueba del tope de 12 partes de 2.000 a 601 líneas. El stress V8 restante queda
+  manual; `check:full` ya no ejecuta esos payloads ni benchmarks de escala.
+- `release` ya no repite el smoke full antes de la matriz E2E y reutiliza el
+  build de `check:full`. Verificado el 26/09: `check:full`, smoke full 109/109 y
+  los 63 fallos del snapshot funcional anterior reejecutados individualmente o
+  en selecciones focales pasaron. `check:full` toleró los diagnósticos Biome y
+  los budgets Studio ya documentados; la suite funcional reducida (450 casos)
+  no se volvió a ejecutar completa.
+
 ### CI de GitHub (2026-09-25)
 
 - Los checks de CI conservan sus nombres y reportan éxito sin ejecutar validaciones, tests ni builds. El estado verde sólo confirma que corrió el workflow; no valida el producto. Ver [`GITHUB_CI.md`](docs/GITHUB_CI.md).
+
+### Reducción de la suite E2E (2026-09-25)
+
+- Se retiraron 81 specs E2E históricos o redundantes y se documentó el inventario, los motivos y la cobertura conservada en [`TEST_SUITE_REDUCTION_2026-09-25.md`](docs/TEST_SUITE_REDUCTION_2026-09-25.md). La suite funcional quedó en 75 specs y smoke full conserva sus 15 specs.
+- Se alinearon los E2E de dashboard y exportación con el arranque actual de Store, la plantilla neutral (33 productos/41 variantes) y el contexto de agentes siempre incluido.
+- Se contrastó la suite actual con una muestra recuperada del baseline Store-only `a3a9bd8a`: 39/45 casos antiguos pasaron. Los fallos restantes se aislaron como contratos envejecidos; se corrigieron expectativas de Builder/Workbench y se redujeron las fixtures cotidianas de catálogo de 1.000 a 200 y de 120 a 60 productos, manteniendo paginación y selección entre páginas.
+- Verificado: `check:micro`, smoke full (118/118) y los seis casos E2E focales modificados. La corrida funcional completa sigue pendiente; `check:quick` terminó con diagnósticos Biome (218 errores de formato y 542 advertencias).
 
 ### Endurecimiento de pruebas y CI (2026-09-23–24)
 

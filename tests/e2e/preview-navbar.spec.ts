@@ -26,6 +26,11 @@ test("el mega-menú de la navbar es visible y alcanzable en el preview", async (
       .getByRole("region", { name: /Tienda seleccionada:/ })
       .getByRole("button", { name: "Abrir tienda", exact: true })
       .click();
+    await page.getByRole("button", { name: "Cerrar panel de edición" }).click();
+    const desktop = page.getByRole("button", { name: "Vista de escritorio" });
+    await expect(desktop).toBeEnabled();
+    await desktop.click();
+    await expect(desktop).toHaveAttribute("aria-pressed", "true");
 
     const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
     const header = preview.locator('[data-solara-module="catalog-header"]');

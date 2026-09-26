@@ -1262,7 +1262,10 @@ export function Studio({
                 <IconButton
                   icon={X}
                   label="Cerrar panel de edición"
-                  onClick={() => setPaneOpen(false)}
+                  onClick={() => {
+                    document.getElementById(`studio-tab-${tab}`)?.focus();
+                    setPaneOpen(false);
+                  }}
                 />
               </Tooltip>
             ) : null}

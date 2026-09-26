@@ -91,7 +91,7 @@ test("el fallo de auditoría se muestra y el reintento habilita producción", as
   await page.unroute("**/assets/*.js");
   await retry.click();
   await expect(production).toBeEnabled({ timeout: 30_000 });
-  await expect(page.getByText("Salud de exportación", { exact: false })).toBeVisible({
+  await expect(page.getByTestId("ui-export-audit-status")).toContainText("Auditoría lista", {
     timeout: 10_000,
   });
 });

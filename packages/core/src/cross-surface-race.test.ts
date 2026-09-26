@@ -324,7 +324,7 @@ function runSeed(seed: number): void {
     };
   })();
 
-  for (let step = 0; step < 100; step += 1) {
+  for (let step = 0; step < 50; step += 1) {
     try {
       const skew = random() < 0.2 ? -5000 : random() < 0.2 ? 5000 : 0;
       const at = operationTime(seed, step, skew);
@@ -421,12 +421,12 @@ function runSeed(seed: number): void {
 
 describe("N4 Cross-Surface Race Lab", () => {
   it(
-    "100 seeds x 100 operaciones conservan snapshots, drafts, conflictos y locks",
+    "20 seeds x 50 operaciones conservan snapshots, drafts, conflictos y locks",
     { timeout: 180000 },
     () => {
       const startSeed = Number.parseInt(process.env.SOLARA_TEST_SEED ?? "0", 10);
       if (!Number.isInteger(startSeed)) throw new Error("SOLARA_TEST_SEED debe ser un entero");
-      for (let offset = 0; offset < 100; offset += 1) runSeed(startSeed + offset);
+      for (let offset = 0; offset < 20; offset += 1) runSeed(startSeed + offset);
     },
   );
 });

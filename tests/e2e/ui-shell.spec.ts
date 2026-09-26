@@ -76,7 +76,7 @@ async function openMutableDemoStore(page: Page): Promise<void> {
 async function openHeroInspector(page: Page): Promise<void> {
   await page.getByRole("tab", { name: "Constructor", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
-  const hero = page.getByRole("listitem").filter({ hasText: "Hero de catálogo" });
+  const hero = page.getByRole("listitem").filter({ hasText: "Hero audiovisual" });
   await hero.getByRole("button").first().click();
   await expect(page.getByRole("textbox", { name: "Título", exact: true })).toBeVisible();
 }
@@ -84,24 +84,17 @@ async function openHeroInspector(page: Page): Promise<void> {
 test("el punto de sucio aparece con un único cambio y se limpia al guardar (H3-B1)", async ({
   page,
 }) => {
-  // Reloj congelado tras el boot: el debounce del autosave (550 ms) no corre
-  // solo; el test decide cuándo avanza el tiempo y la ventana del punto deja
-  // de ser una carrera contra el reloj real.
-  await page.clock.install({ time: FAKE_START });
   await openMutableDemoStore(page);
-  // Precarga las pestañas que el escenario visitará después: al congelar el
-  // reloj no deben quedar chunks lazy pendientes de timers de React.
   await page.getByRole("tab", { name: /Resumen/ }).click();
   await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
   await page.getByRole("tab", { name: "Constructor", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
   await openHeroInspector(page);
-  const clockNow = await page.evaluate(() => Date.now());
-  await page.clock.pauseAt(clockNow + 5_000);
 
   const title = page.getByRole("textbox", { name: "Título", exact: true });
   await title.fill("Cambio único");
-  await expect(page.getByText("Cambios pendientes", { exact: true })).toBeVisible();
+  const pendingSave = page.getByText("Cambios pendientes", { exact: true });
+  await expect(pendingSave).toBeVisible();
 
   await page.getByRole("tab", { name: /Resumen/ }).click();
   await expect(page.getByRole("heading", { name: "Resumen", exact: true })).toBeVisible();
@@ -110,7 +103,6 @@ test("el punto de sucio aparece con un único cambio y se limpia al guardar (H3-
   // otras 6 pestañas tienen el punto.
   await expect(page.getByTestId("ui-tab-dirty")).toHaveCount(6);
 
-  await page.clock.resume();
   await expect(page.getByText(/^Guardado \d{2}:\d{2}$/)).toBeVisible();
   await expect(page.getByTestId("ui-tab-dirty")).toHaveCount(0);
 });
@@ -182,7 +174,6 @@ test("la toolbar vuelve a abrir el panel horizontal cerrado (H3-B3)", async ({ p
 });
 
 test("Ctrl+S fuerza el guardado en modo navegador (H3-B4)", async ({ page }) => {
-  await page.clock.install({ time: FAKE_START });
   await openMutableDemoStore(page);
   await openHeroInspector(page);
 
@@ -196,7 +187,6 @@ test("Ctrl+S fuerza el guardado en modo navegador (H3-B4)", async ({ page }) => 
 });
 
 test("Ctrl+Z deshace un cambio de catálogo y Ctrl+Shift+Z lo rehace (H3-B5)", async ({ page }) => {
-  await page.clock.install({ time: FAKE_START });
   await openMutableDemoStore(page);
   await page.getByRole("tab", { name: "Catálogo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
@@ -259,7 +249,6 @@ test("Ctrl+Z dentro de la búsqueda del catálogo deja el undo nativo (T19)", as
 test("los atajos no se cruzan con el foco dentro del iframe del preview (T19)", async ({
   page,
 }) => {
-  await page.clock.install({ time: FAKE_START });
   await openMutableDemoStore(page);
   await openHeroInspector(page);
 
@@ -273,13 +262,12 @@ test("los atajos no se cruzan con el foco dentro del iframe del preview (T19)", 
   // El keydown del iframe no cruza al documento del Studio: ni Ctrl+S ni
   // Ctrl+Z deben dispararse mientras el foco está en el preview (limitación
   // documentada: el sitio público no conoce los atajos del editor).
-  const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
+  const preview = page.frameLocator("iframe");
   const previewLink = preview.locator("a").first();
   await expect(previewLink).toBeVisible();
-  await expect(preview.locator('[data-solara-module="catalog-hero"] h1')).toHaveText(
-    "Cambio para foco en preview",
-    { timeout: 15_000 },
-  );
+  await expect(
+    preview.getByRole("heading", { name: "Cambio para foco en preview", exact: true }),
+  ).toBeVisible({ timeout: 15_000 });
   // Enfocar el iframe como elemento del documento padre no prueba el caso
   // real: el foco debe estar dentro del documento hijo para que el keydown no
   // llegue al window del Studio.
@@ -296,22 +284,13 @@ test("los atajos no se cruzan con el foco dentro del iframe del preview (T19)", 
   await expect(undoButton).toBeEnabled();
 });
 
-test("la estructura protegida es alcanzable en una tienda limpia (F13)", async ({ page }) => {
+test("una tienda nueva desde el dashboard permite editar su estructura", async ({ page }) => {
   await page.goto(studioUrl);
   await wipeIndexedDb(page);
   await page.reload();
   await createCleanStore(page, "Tienda limpia");
 
   await page.getByRole("tab", { name: "Constructor", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
-  await expect(page.getByText(/estructura base está protegida/)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Agregar sección", exact: true })).toBeDisabled();
-
-  // El Modo avanzado (desde Preparar) sigue siendo la puerta para editar la
-  // estructura: el banner desaparece y "Agregar sección" se habilita.
-  await page.getByRole("tab", { name: "Preparar", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Preparar tienda" })).toBeVisible();
-  await page.getByRole("button", { name: "Modo avanzado", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Constructor", exact: true })).toBeVisible();
   await expect(page.getByText(/estructura base está protegida/)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Agregar sección", exact: true })).toBeEnabled();

@@ -49,6 +49,11 @@ test("SEO transforma favicon y portada manteniendo la paridad del preview", asyn
     timeout: 15_000,
   });
 
+  await page.getByRole("button", { name: "Cerrar panel de edición" }).click();
+  const desktop = page.getByRole("button", { name: "Vista de escritorio" });
+  await expect(desktop).toBeEnabled();
+  await desktop.click();
+  await expect(desktop).toHaveAttribute("aria-pressed", "true");
   const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
   await expect(preview.locator('link[rel="icon"]')).toHaveAttribute("type", "image/x-icon", {
     timeout: 15_000,

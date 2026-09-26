@@ -4,7 +4,7 @@ import { parseJsonBytesChunked, stringifyJsonToBytes } from "./json-stream.mjs";
 it("serializa y parsea un proyecto que supera el límite de cadena de V8", () => {
   const payload = "A".repeat(1_000_000);
   const source = `data:image/png;base64,${payload}`;
-  const assets = Array.from({ length: 560 }, (_, index) => ({
+  const assets = Array.from({ length: 135 }, (_, index) => ({
     kind: "image",
     id: `asset-oversize-${index}`,
     source,
@@ -21,6 +21,6 @@ it("serializa y parsea un proyecto que supera el límite de cadena de V8", () =>
 
   const parsed = parseJsonBytesChunked(bytes) as typeof envelope;
   expect(parsed.projectId).toBe("store-x");
-  expect(parsed.assets).toHaveLength(560);
-  expect(parsed.assets[559]?.source).toBe(source);
+  expect(parsed.assets).toHaveLength(135);
+  expect(parsed.assets[134]?.source).toBe(source);
 }, 600_000);

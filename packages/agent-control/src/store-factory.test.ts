@@ -11,9 +11,9 @@ test(
   { timeout: 600_000 },
   async () => {
     const { results, templateVersionBefore, templateVersionAfter } = await runStoreFactory({
-      total: 20,
+      total: 3,
     });
-    expect(results).toHaveLength(20);
+    expect(results).toHaveLength(3);
     for (const result of results) {
       // Los críticos esperables de una tienda sin assets reales son:
       // imágenes de plantilla pendientes y productos sin imagen. Cualquier

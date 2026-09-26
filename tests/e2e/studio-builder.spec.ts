@@ -218,6 +218,7 @@ test("agrega, ordena, duplica, oculta, deshace y elimina secciones modernas", as
   await expect(picker).toBeVisible();
   await picker.getByRole("button", { name: /Franja de marcas/ }).click();
   await expect(picker).toBeHidden();
+  await page.getByRole("button", { name: "Volver a Constructor" }).click();
   await expect(sections.getByRole("listitem")).toHaveCount(initialCount + 1);
   const added = sections.getByRole("listitem").last();
   await expect(added).toContainText("Franja de marcas");
@@ -228,6 +229,7 @@ test("agrega, ordena, duplica, oculta, deshace y elimina secciones modernas", as
     .filter({ hasText: "Franja de marcas" })
     .last();
   await selectedAdded.getByRole("button", { name: "Duplicar sección" }).click();
+  await page.getByRole("button", { name: "Volver a Constructor" }).click();
   await expect(sections.getByRole("listitem").filter({ hasText: "Franja de marcas" })).toHaveCount(
     initialBrandCount + 2,
   );

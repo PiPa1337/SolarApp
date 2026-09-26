@@ -1,9 +1,8 @@
 /**
  * T4 — Bugfix review 2: exportación.
- * ST-B5: el botón "Exportar producción" no debe habilitarse mientras la
- * auditoría está pendiente (primera carga y re-auditoría al alternar el
- * contexto público). ST-B6: en modo navegador (sin lanzador) el aviso de
- * exportación no debe prometer guardado en proyectos/<tienda>/sitios/.
+ * ST-B5: el botón de producción espera la auditoría y el contexto público de
+ * agentes siempre forma parte de la exportación. ST-B6: en modo navegador el
+ * aviso no debe prometer guardado en proyectos/<tienda>/sitios/.
  */
 import type { Server } from "node:http";
 import { expect, test } from "@playwright/test";
@@ -24,58 +23,6 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   await stopStudioServer(server);
 });
-
-/**
- * El studio registra un service worker PWA que desvía los requests de chunks
- * fuera de page.route. Se desactiva para que el retraso del chunk de
- * @solara/exporter sea determinístico.
- */
-async function disableServiceWorker(page: import("@playwright/test").Page): Promise<void> {
-  await page.addInitScript(() => {
-    try {
-      Object.defineProperty(navigator, "serviceWorker", {
-        value: undefined,
-        configurable: true,
-      });
-    } catch {
-      // navegadores sin service workers: no hace falta neutralizarlo
-    }
-  });
-}
-
-/**
- * Retrasa la primera carga del chunk de @solara/exporter (identificado por su
- * cuerpo) para abrir una ventana determinística donde la auditoría asíncrona
- * del panel sigue pendiente. Otros JS pasan sin tocar.
- */
-async function delayExporterChunk(
-  page: import("@playwright/test").Page,
-  delayMs: number,
-): Promise<() => void> {
-  await disableServiceWorker(page);
-  let releaseDelay = () => {};
-  const delayGate = new Promise<void>((resolve) => {
-    releaseDelay = resolve;
-  });
-  let delayed = false;
-  await page.route("**/assets/*.js", async (route) => {
-    if (delayed) {
-      await route.continue();
-      return;
-    }
-    const response = await route.fetch();
-    const body = await response.body();
-    delayed = body.includes("policies.incomplete");
-    if (delayed) {
-      // El test libera el chunk cuando ya observó el botón bloqueado. El
-      // fallback temporal conserva la reproducción si el flujo no llega al
-      // panel (por ejemplo, durante una navegación abortada).
-      await Promise.race([delayGate, new Promise<void>((resolve) => setTimeout(resolve, delayMs))]);
-    }
-    await route.fulfill({ response, body });
-  });
-  return () => releaseDelay();
-}
 
 /** Mantiene pendientes sólo las auditorías del worker sin bloquear el Studio. */
 async function delayAuditWorker(
@@ -111,11 +58,15 @@ async function delayAuditWorker(
     });
 }
 
-async function delaySiteWorker(page: import("@playwright/test").Page, delayMs: number): Promise<void> {
+async function delaySiteWorker(
+  page: import("@playwright/test").Page,
+  delayMs: number,
+): Promise<void> {
   await page.addInitScript((delay) => {
     const originalPostMessage = Worker.prototype.postMessage;
     Worker.prototype.postMessage = function (message, transfer) {
-      const isSite = message && typeof message === "object" && (message as { type?: unknown }).type === "site";
+      const isSite =
+        message && typeof message === "object" && (message as { type?: unknown }).type === "site";
       if (isSite) {
         window.setTimeout(() => {
           if (transfer === undefined) originalPostMessage.call(this, message);
@@ -155,15 +106,12 @@ test("no habilita el export de producción mientras la auditoría está pendient
   await expect(production).toBeDisabled({ timeout: 1_500 });
   await releaseAudit();
   await expect(production).toBeEnabled({ timeout: 30_000 });
-  await expect(page.getByText("Salud de exportación", { exact: false })).toBeVisible({
+  await expect(page.getByTestId("ui-export-audit-status")).toContainText("Auditoría lista", {
     timeout: 10_000,
   });
 });
 
-test("una tienda con críticos nunca habilita el export, ni al re-auditar por contexto", async ({
-  page,
-}) => {
-  await delayExporterChunk(page, 12_000);
+test("producción siempre incluye el contexto de agentes", async ({ page }) => {
   await page.goto(studioUrl);
   await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
     timeout: 30_000,
@@ -171,15 +119,13 @@ test("una tienda con críticos nunca habilita el export, ni al re-auditar por co
   await createCleanStore(page, "Tienda de auditoría");
   await page.getByRole("tab", { name: "Exportar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible({ timeout: 30_000 });
-
-  const production = page.getByTestId("ui-export-production");
-  await expect(production).toBeDisabled({ timeout: 1_500 });
-  await page.locator(".export-ai-context input[type='checkbox']").uncheck();
-  await expect(production).toBeDisabled({ timeout: 1_500 });
-  await expect(page.locator(".export-warning")).toBeVisible({
+  await expect(page.getByTestId("ui-export-audit-status")).toContainText("Auditoría lista", {
     timeout: 30_000,
   });
-  await expect(production).toBeDisabled();
+
+  const contentOptions = page.locator("details.export-content-options");
+  await contentOptions.locator("summary").click();
+  await expect(page.getByTestId("ui-export-ai-context-status")).toContainText("se generan siempre");
 });
 
 test("mantiene un popup con el avance real hasta completar el export", async ({ page }) => {

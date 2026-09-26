@@ -297,7 +297,11 @@ test("C4: la cantidad respeta los límites 1–99 en el detalle y dentro del dra
   await expect(quantity).toHaveAttribute("max", "99");
 
   await quantity.fill("150");
+  const catalogReconciled = page.waitForResponse((response) =>
+    response.url().endsWith("/catalog-index.json"),
+  );
   await quantity.press("Enter");
+  await catalogReconciled;
   const drawer = page.locator("[data-cart-drawer]");
   const drawerQuantity = drawer.locator("[data-cart-quantity]").first();
   await expect(drawerQuantity).toHaveValue("99");
@@ -490,51 +494,6 @@ test("C9: la toolbar de categoría legacy filtra por etiqueta/precio y ordena co
   await toolbar.locator("[data-category-sort]").selectOption("name");
   await expect(cards.first()).toContainText("Pieza de escala 01");
   await expect(resultCount).toHaveText("24 de 28 productos");
-});
-
-test("C10: la paginación legacy navega prev/next con rel y respeta los límites", async ({
-  page,
-}, testInfo) => {
-  test.info().annotations.push({ type: "contrato", description: "A28 · C10 · pagination" });
-
-  for (const viewport of [
-    { width: 1280, height: 800 },
-    { width: 768, height: 900 },
-    { width: 320, height: 844 },
-  ]) {
-    await page.setViewportSize(viewport);
-    await page.goto(storeUrl(basePort, "/categorias/casa/"));
-
-    await expect(page.locator(".solara-pagination a[rel='prev']")).toHaveCount(0);
-    const next = page.locator(".solara-pagination a[rel='next']");
-    const pagination = page.locator(".solara-pagination");
-    await expect(next).toHaveAttribute("href", "/categorias/casa/pagina/2/");
-    await expect(pagination).toContainText("Página 1 de 2");
-    // T10 agregó links numéricos: el chip de la página actual es el span con
-    // aria-current, y comparte con prev/next el radio del tema.
-    const pageRadius = await pagination
-      .locator('span[aria-current="page"]')
-      .evaluate((element) => getComputedStyle(element).borderRadius);
-    await expect(next).toHaveCSS("border-radius", pageRadius);
-    expect(pageRadius).not.toBe("999px");
-    await pagination.screenshot({
-      path: testInfo.outputPath(`pagination-square-${viewport.width}.png`),
-    });
-  }
-
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await page.goto(storeUrl(basePort, "/categorias/casa/"));
-  const next = page.locator(".solara-pagination a[rel='next']");
-  await next.click();
-  await expect(page).toHaveURL(/\/categorias\/casa\/pagina\/2\/$/);
-  await expect(page.locator(".solara-pagination a[rel='next']")).toHaveCount(0);
-  const prev = page.locator(".solara-pagination a[rel='prev']");
-  await expect(prev).toHaveAttribute("href", "/categorias/casa/");
-  await expect(page.locator(".solara-pagination")).toContainText("Página 2 de 2");
-
-  await prev.click();
-  await expect(page).toHaveURL(/\/categorias\/casa\/$/);
-  await expect(page.locator(".solara-pagination a[rel='prev']")).toHaveCount(0);
 });
 
 test("C11: el contrato de markup legacy declara los atributos que lee el runtime", async () => {

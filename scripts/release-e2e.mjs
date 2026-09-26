@@ -17,6 +17,7 @@ const validationMode =
       ? requestedValidationMode
       : "advisory";
 const runtimeOnly = process.argv.includes("--check-runtime");
+const skipBuild = process.argv.includes("--skip-build");
 
 if (nodeMajor !== releaseNodeMajor) {
   console.error(
@@ -43,7 +44,7 @@ function run(args) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-if (process.env.SOLARA_SKIP_E2E_BUILD !== "1") {
+if (!skipBuild && process.env.SOLARA_SKIP_E2E_BUILD !== "1") {
   run(["pnpm", "--filter", "@solara/studio", "build"]);
 }
 const playwrightCli = resolve("node_modules/@playwright/test/cli.js");

@@ -36,12 +36,12 @@ function oversizeAsset(index: number): ImageAsset {
   };
 }
 
-/** 150 assets × ~4 copias de 1 MiB ≈ 600 M caracteres > límite de V8. */
+/** 135 assets × ~4 copias de 1 MiB ≈ 540 M caracteres > límite de V8. */
 let oversize: StoreProjectV1 | undefined;
 function oversizeProject(): StoreProjectV1 {
   oversize ??= {
     ...structuredClone(catalogModernStore),
-    assets: Array.from({ length: 150 }, (_, index) => oversizeAsset(index)),
+    assets: Array.from({ length: 135 }, (_, index) => oversizeAsset(index)),
   };
   return oversize;
 }

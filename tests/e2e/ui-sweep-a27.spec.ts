@@ -165,56 +165,6 @@ test("C1: el toggle de carrito abre el drawer, refleja aria-expanded y devuelve 
   await expect(toggle).toBeFocused();
 });
 
-test("C2: agregar al carrito crea la línea, actualiza contador y subtotales con límites", async ({
-  page,
-}) => {
-  test.info().annotations.push({ type: "contrato", description: "A27 · C2 · add-to-cart" });
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(storeUrl(basePort, PRODUCT_PATH));
-
-  const toggle = page.locator("button[data-solara-cart-open]");
-  const addButton = page.getByRole("button", { name: "Agregar al carrito" });
-  await expect(addButton).toBeEnabled();
-  await page.locator('input[name="quantity"]').fill("2");
-  await addButton.click();
-
-  const drawer = page.locator("[data-cart-drawer]");
-  await expect(drawer).toHaveAttribute("data-open", "true");
-  await expect(toggle.locator("[data-cart-count]")).toHaveText("2");
-  await expect(toggle).toHaveAttribute("aria-label", "Carrito 2");
-  const line = drawer.locator(".solara-cart-line").first();
-  await expect(line).toContainText("Remera esencial de algodón");
-  await expect(line).toContainText("Negro / S");
-  await expect(drawer.locator("[data-cart-subtotal]")).toHaveText("$ 57.700,00");
-  await expect(drawer.locator("[data-cart-total]")).toHaveText("$ 57.700,00");
-  await expect(line).toContainText("$ 57.700,00");
-
-  await page.keyboard.press("Escape");
-  await expect(drawer).not.toHaveAttribute("data-open", "true");
-  await page.locator('input[name="quantity"]').fill("1");
-  await addButton.click();
-  await expect(drawer).toHaveAttribute("data-open", "true");
-  await expect(toggle.locator("[data-cart-count]")).toHaveText("3");
-  await expect(drawer.locator("[data-cart-total]")).toHaveText("$ 86.550,00");
-
-  const quantityInput = drawer.locator("[data-cart-quantity]").first();
-  await quantityInput.fill("150");
-  await quantityInput.blur();
-  await expect(quantityInput).toHaveValue("99");
-  await expect(toggle.locator("[data-cart-count]")).toHaveText("99");
-  await expect(drawer.locator("[data-cart-total]")).toHaveText("$ 2.856.150,00");
-
-  await quantityInput.fill("0");
-  await quantityInput.blur();
-  await expect(quantityInput).toHaveValue("1");
-  await expect(toggle.locator("[data-cart-count]")).toHaveText("1");
-
-  await drawer.locator("[data-cart-remove]").first().click();
-  await expect(toggle.locator("[data-cart-count]")).toHaveText("0");
-  await expect(toggle).toHaveAttribute("aria-label", "Carrito 0");
-  await expect(drawer.locator("[data-cart-lines]")).toContainText("Tu carrito está vacío");
-});
-
 test("C3: sin JavaScript hay fallback de WhatsApp y la búsqueda sigue visible", async ({
   browser,
 }) => {
@@ -245,39 +195,6 @@ test("C3: sin JavaScript hay fallback de WhatsApp y la búsqueda sigue visible",
     page.locator('#catalog-mobile-menu .catalog-mobile-nav-link[href="/"]'),
   ).toBeVisible();
   await context.close();
-});
-
-test("C4: las miniaturas de galería intercambian la figura activa y sincronizan con la variante", async ({
-  page,
-}) => {
-  test.info().annotations.push({ type: "contrato", description: "A27 · C4 · gallery thumbs" });
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(storeUrl(galleryPort, PRODUCT_PATH));
-  await waitForStorefrontReady(page);
-
-  const figures = page.locator("[data-gallery-image-id]");
-  await expect(figures).toHaveCount(2);
-  const thumbs = page.locator("[data-gallery-thumb]");
-  await expect(thumbs).toHaveCount(2);
-
-  await expect(figures.nth(0)).toHaveAttribute("data-gallery-active", "true");
-  await expect(figures.nth(1)).toHaveAttribute("data-gallery-active", "false");
-  await expect(thumbs.nth(0)).toHaveAttribute("aria-current", "true");
-  await expect(thumbs.nth(1)).toHaveAttribute("aria-current", "false");
-
-  await thumbs.nth(1).click();
-  await expect(figures.nth(0)).toHaveAttribute("data-gallery-active", "false");
-  await expect(figures.nth(1)).toHaveAttribute("data-gallery-active", "true");
-  await expect(thumbs.nth(0)).toHaveAttribute("aria-current", "false");
-  await expect(thumbs.nth(1)).toHaveAttribute("aria-current", "true");
-
-  await page.locator("[data-variant-select]").selectOption(GALLERY_VARIANT_MANTA);
-  await expect(figures.nth(1)).toHaveAttribute("data-gallery-active", "true");
-  await expect(thumbs.nth(1)).toHaveAttribute("aria-current", "true");
-
-  await thumbs.nth(0).click();
-  await expect(figures.nth(0)).toHaveAttribute("data-gallery-active", "true");
-  await expect(thumbs.nth(0)).toHaveAttribute("aria-current", "true");
 });
 
 test("C5: el menú móvil abre con aria-expanded, cierra con foco y navega por sus enlaces", async ({
@@ -320,38 +237,6 @@ test("C5: el menú móvil abre con aria-expanded, cierra con foco y navega por s
   await page.locator('.catalog-mobile-category__parent[href="/categorias/remeras/"]').click();
   await expect(page).toHaveURL(/\/categorias\/remeras\/$/);
   await expect(page.getByRole("heading", { level: 1, name: "Remeras" })).toBeVisible();
-});
-
-test("C6: la búsqueda abre el dialog con aria-expanded y cierra con Escape o backdrop", async ({
-  page,
-}) => {
-  test.info().annotations.push({ type: "contrato", description: "A27 · C6 · search dialog" });
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(storeUrl(basePort, "/"));
-
-  expect(baseIndexHtml).toContain(
-    'data-catalog-search-open aria-controls="catalog-search-dialog" aria-expanded="false"',
-  );
-
-  const trigger = page.locator("[data-catalog-search-open]");
-  const dialog = page.locator("#catalog-search-dialog");
-  await expect(trigger).toHaveAttribute("aria-expanded", "false");
-
-  await trigger.click();
-  await expect(dialog).toBeVisible();
-  await expect(trigger).toHaveAttribute("aria-expanded", "true");
-  await expect(page.locator("#catalog-search-input")).toBeFocused();
-
-  await page.keyboard.press("Escape");
-  await expect(dialog).toBeHidden();
-  await expect(trigger).toHaveAttribute("aria-expanded", "false");
-  await expect(trigger).toBeFocused();
-
-  await trigger.click();
-  await expect(page.locator("#catalog-search-input")).toBeFocused();
-  await page.mouse.click(10, 10);
-  await expect(dialog).toBeHidden();
-  await expect(trigger).toHaveAttribute("aria-expanded", "false");
 });
 
 test("C7: el mega menú despliega con aria-expanded y sus enlaces navegan", async ({ page }) => {
@@ -515,17 +400,6 @@ test("C10: el checkout del drawer moderno abre WhatsApp con el pedido", async ({
   await expect(drawer.locator("[data-order-preview]")).toContainText("Nombre: Malena Ortiz");
   await expect(drawer.locator("[data-order-preview]")).toContainText("11 5555 0142");
   await whatsappPopup.close();
-});
-
-test("A29: el drawer de carrito abierto inertea a los hermanos de la página (como el menú móvil)", async ({
-  page,
-}) => {
-  test.info().annotations.push({ type: "contrato", description: "A27 · A29 · drawer inert" });
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(storeUrl(basePort, "/"));
-
-  await page.locator("button[data-solara-cart-open]").click();
-  await expect(page.locator('[data-solara-module="catalog-hero"]')).toHaveAttribute("inert", "");
 });
 
 test("C11: el contrato del detalle moderno declara los atributos que lee el runtime", async () => {

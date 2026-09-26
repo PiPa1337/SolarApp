@@ -140,6 +140,8 @@ test("el teclado llega desde las tarjetas al panel de detalle", async ({ page })
   await lastCard.focus();
   await page.keyboard.press("Enter");
   const detail = page.locator(".dashboard-store-detail");
+  await expect(detail).toBeVisible();
+  await page.keyboard.press("Tab");
   await expect(detail).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(detail.getByTestId("ui-detail-pin")).toBeFocused();
@@ -624,7 +626,8 @@ test("el ConfirmDialog de eliminar enlace enfoca, atrapa el foco, cancela con Es
 test("el tooltip top de un IconButton aparece sobre el botón con descripción accesible (A13)", async ({
   page,
 }) => {
-  await openDefaultStore(page);
+  await openDashboard(page);
+  await openMutableScaleStore(page, "Tienda a11y tooltip");
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Resumen" })).toBeVisible();
 

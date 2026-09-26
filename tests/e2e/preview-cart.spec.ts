@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { createProjectArchive } from "@solara/exporter";
+import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 test.setTimeout(120_000);
@@ -14,6 +16,37 @@ async function openStoreFromDashboard(
     .click();
 }
 
+async function openV2StoreFromDashboard(
+  page: import("@playwright/test").Page,
+  name: string,
+): Promise<string> {
+  const fixture = structuredClone(catalogModernV2Store);
+  fixture.name = name;
+  await page.getByRole("button", { name: "Nueva tienda", exact: true }).click();
+  await page.getByLabel("Seleccionar tienda para importar").setInputFiles({
+    name: "catalog-modern-v2.solara.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(createProjectArchive(fixture), "utf8"),
+  });
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
+    timeout: 20_000,
+  });
+  await page.getByRole("button", { name: "Volver a tiendas" }).click();
+  const card = page.locator(".dashboard-store-card").filter({ hasText: name }).first();
+  const storeId = await card.locator(".dashboard-store-card__button").getAttribute("data-store-card-id");
+  if (!storeId) throw new Error(`No se pudo identificar la tienda V2 "${name}".`);
+  await openStoreFromDashboard(page, card);
+  await expect(page.getByRole("navigation", { name: "Áreas de la tienda" })).toBeVisible({
+    timeout: 20_000,
+  });
+  await page.getByRole("button", { name: "Cerrar panel de edición" }).click();
+  const desktop = page.getByRole("button", { name: "Vista de escritorio" });
+  await expect(desktop).toBeEnabled();
+  await desktop.click();
+  await expect(desktop).toHaveAttribute("aria-pressed", "true");
+  return storeId;
+}
+
 test("el preview V2 conserva el carrito al navegar con enlaces internos", async ({ page }) => {
   const running = await startStudioServer();
   try {
@@ -22,13 +55,10 @@ test("el preview V2 conserva el carrito al navegar con enlaces internos", async 
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
       timeout: 30_000,
     });
-    const card = page.locator(".dashboard-store-card").filter({
-      has: page.getByText("Predeterminado", { exact: true }),
-    });
-    await openStoreFromDashboard(page, card);
+    const storeId = await openV2StoreFromDashboard(page, "Preview carrito interno V2");
 
     const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
-    await page.evaluate(() => localStorage.removeItem("solara-cart:store-modo-sur-demo"));
+    await page.evaluate((id) => localStorage.removeItem(`solara-cart:${id}`), storeId);
     await expect(preview.locator('[data-design-family="catalog-modern-v2"]')).toBeVisible({
       timeout: 30_000,
     });
@@ -86,14 +116,13 @@ test("el preview V2 conserva el carrito al navegar con enlaces internos", async 
     await expect
       .poll(
         () =>
-          page.evaluate(() => {
+          page.evaluate((id) => {
             try {
-              return JSON.parse(localStorage.getItem("solara-cart:store-modo-sur-demo") ?? "[]")
-                .length;
+              return JSON.parse(localStorage.getItem(`solara-cart:${id}`) ?? "[]").length;
             } catch {
               return -1;
             }
-          }),
+          }, storeId),
         { timeout: 10_000 },
       )
       .toBe(2);
@@ -142,10 +171,7 @@ test("el enlace Abrir carrito del footer abre el drawer sin cambiar de ruta", as
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
       timeout: 30_000,
     });
-    const card = page.locator(".dashboard-store-card").filter({
-      has: page.getByText("Predeterminado", { exact: true }),
-    });
-    await openStoreFromDashboard(page, card);
+    await openV2StoreFromDashboard(page, "Preview footer carrito V2");
 
     const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
     const footerCartLink = preview.locator("a.catalog-footer-cart-link");
@@ -170,13 +196,10 @@ test("el preview V2 conserva el carrito al cambiar de ruta inmediatamente despu�
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
       timeout: 30_000,
     });
-    const card = page.locator(".dashboard-store-card").filter({
-      has: page.getByText("Predeterminado", { exact: true }),
-    });
-    await openStoreFromDashboard(page, card);
+    const storeId = await openV2StoreFromDashboard(page, "Preview cambio inmediato V2");
 
     const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
-    await page.evaluate(() => localStorage.removeItem("solara-cart:store-modo-sur-demo"));
+    await page.evaluate((id) => localStorage.removeItem(`solara-cart:${id}`), storeId);
     await expect(preview.locator('[data-design-family="catalog-modern-v2"]')).toBeVisible({
       timeout: 30_000,
     });
@@ -230,16 +253,13 @@ test("el preview V2 conserva el vaciado intencional al cambiar de ruta", async (
     await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
       timeout: 30_000,
     });
-    const card = page.locator(".dashboard-store-card").filter({
-      has: page.getByText("Predeterminado", { exact: true }),
-    });
-    await openStoreFromDashboard(page, card);
+    const storeId = await openV2StoreFromDashboard(page, "Preview vaciado intencional V2");
 
     const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
-    await page.evaluate(() => {
-      localStorage.removeItem("solara-cart:store-modo-sur-demo");
-      localStorage.removeItem("solara-cart:store-modo-sur-demo:backup");
-    });
+    await page.evaluate((id) => {
+      localStorage.removeItem(`solara-cart:${id}`);
+      localStorage.removeItem(`solara-cart:${id}:backup`);
+    }, storeId);
     await expect(preview.locator('[data-design-family="catalog-modern-v2"]')).toBeVisible({
       timeout: 30_000,
     });
@@ -276,6 +296,11 @@ test("P7-B5: los tamaños de vista y el zoom cambian el stage del preview", asyn
     });
     await openStoreFromDashboard(page, card);
     await page.locator(".studio-shell").waitFor({ timeout: 30_000 });
+    await page.getByRole("button", { name: "Cerrar panel de edición" }).click();
+    const desktopButton = page.getByRole("button", { name: "Vista de escritorio" });
+    await expect(desktopButton).toBeEnabled();
+    await desktopButton.click();
+    await expect(desktopButton).toHaveAttribute("aria-pressed", "true");
 
     const frame = page.locator('.preview-stage iframe[title^="Vista previa"]');
     await expect(frame).toBeVisible();

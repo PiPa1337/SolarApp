@@ -78,7 +78,8 @@ test("Preparar conserva una sola columna y un CTA legible en móvil", async ({ p
     .toBe(1);
 
   const nextButton = page.getByTestId("ui-guided-next");
-  await expect.poll(async () => (await nextButton.boundingBox())?.width ?? 0).toBeGreaterThan(200);
+  await expect(nextButton).toBeVisible();
+  await expect(nextButton).toContainText(/^Siguiente:/);
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= 390))
     .toBe(true);
@@ -90,17 +91,22 @@ test("el progreso de Preparar sube al completar un requisito (T4.1)", async ({ p
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
   const progress = page.getByTestId("ui-guided-progress");
   await expect(progress).toBeVisible();
-  const initial = Number(await progress.getAttribute("aria-valuenow"));
+  const progressCopy = page.locator(".guided-progress__copy > strong");
+  const readReadyCount = async () => {
+    const text = (await progressCopy.textContent()) ?? "";
+    return Number(text.match(/^(\d+)/)?.[1] ?? -1);
+  };
+  const initialReadyCount = await readReadyCount();
 
   await page.getByRole("tab", { name: "Resumen", exact: true }).click();
   await page.getByLabel("Descripción", { exact: true }).fill("Descripción de la marca de prueba");
 
   await page.getByRole("tab", { name: "Preparar", exact: true }).click();
   await expect
-    .poll(async () => Number(await progress.getAttribute("aria-valuenow")), {
+    .poll(readReadyCount, {
       timeout: 10_000,
     })
-    .toBeGreaterThan(initial);
+    .toBeGreaterThan(initialReadyCount);
 
   const pendingDescription = page.locator(
     '[data-requirement-id="identity.description"][data-requirement-status="missing"]',

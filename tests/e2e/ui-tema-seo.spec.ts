@@ -39,7 +39,7 @@ function fieldsetOf(input: Locator): Locator {
 }
 
 function previewBackground(page: Page): () => Promise<string> {
-  const html = page.frameLocator('iframe[title="Vista previa desktop"]').locator("html");
+  const html = page.frameLocator("iframe").locator("html");
   return () =>
     html.evaluate((element) => getComputedStyle(element).backgroundColor).catch(() => "");
 }
@@ -50,7 +50,7 @@ test("los presets de Tema aplican la paleta real al preview (H8-09)", async ({ p
 
   const accentText = page.getByTestId("ui-color-text-accent");
   const background = previewBackground(page);
-  await expect.poll(background, { timeout: 15_000 }).toBe("rgb(252, 252, 251)");
+  await expect.poll(background, { timeout: 15_000 }).toBe("rgb(247, 245, 240)");
 
   await page.getByRole("button", { name: "Aplicar paleta Terracota solar" }).click();
 
@@ -103,7 +103,7 @@ test("Restaurar colores vuelve a los valores de apertura de la pestaña (H8-10)"
   await page.getByTestId("ui-reset-colors").click();
   await expect(accentText).toHaveValue(originalAccent);
   await expect(backgroundText).toHaveValue(originalBackground);
-  await expect.poll(previewBackground(page), { timeout: 15_000 }).toBe("rgb(252, 252, 251)");
+  await expect.poll(previewBackground(page), { timeout: 15_000 }).toBe("rgb(247, 245, 240)");
 });
 
 test("un color hex inválido muestra error inline y no commitea (H8-B1)", async ({ page }) => {
@@ -161,13 +161,13 @@ test("los pares de color del Tema tienen nombres accesibles independientes", asy
   await setupCleanStore(page, "Tienda colores accesibles");
   await openThemeTab(page);
 
-  await expect(page.getByLabel("Fondo selector de color")).toHaveValue("#fcfcfb");
-  await expect(page.getByLabel("Fondo valor hexadecimal")).toHaveValue("#fcfcfb");
+  await expect(page.getByLabel("Fondo selector de color")).toHaveValue("#f7f5f0");
+  await expect(page.getByLabel("Fondo valor hexadecimal")).toHaveValue("#f7f5f0");
   await expect(page.getByLabel("Texto secundario selector de color")).toBeVisible();
   await expect(page.getByLabel("Texto secundario valor hexadecimal")).toBeVisible();
 });
 
-test("SEO comunica el estado de auditoría y prioriza el diagnóstico sobre las previews", async ({
+test("SEO comunica el estado de auditoría y agrupa el diagnóstico y las previews", async ({
   page,
 }) => {
   await setupCleanStore(page, "Tienda SEO estados");
@@ -176,15 +176,21 @@ test("SEO comunica el estado de auditoría y prioriza el diagnóstico sobre las 
   const status = page.getByTestId("ui-seo-audit-state");
   const score = page.locator(".seo-header-score");
   const audit = page.getByTestId("ui-seo-audit-panel");
-  const checklist = page.getByTestId("ui-seo-checklist");
-  const appearance = page.locator(".seo-fieldset--appearance");
   const previews = page.getByTestId("ui-seo-preview-google");
 
   await expect(status).toBeVisible();
-  await expect(status).toHaveText(/Auditoría lista|críticos/);
+  await expect(status).toContainText(/\d+ advertencias|\d+ críticos|Sin observaciones/);
   await expect(score).toHaveAccessibleName(/Score SEO: \d+\/100/);
   await expect(audit).toBeVisible();
-  await expect(audit).toContainText(/errores críticos|No se detectaron problemas/);
+  await expect(audit).toContainText(/\d+ errores críticos, \d+ advertencias/);
+  await expect(page.locator(".workspace-group").filter({ has: audit })).toHaveAttribute(
+    "aria-label",
+    "Diagnóstico",
+  );
+  await expect(page.locator(".workspace-group").filter({ has: previews })).toHaveAttribute(
+    "aria-label",
+    "Apariencia en buscadores",
+  );
   const auditSeverity = audit.locator(".audit-item__severity");
   if (await auditSeverity.count()) {
     await expect(auditSeverity.first()).toHaveText(/Crítico|Advertencia|Información/);
@@ -192,21 +198,20 @@ test("SEO comunica el estado de auditoría y prioriza el diagnóstico sobre las 
     await expect(audit.locator(".audit-item__meta").first()).not.toContainText("Resolver en:");
   }
 
-  const auditBox = await audit.boundingBox();
-  const checklistBox = await checklist.boundingBox();
-  const appearanceBox = await appearance.boundingBox();
-  const previewsBox = await previews.boundingBox();
-  expect(auditBox).not.toBeNull();
-  expect(checklistBox).not.toBeNull();
-  expect(appearanceBox).not.toBeNull();
-  expect(previewsBox).not.toBeNull();
-  expect(auditBox?.y).toBeLessThan(checklistBox?.y ?? Number.POSITIVE_INFINITY);
-  expect(checklistBox?.y).toBeLessThan(appearanceBox?.y ?? Number.POSITIVE_INFINITY);
-  expect(appearanceBox?.y).toBeLessThan(previewsBox?.y ?? Number.POSITIVE_INFINITY);
-  const semanticOrder = await page
-    .locator(".seo-grid")
-    .evaluate((grid) => Array.from(grid.children).map((child) => child.className));
-  expect(semanticOrder.indexOf("audit-panel")).toBeLessThan(semanticOrder.indexOf("seo-previews"));
+  const groupOrder = await page
+    .locator(".workspace-group")
+    .evaluateAll((groups) => groups.map((group) => group.getAttribute("aria-label")));
+  expect(groupOrder).toEqual([
+    "Apariencia en buscadores",
+    "Diagnóstico",
+    "Publicación y rastreo",
+  ]);
+  const diagnosticNavigation = page
+    .getByRole("navigation", { name: "Herramientas SEO" })
+    .getByRole("button", { name: "Diagnóstico" });
+  await diagnosticNavigation.click();
+  await expect(diagnosticNavigation).toHaveAttribute("aria-current", "location");
+  await expect(audit).toBeInViewport();
 });
 
 test("las incidencias SEO conservan metadata legible sin overflow en mobile", async ({ page }) => {
