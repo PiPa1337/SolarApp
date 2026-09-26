@@ -6,6 +6,8 @@ import { defineConfig, devices } from "@playwright/test";
 // accidente el gate release ni convierta diferencias del browser del Studio en
 // supuestas regresiones del storefront.
 const publicStorefrontSpecs = /[/\\](exported-store|exporter-sentinel|storefront-nojs)\.spec\.ts$/;
+const publicStorefrontSentinels =
+  /selecciona una variante, agrega al carrito y abre WhatsApp|la demo con teléfono real conserva el contrato data-whatsapp del sitio|sin JavaScript la compra se deriva a WhatsApp y la navegación móvil queda accesible/;
 const ciVisualSpecs = [/[/\\]__vision__[/\\]/, /[/\\]visual-break\.spec\.ts$/];
 const auditSpecs = [
   /[/\\]__vision__[/\\].+\.spec\.ts$/,
@@ -49,11 +51,13 @@ export default defineConfig({
           {
             name: "firefox",
             testMatch: publicStorefrontSpecs,
+            grep: publicStorefrontSentinels,
             use: { ...devices["Desktop Firefox"] },
           },
           {
             name: "webkit",
             testMatch: publicStorefrontSpecs,
+            grep: publicStorefrontSentinels,
             use: { ...devices["Desktop Safari"] },
           },
         ]

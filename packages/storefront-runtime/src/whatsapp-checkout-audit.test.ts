@@ -328,30 +328,6 @@ describe("AUDITORIA WhatsApp checkout - matriz completa", () => {
       expect(decoded).toBe(part);
     }
   });
-  it("mensaje con 100 productos: multiparte 50+50 sin resumen y total completo", () => {
-    const lines = Array.from({ length: 100 }, (_, i) =>
-      makeProduct({
-        productId: `qp${i}`,
-        variantId: `qv${i}`,
-        title: `P${i}`,
-        variantTitle: `V${i}`,
-        sku: `SKU${i}`,
-        unitPrice: 10000,
-        quantity: 1,
-      }),
-    );
-    const parts = splitOrderParts(makeStore() as any, lines as any, {
-      name: "A",
-      phone: "B",
-      address: "C",
-      notes: "",
-    });
-    expect(parts.length).toBe(2);
-    const joined = parts.join("\n");
-    for (let i = 0; i < 100; i += 1) expect(joined).toContain(`P${i} (V${i})`);
-    expect(joined).toContain(formatMoney(10000 * 100));
-    expect(joined).not.toContain("productos mas");
-  });
   it("Unicode diverso: \u00F1 \u00E1 (titulos plegados, cliente verbatim)", () => {
     const line = makeProduct({
       title: "Ni\u00F1o \u00F1and\u00FA ca\u00F1a",

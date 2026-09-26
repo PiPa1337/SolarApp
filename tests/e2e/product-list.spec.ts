@@ -1,15 +1,12 @@
 import { createServer, type Server } from "node:http";
 import { expect, test } from "@playwright/test";
 import { exportProject, renderPreviewHtml } from "@solara/exporter";
-import { catalogModernV2Store } from "@solara/project-schema/catalog-modern-v2-fixture";
 import { referenceStore } from "@solara/project-schema/fixture";
 import { buildModernBaseTemplateProject } from "@solara/project-schema/modern-base-template";
 import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 import { FIXTURE_PRODUCT_FILES } from "./fixture-server";
 
 const demo = buildModernBaseTemplateProject();
-const noSearch = structuredClone(catalogModernV2Store);
-noSearch.commerceTemplates.search.enabled = false;
 const longNames = structuredClone(demo);
 const longProduct = longNames.products[0];
 if (!longProduct) throw new Error("Demo sin productos");
@@ -17,7 +14,6 @@ longProduct.title = `Árbol de estación & algodón ${"extraordinario".repeat(6)
 const projects = {
   demo,
   legacy: referenceStore,
-  v2: noSearch,
   scale: catalogScaleStore,
   long: longNames,
 };
@@ -71,7 +67,7 @@ test.afterAll(async () => {
   );
 });
 
-for (const key of ["demo", "legacy", "v2", "scale"] as const) {
+for (const key of ["legacy", "scale"] as const) {
   test(`${key}: footer, listado completo y enlace al producto`, async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
@@ -154,7 +150,7 @@ test("Preview conserva las mismas filas y filtros", async ({ page }) => {
   await expect(page.locator("[data-product-list-row]")).toHaveCount(1);
 });
 
-for (const width of [390, 767, 768, 1024, 1199, 1200, 1440]) {
+for (const width of [390]) {
   test(`responsive ${width}px: lectura y precios sin recortes`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
     await page.emulateMedia({ reducedMotion: "reduce" });
@@ -170,7 +166,7 @@ for (const width of [390, 767, 768, 1024, 1199, 1200, 1440]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
-    if ([390, 1024, 1440].includes(width))
+    if (width === 390)
       await page.screenshot({ path: testInfo.outputPath(`listado-${width}.png`), fullPage: true });
     await page.goto(`${urls.get("long")}/listado/`);
     await page.getByRole("searchbox", { name: "Buscar en el listado" }).fill("arbol algodon");

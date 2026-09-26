@@ -1,12 +1,10 @@
 /**
- * T0.7 — Workers del editor: errores y progreso.
- * Verifica que el import CSV muestre errores por fila, que las imágenes
- * fallidas se reporten por archivo con mensaje accionable y que la exportación
- * tenga estado "generando" y resultado (éxito o bloqueo crítico).
+ * T0.7 — Workers del editor: fallos de imágenes y estados de exportación.
+ * La importación CSV (errores por fila, progreso y confirmación) está consolidada
+ * en el recorrido de catálogo de tests/e2e/catalog.spec.ts.
  */
 import type { Server } from "node:http";
 import { expect, test } from "@playwright/test";
-import { exportProductsCsv, generatePerformanceFixture } from "@solara/core";
 import { createCleanStore, openMutableScaleStore } from "./project-helpers";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
@@ -48,136 +46,6 @@ async function openDemoAssets(page: import("@playwright/test").Page) {
   await page.getByRole("tab", { name: "Recursos", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Recursos" })).toBeVisible();
 }
-
-const commercialHeader =
-  "producto_id,variante_id,slug,titulo,descripcion,marca,estado,categorias,colecciones,etiquetas,imagenes,variante,sku,opciones,precio_centavos,precio_anterior_centavos,disponible,estado_stock,gtin,mpn,imagen_variante,creado_en,actualizado_en";
-
-const fecha = "2026-08-07T10:00:00.000Z";
-
-test("importa CSV y muestra el error de cada fila inválida sin tocar el catálogo", async ({
-  page,
-}) => {
-  await openDemoCatalog(page);
-  const filaConPrecioInvalido = [
-    "",
-    "",
-    "taza-rota",
-    "Taza rota",
-    "",
-    "Marca A",
-    "active",
-    "",
-    "",
-    "casa",
-    "",
-    "Única",
-    "",
-    "",
-    "abc",
-    "",
-    "true",
-    "in_stock",
-    "",
-    "",
-    "",
-    fecha,
-    fecha,
-  ];
-  const filaConOpcionInvalida = [
-    "",
-    "",
-    "taza-mal-opcion",
-    "Taza con opción inválida",
-    "",
-    "Marca B",
-    "active",
-    "",
-    "",
-    "casa",
-    "",
-    "Única",
-    "",
-    "Color",
-    "12500",
-    "",
-    "true",
-    "in_stock",
-    "",
-    "",
-    "",
-    fecha,
-    fecha,
-  ];
-  const filaValida = [
-    "",
-    "",
-    "taza-buena",
-    "Taza buena",
-    "",
-    "Marca C",
-    "active",
-    "",
-    "",
-    "casa",
-    "",
-    "Única",
-    "TAZA-001",
-    "",
-    "125000",
-    "",
-    "true",
-    "in_stock",
-    "",
-    "",
-    "",
-    fecha,
-    fecha,
-  ];
-  const csv = [
-    commercialHeader,
-    filaConPrecioInvalido.join(","),
-    filaConOpcionInvalida.join(","),
-    filaValida.join(","),
-  ].join("\r\n");
-  await page.locator('input[type="file"][accept*="csv"]').setInputFiles({
-    name: "catalogo-con-errores.csv",
-    mimeType: "text/csv",
-    buffer: Buffer.from(csv, "utf8"),
-  });
-
-  const errors = page.getByTestId("ui-csv-errors");
-  await expect(errors).toBeVisible();
-  await expect(page.getByTestId("ui-csv-error")).toHaveCount(2);
-  await expect(errors.getByText(/Fila 2/)).toBeVisible();
-  await expect(errors.getByText(/precio_centavos/)).toBeVisible();
-  await expect(errors.getByText(/Fila 3/)).toBeVisible();
-  await expect(errors.getByText(/opciones/)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Reemplazar catálogo" })).toHaveCount(0);
-  await expect(page.getByText("50 productos y 60 variantes.")).toBeVisible();
-});
-
-test("deshabilita las acciones y muestra progreso mientras importa un CSV grande", async ({
-  page,
-}) => {
-  await openDemoCatalog(page);
-  const csv = exportProductsCsv(generatePerformanceFixture(60).products);
-  if ((await page.locator(".workbench-transfer").getAttribute("open")) === null) {
-    await page.locator(".workbench-transfer > summary").click();
-  }
-  const importButton = page.getByTestId("ui-csv-import");
-  await page.locator('input[type="file"][accept*="csv"]').setInputFiles({
-    name: "catalogo-60.csv",
-    mimeType: "text/csv",
-    buffer: Buffer.from(csv, "utf8"),
-  });
-  await expect(importButton).toBeDisabled();
-  await expect(importButton).toContainText("Procesando");
-  await expect(page.getByTestId("ui-catalog-progress")).toContainText("Procesando CSV");
-  await page.getByRole("button", { name: "Reemplazar catálogo" }).click({ timeout: 30_000 });
-  await expect(page.getByText("60 productos y 120 variantes.")).toBeVisible({
-    timeout: 30_000,
-  });
-});
 
 test("reporta por archivo las imágenes que no se pudieron procesar y conserva el resto", async ({
   page,
@@ -293,42 +161,6 @@ test("bloquea la exportación de producción cuando hay errores críticos visibl
   await expect(page.getByTestId("ui-export-production")).toBeDisabled();
 });
 
-test("el respaldo del proyecto muestra progreso y deshabilita las acciones (T6.7)", async ({
-  page,
-}) => {
-  await openDemoCatalog(page);
-  await page.getByRole("tab", { name: "Exportar", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Exportar" })).toBeVisible();
-
-  const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Descargar .solara.json" }).click();
-  // Lectura atómica: mientras el progreso es visible, ambos botones deben
-  // estar deshabilitados EN EL MISMO turno (la ventana dura ~1 frame con el
-  // worker caliente; dos aserciones separadas la pierden).
-  await expect
-    .poll(
-      () =>
-        page.evaluate(() => {
-          const progress = document.querySelector('[data-testid="ui-export-progress"]');
-          if (!progress) return { progress: false };
-          const draft = document.querySelector('[data-testid="ui-export-draft"]');
-          const importButton = Array.from(document.querySelectorAll("button")).find((b) =>
-            b.textContent?.trim().startsWith("Importar respaldo"),
-          );
-          return {
-            progress: true,
-            draft: draft?.hasAttribute("disabled") ?? null,
-            import: importButton?.hasAttribute("disabled") ?? null,
-          };
-        }),
-      { timeout: 15_000 },
-    )
-    .toEqual({ progress: true, draft: true, import: true });
-
-  const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/\.solara\.json$/);
-  await expect(page.getByTestId("ui-export-progress")).toHaveCount(0);
-});
 
 test("importar un respaldo inválido pide confirmación y muestra un error accionable (T6.7)", async ({
   page,

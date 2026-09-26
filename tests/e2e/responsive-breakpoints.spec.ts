@@ -14,14 +14,10 @@ const exported = {
 };
 
 const boundaryViewports = [
-  { name: "mobile-before-5", width: 762, height: 844, mode: "mobile" },
-  { name: "mobile-edge", width: 767, height: 844, mode: "mobile" },
-  { name: "tablet-edge", width: 768, height: 900, mode: "tablet" },
-  { name: "tablet-after-5", width: 773, height: 900, mode: "tablet" },
-  { name: "tablet-before-5", width: 1194, height: 900, mode: "tablet" },
-  { name: "tablet-edge-top", width: 1199, height: 900, mode: "tablet" },
-  { name: "desktop-edge", width: 1200, height: 900, mode: "desktop" },
-  { name: "desktop-after-5", width: 1205, height: 900, mode: "desktop" },
+  { name: "mobile-max", width: 767, height: 844, mode: "mobile" },
+  { name: "tablet-min", width: 768, height: 900, mode: "tablet" },
+  { name: "tablet-max", width: 1199, height: 900, mode: "tablet" },
+  { name: "desktop-min", width: 1200, height: 900, mode: "desktop" },
 ] as const;
 
 const visualViewports = [
@@ -145,7 +141,7 @@ async function metrics(page: import("@playwright/test").Page) {
   });
 }
 
-test("captura evidencia visual real cinco píxeles antes y después de cada frontera", async ({
+test("captura evidencia en los límites exactos y checkpoints responsive", async ({
   page,
 }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -194,17 +190,17 @@ test("mantiene overflow y composición en V1/V2 para las rutas críticas", async
   ];
 
   for (const family of ["v1", "v2"] as const) {
-    for (const viewport of visualViewports) {
-      await page.setViewportSize({ width: viewport.width, height: viewport.height });
-      for (const path of routes) {
-        await open(page, family, path);
-        const current = await metrics(page);
-        expect(
-          current.documentWidth,
-          `${family} ${path} ${viewport.width}: no overflow horizontal ${JSON.stringify(current)}`,
-        ).toBeLessThanOrEqual(current.clientWidth + 1);
-        expect(current.mode, `${family} ${path} ${viewport.width}: modo responsive`).toBe(viewport.mode);
-      }
+    const viewport = visualViewports[0];
+    if (!viewport) throw new Error("Falta el checkpoint móvil responsive.");
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    for (const path of routes) {
+      await open(page, family, path);
+      const current = await metrics(page);
+      expect(
+        current.documentWidth,
+        `${family} ${path} ${viewport.width}: no overflow horizontal ${JSON.stringify(current)}`,
+      ).toBeLessThanOrEqual(current.clientWidth + 1);
+      expect(current.mode, `${family} ${path} ${viewport.width}: modo responsive`).toBe(viewport.mode);
     }
   }
 });

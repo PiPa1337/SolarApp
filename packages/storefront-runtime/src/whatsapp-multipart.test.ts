@@ -129,6 +129,11 @@ describe("WhatsApp multiparte - split", () => {
     expect(parts[1]).toContain("Malena Ortiz");
     expect(parts[1]).toContain("✓ Fin del pedido (2/2)");
     expect(parts[1]).not.toContain("Sigue en la parte");
+    for (let i = 0; i < 50; i += 1) expect(parts[0]).toContain(`Producto ${i} (V${i})`);
+    for (let i = 50; i < 60; i += 1) expect(parts[1]).toContain(`Producto ${i} (V${i})`);
+    expect(parts[0]).not.toContain("Producto 50 (V50)");
+    expect(parts[1]).not.toContain("Producto 49 (V49)");
+    expect(parts.join("\n")).not.toContain("productos mas");
     for (const p of parts) {
       expect(buildWhatsAppUrl(PHONE, p as string).length).toBeLessThanOrEqual(3900);
     }

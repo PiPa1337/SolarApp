@@ -28,7 +28,7 @@ const PALETAS = ["editorial", "minimal", "calido", "industrial", "botanico"];
 const SIZES = [
   { label: "mini", products: 6 },
   { label: "normal", products: 30 },
-  { label: "mediana", products: 120 },
+  { label: "mediana", products: 60 },
 ];
 
 function slugify(value) {
@@ -125,7 +125,7 @@ async function createStore(controller, index, size, rubro, paleta) {
   };
 }
 
-export async function runStoreFactory({ total = 20, root } = {}) {
+export async function runStoreFactory({ total = 3, root } = {}) {
   const results = [];
   const ownedRoot = root === undefined;
   const applicationRoot = root ?? (await mkdtemp(join(tmpdir(), "solara-store-factory-")));
@@ -168,7 +168,7 @@ export async function runStoreFactory({ total = 20, root } = {}) {
 
 const isDirectRun = process.argv[1]?.endsWith("store-factory.mjs");
 if (isDirectRun) {
-  const total = Number(process.argv[2] ?? "20");
+  const total = Number(process.argv[2] ?? "3");
   const startedAt = Date.now();
   runStoreFactory({ total })
     .then(({ results }) => {

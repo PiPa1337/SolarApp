@@ -67,10 +67,10 @@ const QUICK_SMOKE = {
     "tests/e2e/exported-store.spec.ts",
     "tests/e2e/storefront-nojs.spec.ts",
   ],
-  storefront: ["tests/e2e/exported-store.spec.ts", "tests/e2e/interacciones.spec.ts"],
-  studio: ["tests/e2e/interacciones.spec.ts", "tests/e2e/focus-visible.spec.ts"],
+  storefront: ["tests/e2e/exported-store.spec.ts", "tests/e2e/storefront-nojs.spec.ts"],
+  studio: ["tests/e2e/editor-smoke.spec.ts", "tests/e2e/focus-visible.spec.ts"],
   schema: ["tests/e2e/exporter-sentinel.spec.ts", "tests/e2e/exported-store.spec.ts"],
-  modules: ["tests/e2e/interacciones.spec.ts", "tests/e2e/focus-visible.spec.ts"],
+  modules: ["tests/e2e/exporter-sentinel.spec.ts", "tests/e2e/focus-visible.spec.ts"],
 };
 
 export function selectQuickSmokeSpecs(files, fallbackSpecs) {

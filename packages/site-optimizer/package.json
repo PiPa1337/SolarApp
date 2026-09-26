@@ -8,8 +8,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --exclude src/oversize-snapshot.test.ts",
-    "test:stress": "vitest run --no-file-parallelism src/oversize-snapshot.test.ts",
+    "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

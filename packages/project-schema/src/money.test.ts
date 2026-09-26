@@ -35,6 +35,12 @@ describe("formatPrice", () => {
     });
   }
 
+  it("rechaza valores que no son enteros seguros", () => {
+    for (const value of [Number.NaN, Number.POSITIVE_INFINITY, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+      expect(() => formatPrice(value), `value=${String(value)}`).toThrow(/entero en centavos/i);
+    }
+  });
+
   it("nunca redondea ni trunca centavos distintos de 00", () => {
     expect(formatPrice(150001, { priceFractionDisplay: "auto" }).replace("\u00A0", " ")).toBe(
       "$ 1.500,01",

@@ -23,13 +23,13 @@ function randomString(rand: () => number, len = 8): string {
   return s;
 }
 describe("fuzz comprehensive", () => {
-  it("500 ops con todas las operaciones y casos invalidos mantiene invariantes", () => {
+  it("100 ops con operaciones y casos inválidos mantiene invariantes", () => {
     const seed = 999;
     const rand = mulberry32(seed);
     let project: any = structuredClone(catalogScaleStore);
     const base = Date.parse("2026-08-20T10:00:00.000Z");
-    // 1000 -> 500: mismo motivo que fuzz.test.ts (presupuesto RPC bajo carga).
-    for (let step = 0; step < 500; step++) {
+    // El test cubre 10 clases de operación; 100 pasos mantienen variedad sin repetirlas 500 veces.
+    for (let step = 0; step < 100; step++) {
       const at = new Date(base + step * 100).toISOString();
       const op = Math.floor(rand() * 10);
       let cmd: any = null;

@@ -153,26 +153,6 @@ test("P8-B6: el historial de exportaciones registra y se borra con confirmación
   console.log("P8-B6 historial borrado");
 });
 
-test("R3-P8-B5: importar un respaldo inválido muestra error y no rompe la app", async ({
-  page,
-}) => {
-  await openDemoStore(page);
-  await page.getByTestId("ui-export-import").click();
-  const fileInput = page.getByLabel("Seleccionar respaldo de proyecto");
-  await fileInput.setInputFiles({
-    name: "roto.solara.json",
-    mimeType: "application/json",
-    buffer: Buffer.from('{"format":"solara-project","project":{}}', "utf8"),
-  });
-  const dialog = page.getByRole("dialog", { name: "Importar respaldo" });
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "Importar y reemplazar" }).click();
-  await expect(dialog).toBeHidden();
-  await expect(page.getByRole("tab", { name: "Exportar" })).toBeVisible();
-  await expect(page.getByTestId("ui-inline-error")).toBeVisible();
-  console.log("R3-P8-B5 error de importación visible: true");
-});
-
 test("R4-P8-B5: exportar producción pasa por confirmación y completa las etapas", async ({
   page,
 }) => {

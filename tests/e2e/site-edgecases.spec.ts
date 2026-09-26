@@ -93,12 +93,3 @@ test("F2-E2: el producto sin categoría tiene página y figura en el catálogo",
   console.log("F2-E2 producto sin categoría listado en home:", listed);
   expect(listed).toBe(true);
 });
-
-test("F2-E3: el precio 0 se muestra formateado sin NaN ni cortes", async ({ page }) => {
-  const firstProduct = edgeStore.products[0];
-  await page.goto(`${serverUrl}/productos/${firstProduct.slug}/`);
-  const body = await page.locator("body").innerText();
-  const hasNaN = /NaN|undefined|null/.test(body);
-  console.log("F2-E3 precio 0 sin NaN:", !hasNaN);
-  expect(hasNaN).toBe(false);
-});

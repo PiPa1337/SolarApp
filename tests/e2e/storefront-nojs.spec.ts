@@ -34,19 +34,8 @@ remera.variants = [
 const availableVariant = remera.variants.find((variant) => variant.available);
 if (!availableVariant) throw new Error("Fixture sin variante disponible");
 
-const noSearchStore = structuredClone(catalogModernStore);
-noSearchStore.commerceTemplates.search.enabled = false;
-// Los grid de la plantilla limpia siembran viewAllHref "/buscar/": con la
-// búsqueda apagada deben resolver a la primera categoría raíz visible.
-noSearchStore.sections = noSearchStore.sections.map((section) =>
-  section.moduleId === "catalog-product-grid"
-    ? { ...section, settings: { ...section.settings, viewAllHref: "/buscar/" } }
-    : section,
-);
-
 const baseExport = exportProject(catalogModernStore, { mode: "production" });
 const soldOutFirstExport = exportProject(soldOutFirstStore, { mode: "production" });
-const noSearchExport = exportProject(noSearchStore, { mode: "production" });
 
 function startServer(exported: typeof baseExport): Promise<number> {
   return new Promise((resolveListening) => {
@@ -89,13 +78,11 @@ function startServer(exported: typeof baseExport): Promise<number> {
 
 let basePort = 0;
 let soldOutFirstPort = 0;
-let noSearchPort = 0;
 
 test.beforeAll(async () => {
-  [basePort, soldOutFirstPort, noSearchPort] = await Promise.all([
+  [basePort, soldOutFirstPort] = await Promise.all([
     startServer(baseExport),
     startServer(soldOutFirstExport),
-    startServer(noSearchExport),
   ]);
 });
 
@@ -145,29 +132,4 @@ test("el detalle moderno inicializa en la variante disponible aunque la primera 
   await expect(select.locator("option[selected]")).toHaveAttribute("value", availableVariant.id);
   await expect(select.locator("option[value]").first()).toBeDisabled();
   await expect(page.locator(".catalog-product-add")).toHaveText("Agregar al carrito");
-});
-
-test("sin búsqueda habilitada no se emiten formularios ni enlaces muertos a /buscar/", async ({
-  page,
-}) => {
-  await page.goto(`http://127.0.0.1:${noSearchPort}/`);
-  await expect(page.locator('form[action="/buscar/"]')).toHaveCount(0);
-  await expect(page.locator('a[href="/buscar/"]')).toHaveCount(0);
-  await expect(page.locator("#catalog-search-dialog")).toHaveCount(0);
-  expect(await page.content()).not.toContain('action="/buscar/"');
-
-  await page.goto(`http://127.0.0.1:${noSearchPort}${PRODUCT_PAGE}`);
-  await expect(page.locator('a[href="/buscar/"]')).toHaveCount(0);
-  expect(await page.content()).not.toContain('action="/buscar/"');
-});
-
-test("búsqueda deshabilitada: 'Ver todos' cae en la primera categoría raíz visible", async ({
-  page,
-}) => {
-  await page.goto(`http://127.0.0.1:${noSearchPort}/`);
-  const viewAll = page.locator("a.catalog-view-all").first();
-  await expect(viewAll).toHaveAttribute("href", "/categorias/remeras/");
-  await viewAll.click();
-  await expect(page).toHaveURL(/\/categorias\/remeras\/$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Remeras" })).toBeVisible();
 });

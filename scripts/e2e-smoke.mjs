@@ -2,10 +2,10 @@ import { spawn } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
-// e2e-smoke — smoke quick post-cambio (5 specs, ~1 min) con cache de build Studio
+// e2e-smoke — smoke quick post-cambio (4 specs) con cache de build Studio
 // Valida flujos criticos sin compilar Studio si no hay cambios.
 // Uso: corepack pnpm test:e2e:smoke [-- args extra para playwright]
-//   --smoke-full: 15 specs de cierre (catálogo, export, storefront, accesibilidad y editor)
+//   --smoke-full: 13 specs de cierre (catálogo, export, storefront y accesibilidad)
 //   --full: solo build cacheado, no ejecuta specs (lo usa test:e2e antes del full)
 
 const smokeSpecs = [
@@ -17,10 +17,8 @@ const smokeSpecs = [
   "tests/e2e/ui-sweep-a28.spec.ts",
   "tests/e2e/ui-sweep-a29.spec.ts",
   "tests/e2e/ui-sweep-a30.spec.ts",
-  "tests/e2e/release-a11y.spec.ts",
   "tests/e2e/nojs-coverage.spec.ts",
   "tests/e2e/focus-visible.spec.ts",
-  "tests/e2e/interacciones.spec.ts",
   "tests/e2e/catalog.spec.ts",
   "tests/e2e/assets.spec.ts",
   "tests/e2e/exported-store.spec.ts",
@@ -31,7 +29,6 @@ const quickSmokeSpecs = [
   "tests/e2e/storefront-nojs.spec.ts",
   "tests/e2e/catalog.spec.ts",
   "tests/e2e/assets.spec.ts",
-  "tests/e2e/interacciones.spec.ts",
 ];
 
 function maxMtimeRecursive(dir) {
@@ -196,7 +193,7 @@ if (isFull) {
 }
 // Construir comando playwright con workers acotados (3 por defecto, env override)
 // y solo Chromium (smoke no necesita Firefox/WebKit). Quick usa retries 0 y 0 trace para ahorrar ~10s.
-const smokeMode = isQuick ? "quick (5 specs, ~1 min)" : "full (15 specs, cierre)";
+const smokeMode = isQuick ? "quick (4 specs)" : "full (13 specs, cierre)";
 console.log(`[smoke] ▶ modo ${smokeMode}`);
 const playwrightArgs = ["test", ...activeSpecs, ...extraArgs];
 if (isQuick && !extraArgs.includes("--retries")) playwrightArgs.push("--retries", "0");

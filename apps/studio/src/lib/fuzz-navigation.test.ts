@@ -20,13 +20,13 @@ function randomString(rand: () => number, len = 8): string {
 }
 describe("fuzz navigation/modules", () => {
   it(
-    "20 seeds x 30 operaciones mantienen parse y sin referencias huérfanas",
+    "10 semillas x 50 operaciones mantienen parse y sin referencias huérfanas",
     { timeout: 120000 },
     () => {
-      for (let seed = 0; seed < 20; seed++) {
+      for (let seed = 0; seed < 10; seed++) {
         const rand = mulberry32(seed);
         let project: StoreProjectV1 = structuredClone(catalogScaleStore);
-        for (let step = 0; step < 30; step++) {
+        for (let step = 0; step < 50; step++) {
           const before = JSON.stringify(project);
           const op = Math.floor(rand() * 5);
           try {

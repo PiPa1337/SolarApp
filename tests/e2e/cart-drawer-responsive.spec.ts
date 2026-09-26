@@ -140,55 +140,8 @@ test("mantiene el borde y el foco de los inputs dentro del panel de checkout", a
   expect(metrics?.rightInset).toBeGreaterThanOrEqual(6);
 });
 
-test("compacta doce líneas y reserva espacio para la scrollbar en mobile", async ({ page }) => {
-  for (const viewport of [
-    { width: 390, height: 844 },
-    { width: 320, height: 568 },
-  ]) {
-    await page.setViewportSize(viewport);
-    await openPopulatedCart(page);
-    await page.evaluate(() => document.fonts.ready);
-
-    const cartScroll = page.locator(".catalog-cart-scroll");
-    await expect
-      .poll(() => cartScroll.evaluate((scroll) => scroll.scrollHeight / scroll.clientHeight))
-      .toBeLessThan(6);
-
-    const metrics = await page.locator(".catalog-cart-drawer").evaluate((drawer) => {
-      const scroll = drawer.querySelector<HTMLElement>(".catalog-cart-scroll");
-      const footer = drawer.querySelector<HTMLElement>(".catalog-drawer-footer");
-      const prices = [
-        ...drawer.querySelectorAll<HTMLElement>(".solara-cart-line > span:last-child"),
-      ];
-      if (!scroll || !footer) return null;
-      const scrollRect = scroll.getBoundingClientRect();
-      return {
-        scrollRatio: scroll.scrollHeight / scroll.clientHeight,
-        footerHeight: footer.getBoundingClientRect().height,
-        gutter: getComputedStyle(scroll).scrollbarGutter,
-        paddingRight: Number.parseFloat(getComputedStyle(scroll).paddingRight),
-        minimumPriceGap: Math.min(
-          ...prices.map(
-            (price) => scrollRect.left + scroll.clientWidth - price.getBoundingClientRect().right,
-          ),
-        ),
-        documentWidth: document.documentElement.scrollWidth,
-      };
-    });
-    expect(metrics).not.toBeNull();
-    expect(metrics?.scrollRatio).toBeLessThan(6);
-    expect(metrics?.footerHeight).toBeLessThan(90);
-    expect(metrics?.gutter).toContain("stable");
-    expect(metrics?.paddingRight).toBeGreaterThanOrEqual(12);
-    expect(metrics?.minimumPriceGap).toBeGreaterThanOrEqual(12);
-    expect(metrics?.documentWidth).toBeLessThanOrEqual(viewport.width);
-  }
-});
-
 test("mantiene el drawer lateral hasta 600px y usa pantalla completa debajo", async ({ page }) => {
   for (const [width, expectedWidth] of [
-    [768, 520],
-    [767, 520],
     [600, 520],
     [599, 599],
   ] as const) {

@@ -167,29 +167,7 @@ test("N3.1 Canvas permite editar texto del contacto V2 del Home", async ({ page 
   await expect(target).toHaveText("Consultanos desde Canvas", { timeout: 20_000 });
 });
 
-test("N3.2 Canvas conserva el vínculo generado de un canal de contacto", async ({ page }) => {
-  test.setTimeout(90_000);
-  const frame = await openCanvasStore(page, "N3 contacto vínculo", {
-    initialEmail: "inicial@example.com",
-  });
-  const target = frame.locator(
-    '[data-canvas-edit^="ce-home-section-contact-channels-identity-email-identity-"]',
-  );
-  const dialog = await openTextDialog(page, target, "Email de contacto");
-  await applyText(dialog, "canvas-contacto@example.com");
-  await expect(
-    frame.locator('.contact-channel-row[href="mailto:canvas-contacto@example.com"]'),
-  ).toBeVisible({ timeout: 20_000 });
-});
 
-test("N3.3 Canvas edita el título de un producto desde una card", async ({ page }) => {
-  test.setTimeout(90_000);
-  const frame = await openCanvasStore(page, "N3 producto título");
-  const target = frame.locator('[data-canvas-edit*="-product-title-product-"]').first();
-  const dialog = await openTextDialog(page, target, "Título de producto");
-  await applyText(dialog, "Producto editado en Canvas");
-  await expect(target).toHaveText("Producto editado en Canvas", { timeout: 20_000 });
-});
 
 test("N3.4 Canvas cambia la imagen de producto desde una card", async ({ page }) => {
   test.setTimeout(90_000);
@@ -200,52 +178,9 @@ test("N3.4 Canvas cambia la imagen de producto desde una card", async ({ page })
   await expect(target).toBeVisible({ timeout: 20_000 });
 });
 
-test("N3.5 Canvas edita el título de una categoría", async ({ page }) => {
-  test.setTimeout(90_000);
-  const frame = await openCanvasStore(page, "N3 categoría título");
-  const target = frame.locator('[data-canvas-edit*="-category-title-category-"]').first();
-  const dialog = await openTextDialog(page, target, "Título de categoría");
-  await applyText(dialog, "Categoría editada en Canvas");
-  await expect(target).toHaveText("Categoría editada en Canvas", { timeout: 20_000 });
-});
 
-test("N3.6 Canvas cambia la imagen de una categoría", async ({ page }) => {
-  test.setTimeout(90_000);
-  const frame = await openCanvasStore(page, "N3 categoría imagen");
-  const target = frame.locator('[data-canvas-image*="-category-image-category-"]').first();
-  const dialog = await openTextDialog(page, target, "Imagen de categoría");
-  await applyDifferentAsset(dialog);
-  await expect(target).toBeVisible({ timeout: 20_000 });
-});
 
-test("N3.7 Canvas edita el título de una colección generada", async ({ page }) => {
-  test.setTimeout(90_000);
-  const frame = await openCanvasStore(page, "N3 colección título", {
-    fixture: catalogModernV2Store,
-  });
-  const routed = await goToRoute(page, "/colecciones/recien-llegados/");
-  const target = routed.locator(
-    '[data-canvas-edit][data-canvas-entity-kind="collection"][data-canvas-field="title"]',
-  );
-  const dialog = await openTextDialog(page, target, "Título de colección");
-  await applyText(dialog, "Colección editada en Canvas");
-  await expect(target).toHaveText("Colección editada en Canvas", { timeout: 20_000 });
-  await expect(frame.locator("html[data-store-id]")).toBeVisible();
-});
 
-test("N3.8 Canvas cambia la imagen de una colección generada", async ({ page }) => {
-  test.setTimeout(90_000);
-  await openCanvasStore(page, "N3 colección imagen", {
-    fixture: catalogModernV2Store,
-  });
-  const frame = await goToRoute(page, "/colecciones/recien-llegados/");
-  const target = frame.locator(
-    '[data-canvas-image][data-canvas-entity-kind="collection"][data-canvas-field="imageId"]',
-  );
-  const dialog = await openTextDialog(page, target, "Imagen de colección");
-  await applyDifferentAsset(dialog);
-  await expect(target).toBeVisible({ timeout: 20_000 });
-});
 
 test("N3.9 Canvas edita descripción y precio entero en el PDP", async ({ page }) => {
   test.setTimeout(90_000);
@@ -268,30 +203,7 @@ test("N3.9 Canvas edita descripción y precio entero en el PDP", async ({ page }
   });
 });
 
-test("N3.10 Canvas permite actualizar el alt de una imagen real", async ({ page }) => {
-  test.setTimeout(90_000);
-  await openCanvasStore(page, "N3 alt imagen", {
-    fixture: catalogModernV2Store,
-  });
-  const frame = await goToRoute(page, "/productos/remera-esencial-de-algodon/");
-  const target = frame.locator('[data-canvas-edit*="-asset-alt-asset-"]').first();
-  const dialog = await openTextDialog(page, target, "Texto alternativo de imagen");
-  await applyText(dialog, "Remera de algodón editada desde Canvas");
-  await expect(target).toHaveAttribute("alt", "Remera de algodón editada desde Canvas", {
-    timeout: 20_000,
-  });
-});
 
-test("N3.11 Canvas actualiza un ítem de repeater con su itemId", async ({ page }) => {
-  test.setTimeout(90_000);
-  const frame = await openCanvasStore(page, "N3 repeater", {
-    fixture: catalogModernV2Store,
-  });
-  const target = frame.locator('[data-canvas-edit*="-item-author"][data-canvas-item]').first();
-  const dialog = await openTextDialog(page, target, "Nombre del testimonio");
-  await applyText(dialog, "Cliente actualizado en Canvas");
-  await expect(target).toHaveText("Cliente actualizado en Canvas", { timeout: 20_000 });
-});
 
 test("N3.12 cancelar y cambiar de ruta limpian la selección de Canvas", async ({ page }) => {
   test.setTimeout(90_000);

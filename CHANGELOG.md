@@ -1,3 +1,40 @@
+### Recorte final de interacciones E2E (2026-09-26)
+
+- Matriz responsive baja de 46 a 22 navegaciones; tres loops de media, menú y
+  carrito pasan de 6/5/4 a 4/3/2. Conserva límites exactos, tres checkpoints,
+  rutas móviles y extremos de catálogo.
+- Se retira un E2E repetido de importación inválida: queda el flujo de error de
+  JSON corrupto y los rechazos de parseo/schema en tests directos. Auditoría
+  queda en 5 specs / 26 casos; release proyecta 146 Chromium y 152 entre los
+  tres navegadores. No se ejecutaron tests ni `playwright --list`.
+- `test:mutation` deja de relanzar 500 valores aleatorios de formato tres veces
+  para dos mutantes: la guarda de enteros seguros pasa a `money.test.ts`, que
+  ahora es la prueba focal para ambos mutantes; la propiedad aleatoria queda una
+  sola vez en el test normal.
+- El test de métricas de dashboard baja de 164 a 100 productos. Undo/redo/FIFO
+  pasan de 520 a 153 cambios en los casos de frontera; se quita el caso redundante
+  de sólo longitud. WhatsApp elimina el lote duplicado de 100 líneas y conserva
+  el caso obligatorio 60→50+10 con comprobación de cada renglón.
+
+### Continuación de poda E2E (2026-09-26)
+
+- La proyección funcional baja de 61 specs / 164 casos a 52 / 120. Se retiran
+  nueve specs redundantes de robustez y Preview, y se consolidan búsquedas y
+  viewports repetidos; también se quita el caso duplicado de movimiento reducido
+  entre Gargantua y editor-motion. Las reglas SEO/runtime que salen del E2E
+  conservan pruebas directas en Core, exporter y storefront-runtime.
+- Smoke full queda en 13 specs / 28 casos; smoke quick sigue en 4 / 6. Las cinco
+  auditorías manuales conservan 26 casos. La ficha de alcance y el plan de poda
+  reflejan estas proyecciones; no se ejecutaron tests ni `playwright --list`.
+
+### Segunda poda extrema de la suite (2026-09-26)
+
+- La fábrica QA queda en 3 tiendas de 6, 30 y 60 productos (96 productos, 6 lotes); el comando manual usa 3 tiendas por defecto.
+- Se consolidan errores de fila, progreso del Worker, cancelación, confirmación, resultado y acciones entre páginas en un recorrido CSV. Se eliminan dos E2E CSV duplicados de `editor-workers.spec.ts`.
+- Fuzz baja de 3.850 a 1.200 pasos deterministas. `visual-break` baja de 18 a 12 casos en los tres viewports oficiales, sin exportar 50 productos ni abrir 20 líneas de carrito por viewport.
+- El hash del optimizer queda en la suite normal con 4 MB; `test:stress` conserva un único caso manual de streaming JSON sobre el límite de cadena de V8.
+- Documentación de alcance y poda actualizada. Proyección estática: 448 casos funcionales y 27 de auditoría; no se ejecutaron tests ni se volvió a enumerar Playwright, por lo que estos cambios siguen sin validar en ejecución.
+
 ### Poda extrema de la suite (2026-09-26)
 
 - Se borran cinco perfiles manuales sin aserciones, dos benchmarks de catálogo

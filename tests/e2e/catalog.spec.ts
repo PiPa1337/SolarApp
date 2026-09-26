@@ -4,6 +4,12 @@ import { exportProductsCsv, generatePerformanceFixture } from "@solara/core";
 import { startStudioServer, stopStudioServer } from "./studio-server";
 
 const selectionCsv = exportProductsCsv(generatePerformanceFixture(60).products);
+const importErrorCsv = [
+  "producto_id,variante_id,slug,titulo,descripcion,marca,estado,categorias,colecciones,etiquetas,imagenes,variante,sku,opciones,precio_centavos,precio_anterior_centavos,disponible,estado_stock,gtin,mpn,imagen_variante,creado_en,actualizado_en",
+  ",,taza-rota,Taza rota,,Marca A,active,,,casa,,Única,,,abc,,true,in_stock,,,,2026-08-07T10:00:00.000Z,2026-08-07T10:00:00.000Z",
+  ",,taza-mal-opcion,Taza con opción inválida,,Marca B,active,,,casa,,Única,,Color,12500,,true,in_stock,,,,2026-08-07T10:00:00.000Z,2026-08-07T10:00:00.000Z",
+  ",,taza-buena,Taza buena,,Marca C,active,,,casa,,Única,TAZA-001,,125000,,true,in_stock,,,,2026-08-07T10:00:00.000Z,2026-08-07T10:00:00.000Z",
+].join("\r\n");
 let server: Server;
 let studioUrl: string;
 
@@ -43,12 +49,23 @@ async function openCatalog(page: import("@playwright/test").Page) {
   await expect(page.getByRole("heading", { name: "Catálogo", exact: true })).toBeVisible();
 }
 
-async function uploadCsv(page: import("@playwright/test").Page, csv: string, name: string) {
+async function uploadCsv(
+  page: import("@playwright/test").Page,
+  csv: string,
+  name: string,
+  checkProgress = false,
+) {
   await page.locator('input[type="file"][accept*="csv"]').setInputFiles({
     name,
     mimeType: "text/csv",
     buffer: Buffer.from(csv, "utf8"),
   });
+  if (checkProgress) {
+    const importButton = page.getByTestId("ui-csv-import");
+    await expect(importButton).toBeDisabled();
+    await expect(importButton).toContainText("Procesando");
+    await expect(page.getByTestId("ui-catalog-progress")).toContainText("Procesando CSV");
+  }
   await expect(page.getByRole("heading", { name })).toBeVisible();
 }
 
@@ -109,9 +126,27 @@ test("edita variantes y conserva el último cambio al volver, recargar y reabrir
   await expect(page.getByRole("dialog").locator(".variant-editor")).toHaveCount(2);
 });
 
-test("previsualiza, cancela y edita en masa entre páginas", async ({ page }) => {
+test("importa CSV: errores, progreso, cancelación y edición masiva entre páginas", async ({
+  page,
+}) => {
   test.setTimeout(90_000);
   await openCatalog(page);
+
+  await page.locator('input[type="file"][accept*="csv"]').setInputFiles({
+    name: "catalogo-con-errores.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(importErrorCsv, "utf8"),
+  });
+  const errors = page.getByTestId("ui-csv-errors");
+  await expect(errors).toBeVisible();
+  await expect(page.getByTestId("ui-csv-error")).toHaveCount(2);
+  await expect(errors.getByText(/Fila 2/)).toBeVisible();
+  await expect(errors.getByText(/precio_centavos/)).toBeVisible();
+  await expect(errors.getByText(/Fila 3/)).toBeVisible();
+  await expect(errors.getByText(/opciones/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Reemplazar catálogo" })).toHaveCount(0);
+  await expect(page.getByText("33 productos y 41 variantes.")).toBeVisible();
+
   await uploadCsv(page, selectionCsv, "catalogo-60.csv");
 
   const review = page.locator(".import-review");
@@ -121,7 +156,7 @@ test("previsualiza, cancela y edita en masa entre páginas", async ({ page }) =>
   // La tienda derivada arranca con la misma base neutral: 33 productos y 41 variantes.
   await expect(page.getByText("33 productos y 41 variantes.")).toBeVisible();
 
-  await uploadCsv(page, selectionCsv, "catalogo-60.csv");
+  await uploadCsv(page, selectionCsv, "catalogo-60.csv", true);
   await clickDom(page.getByRole("button", { name: "Reemplazar catálogo" }));
   await expect(page.getByText("60 productos y 120 variantes.")).toBeVisible({
     timeout: 30_000,

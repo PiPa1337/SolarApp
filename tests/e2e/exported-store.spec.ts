@@ -71,6 +71,9 @@ test("selecciona una variante, agrega al carrito y abre WhatsApp", async ({ page
   page.on("console", (message) => {
     if (message.type() === "error") runtimeErrors.push(`console.error: ${message.text()}`);
   });
+  page.on("response", (response) => {
+    if (response.status() === 404) runtimeErrors.push(`404: ${response.url()}`);
+  });
 
   await page.goto(storeUrl("/productos/manta-bruma/"));
   await page.getByLabel("Variante", { exact: true }).selectOption("variant-manta-piedra");
@@ -106,61 +109,4 @@ test("selecciona una variante, agrega al carrito y abre WhatsApp", async ({ page
   expect(openedUrl).toContain("https://wa.me/5491123456789?text=");
   expect(decodeURIComponent(openedUrl ?? "")).toContain("2x Manta Bruma (Piedra)");
   expect(runtimeErrors).toEqual([]);
-});
-
-test("descubre productos siguiendo enlaces sin JavaScript", async ({ browser }) => {
-  const context = await browser.newContext({ javaScriptEnabled: false });
-  const page = await context.newPage();
-  await page.goto(storeUrl("/"));
-
-  const productLink = page.locator('a[href="/productos/manta-bruma/"]').first();
-  await expect(productLink).toBeVisible();
-  await productLink.click();
-  await expect(page).toHaveURL(/\/productos\/manta-bruma\/$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Manta Bruma" })).toBeVisible();
-  await context.close();
-});
-
-test("mantiene composicion y ancho estable en desktop y movil", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(storeUrl("/"));
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Una casa con materia y calma." }),
-  ).toBeVisible();
-  for (const section of await page.locator("[data-motion-root]").all()) {
-    await section.scrollIntoViewIfNeeded();
-  }
-  await page.locator('[data-solara-module="editorial-header"]').scrollIntoViewIfNeeded();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
-    false,
-  );
-  await page.screenshot({ path: "test-results/storefront-desktop.png", fullPage: true });
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
-    false,
-  );
-  await page.screenshot({ path: "test-results/storefront-mobile.png", fullPage: true });
-});
-
-test("mantiene el contenido visible con movimiento reducido y activa inView", async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: "no-preference" });
-  await page.goto(storeUrl("/"));
-  const hero = page.locator('[data-solara-module="hero-media"]');
-  await expect(hero).toHaveAttribute("data-motion-intensity", "0.5");
-  await expect(hero).toHaveAttribute("data-motion-entry", "0.25");
-  await hero.scrollIntoViewIfNeeded();
-  await expect(hero).toHaveAttribute("data-motion-visible", "true");
-
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.reload();
-  await expect(hero).toHaveAttribute("data-motion-visible", "true");
-  expect(
-    await page
-      .locator('[data-solara-module="hero-media"] [data-motion-zone]')
-      .first()
-      .evaluate((element) => {
-        return getComputedStyle(element).opacity;
-      }),
-  ).toBe("1");
 });

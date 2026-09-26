@@ -27,20 +27,14 @@ const mutants = [
     file: "packages/project-schema/src/money.ts",
     from: "if (!Number.isSafeInteger(cents)) {",
     to: "if (false) {",
-    tests: [
-      "packages/project-schema/src/money.test.ts",
-      "packages/project-schema/src/money.property.test.ts",
-    ],
+    tests: ["packages/project-schema/src/money.test.ts"],
   },
   {
     id: "money-auto-fraction-branch",
     file: "packages/project-schema/src/money.ts",
     from: 'const fractionDigits = display === "auto" && cents % 100 === 0 ? 0 : 2;',
     to: 'const fractionDigits = display === "auto" && cents % 100 !== 0 ? 0 : 2;',
-    tests: [
-      "packages/project-schema/src/money.test.ts",
-      "packages/project-schema/src/money.property.test.ts",
-    ],
+    tests: ["packages/project-schema/src/money.test.ts"],
   },
 ];
 

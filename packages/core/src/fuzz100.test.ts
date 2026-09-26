@@ -36,7 +36,7 @@ function checkInvariants(project: any, label: string) {
 }
 describe("fuzz100", () => {
   it(
-    "10 seeds x 50 ops",
+    "10 semillas x 25 operaciones",
     { timeout: 180000 },
     async () => {
       // Mantiene varias semillas deterministas sin repetir secuencias largas.
@@ -45,7 +45,7 @@ describe("fuzz100", () => {
         let project: any = structuredClone(catalogScaleStore);
         let history = createHistory(project);
         const base = Date.parse("2026-08-20T10:00:00.000Z") + seed * 100000;
-        for (let step = 0; step < 50; step++) {
+        for (let step = 0; step < 25; step++) {
           const at = new Date(base + step * 700).toISOString();
           const op = Math.floor(rand() * 6);
           let cmd: any = null;

@@ -6,7 +6,6 @@ const EXCLUDED_PATHS = ["/node_modules/", "/dist/", "/back up/", "/.local-backup
 const DAILY_SMOKE_E2E = new Set([
   "/tests/e2e/exported-store.spec.ts",
   "/tests/e2e/storefront-nojs.spec.ts",
-  "/tests/e2e/interacciones.spec.ts",
   "/tests/e2e/focus-visible.spec.ts",
   "/tests/e2e/exporter-sentinel.spec.ts",
 ]);

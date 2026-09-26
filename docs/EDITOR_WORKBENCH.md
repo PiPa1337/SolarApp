@@ -74,21 +74,20 @@ Los tokens y reglas visuales compartidas están registrados en `DESIGN.md`;
 
 ## Verificación
 
-`tests/e2e/editor-workbench.spec.ts` cubre navegación, geometría, restauración de
-presets e inspectores, incluidas las 24 combinaciones de apertura de ocho áreas
-desde tres presets y el atajo de apertura. Las capturas usan ventanas de escritorio
-de 1280, 1440 y 1920 px, con referencias adicionales de 1914×903 y 1920×912 para
-el aprovechamiento del espacio hasta la preview. Los contratos comerciales siguen cubiertos por las suites del editor,
-catálogo, recursos, exportación y persistencia.
+La suite E2E conserva un recorrido del editor en `editor-smoke.spec.ts`, los
+atajos y la reapertura del panel en `ui-shell.spec.ts`, y la edición de secciones
+en `studio-builder.spec.ts`. Se retiró la matriz repetida de 24 combinaciones de
+ocho áreas y tres presets. La revisión manual del workbench prioriza 1920×912 y
+comprueba geometría, scroll, cierre visible y espacio de la preview.
 
 La X de cierre ocupa una zona fija fuera del scroll, tanto en las áreas como en
 los detalles. El contenido reserva espacio para que no quede bajo ese control.
 La tabla de productos ajusta sus columnas y campos al ancho del panel. Por debajo
 de 700 px de panel, cada fila se presenta como una ficha en dos columnas,
 con etiquetas y todas sus acciones; se conserva la ordenación y selección.
-`tests/e2e/editor-scroll.spec.ts` recorre todo el alto a 1920×912 con grupos
-abiertos; verifica cierre visible y accesible, scroll horizontal raíz e interno,
-y captura cada tramo para revisión visual.
+Las capturas y comprobaciones de todos los tramos de scroll quedan en esa
+revisión visual manual; el cierre y los accesos de teclado se revisan en los
+recorridos funcionales retenidos.
 
 Los fieldsets de un solo campo no reciben el padding de los grupos de formulario.
 Las herramientas se alinean al inicio del panel; el espacio libre no estira sus

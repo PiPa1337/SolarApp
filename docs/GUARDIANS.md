@@ -11,7 +11,7 @@ Miden el layout real con `getBoundingClientRect()`. No dependen de screenshots.
 | --- | --- | --- |
 | `__vision__/alignment.spec.ts` | Tabs del nav con misma X/Y; columnas del builder alineadas; section-row con alto acotado; cards del dashboard consistentes | `pnpm exec playwright test tests/e2e/__vision__/alignment.spec.ts` |
 | `__vision__/storefront-alignment.spec.ts` | Cards por grilla con ancho uniforme; módulos centrados; sin overflow en 320px | `pnpm exec playwright test tests/e2e/__vision__/storefront-alignment.spec.ts` |
-| `visual-break.spec.ts` | Overflow horizontal en 10 viewports (320-2560) con datos adversarios (títulos largos, Unicode, precios extremos) | `pnpm exec playwright test tests/e2e/visual-break.spec.ts` |
+| `visual-break.spec.ts` | 12 casos en Mobile 390×844, Tablet 1024×900 y Desktop 1440×900, con pocos productos y estados representativos | `pnpm exec playwright test tests/e2e/visual-break.spec.ts` |
 | `responsive-breakpoints.spec.ts` | Modo correcto, overflow y rutas críticas en 762/773 y 1194/1205, con capturas cinco píxeles antes/después de cada frontera | `node_modules\\.bin\\playwright.CMD test tests/e2e/responsive-breakpoints.spec.ts --workers=1 --retries=0` |
 
 ## Guardianes adversariales
@@ -22,9 +22,9 @@ Simulan condiciones hostiles o entradas maliciosas.
 | --- | --- | --- |
 | `__bugs__/content-edge-cases.spec.ts` | Textos extremos (RTL, emoji, 5000 chars), precios $0.01/$99999999.99, sin imágenes | `pnpm exec playwright test tests/e2e/__bugs__/content-edge-cases.spec.ts` |
 | `__bugs__/navigation-matrix.spec.ts` | Todo link interno responde 200; sin duplicados por trailing slash | `pnpm exec playwright test tests/e2e/__bugs__/navigation-matrix.spec.ts` |
-| `__bugs__/runtime-failures.spec.ts` | localStorage bloqueado, catalog corrupto, imágenes rotas — sin errores JS ni overflow | `pnpm exec playwright test tests/e2e/__bugs__/runtime-failures.spec.ts` |
-| `__bugs__/forms-adversarial.spec.ts` | XSS en checkout/contacto, 10k chars, solo emojis — sin ejecución ni inyección | `pnpm exec playwright test tests/e2e/__bugs__/forms-adversarial.spec.ts` |
-| `__bugs__/seo-integrity.spec.ts` | Canonical único, JSON-LD parseable, sitemap sin rutas rotas | `pnpm exec playwright test tests/e2e/__bugs__/seo-integrity.spec.ts` |
+| `packages/storefront-runtime/src/redteam-functional.test.ts` | localStorage bloqueado, catálogo corrupto o desactualizado, imágenes rotas y texto hostil | `corepack pnpm --filter @solara/storefront-runtime test` |
+| `__bugs__/forms-adversarial.spec.ts` | Payloads hostiles del checkout no ejecutan ni inyectan HTML; se retiró la repetición de 10k caracteres | `corepack pnpm exec playwright test tests/e2e/__bugs__/forms-adversarial.spec.ts` |
+| `packages/exporter/src/seo-audit.test.ts` y `seo-deep.test.ts` | Canonical, JSON-LD, noindex y sitemap comprobados directamente sobre el HTML exportado | `corepack pnpm --filter @solara/exporter test` |
 
 ## Guardianes de presupuesto
 

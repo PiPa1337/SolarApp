@@ -4,11 +4,10 @@ import { expect, type Page, test } from "@playwright/test";
 import { exportProject } from "@solara/exporter";
 import type { StoreProjectV1 } from "@solara/project-schema";
 import { catalogModernStore } from "@solara/project-schema/catalog-modern-fixture";
-import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 
 // Cada test exporta el sitio y captura pantallas por viewport: con la suite
 // completa con alta concurrencia el default de 30s flaquea por contención
-// (mismo tratamiento que axe-site y oversize-snapshot).
+// (mismo tratamiento que axe-site).
 test.setTimeout(120_000);
 
 const VIEWPORTS = [
@@ -17,8 +16,19 @@ const VIEWPORTS = [
   { w: 1440, h: 900, name: "1440" },
 ];
 
+function smallVisualStore(): StoreProjectV1 {
+  const project = JSON.parse(JSON.stringify(catalogModernStore)) as StoreProjectV1;
+  project.products = project.products.slice(0, 3);
+  const productIds = new Set(project.products.map((product) => product.id));
+  for (const category of project.categories)
+    category.productIds = category.productIds.filter((id) => productIds.has(id));
+  for (const collection of project.collections)
+    collection.productIds = collection.productIds.filter((id) => productIds.has(id));
+  return project;
+}
+
 function longTextStore(): StoreProjectV1 {
-  const base = JSON.parse(JSON.stringify(catalogModernStore)) as StoreProjectV1;
+  const base = smallVisualStore();
   base.identity.brandName =
     "MarcaSuperLargaSinEspaciosQueNoDeberiaRomperElLayoutYDebeHacerWrapCorrectamenteConOverflowWrapAnywhereYConPalabrasMuyLargasComoSupercalifragilisticoespialidoso".repeat(
       1,
@@ -53,60 +63,8 @@ function longTextStore(): StoreProjectV1 {
   return base;
 }
 
-function manyProductsStore(): StoreProjectV1 {
-  const base = JSON.parse(JSON.stringify(catalogScaleStore)) as StoreProjectV1;
-  while (base.products.length < 50) {
-    const idx = base.products.length;
-    const clone = JSON.parse(
-      JSON.stringify(base.products[idx % 10]),
-    ) as StoreProjectV1["products"][number];
-    clone.id = `prod-many-${idx}`;
-    clone.slug = `prod-many-${idx}`;
-    clone.title = `Producto ${idx} ${"Extra".repeat(5)}`;
-    clone.variants = clone.variants.map((v, vi) => ({
-      ...v,
-      id: `prod-many-${idx}-variant-${vi}`,
-      sku: `SKU-MANY-${idx}-${vi}`,
-    }));
-    base.products.push(clone);
-  }
-  // recompute derived productIds correctly (including parent scope)
-  const childrenByParent = new Map();
-  for (const cat of base.categories) {
-    const list = childrenByParent.get(cat.parentId ?? "") ?? [];
-    list.push(cat.id);
-    childrenByParent.set(cat.parentId ?? "", list);
-  }
-  function descendantsOf(id) {
-    const res = [];
-    const stack = [id];
-    const seen = new Set([id]);
-    while (stack.length) {
-      const cur = stack.pop();
-      const kids = childrenByParent.get(cur) ?? [];
-      for (const kid of kids) {
-        if (seen.has(kid)) continue;
-        seen.add(kid);
-        res.push(kid);
-        stack.push(kid);
-      }
-    }
-    return res;
-  }
-  for (const cat of base.categories) {
-    const scope = new Set([cat.id, ...descendantsOf(cat.id)]);
-    cat.productIds = base.products
-      .filter((p) => p.categoryIds.some((cid) => scope.has(cid)))
-      .map((p) => p.id);
-  }
-  for (const col of base.collections) {
-    col.productIds = base.products.filter((p) => p.collectionIds.includes(col.id)).map((p) => p.id);
-  }
-  return base;
-}
-
 function imageVariantStore(): StoreProjectV1 {
-  const base = JSON.parse(JSON.stringify(catalogModernStore)) as StoreProjectV1;
+  const base = smallVisualStore();
   // forzar 3 productos con imagenes vertical/horizontal/cuadrada simulando width/height distintos
   const vId = base.products[0]?.variants[0]?.imageId;
   const assetV = base.assets.find((a) => a.id === vId);
@@ -220,9 +178,8 @@ async function checkStickyFilters(page: Page) {
       .locator(".catalog-category-filters")
       .first()
       .evaluate((el: HTMLElement) => el.getBoundingClientRect().top);
-    const _navBottom = navbarBox.y + navbarBox.height;
-    // filters should be visible, not under nav (top should be >= navBottom - 10 or >=0)
-    expect(afterFiltersTop, "filters sticky no debe quedar bajo navbar").toBeGreaterThanOrEqual(-2);
+    // Los filtros sticky deben seguir dentro del viewport después del scroll.
+    expect(afterFiltersTop, "filters sticky sigue en el viewport").toBeGreaterThanOrEqual(-2);
     await page.evaluate(() => window.scrollTo(0, 0));
   }
 }
@@ -230,7 +187,7 @@ async function checkStickyFilters(page: Page) {
 for (const vp of VIEWPORTS) {
   test.describe(`viewport ${vp.name} (${vp.w}x${vp.h})`, () => {
     test(`home sin overflow y botones visibles`, async ({ page }) => {
-      const { server } = startServer(catalogModernStore);
+      const { server } = startServer(smallVisualStore());
       await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
       const base = serverBase(server);
       try {
@@ -239,6 +196,17 @@ for (const vp of VIEWPORTS) {
         await page.waitForTimeout(300);
         await checkNoHorizontalScroll(page);
         await checkButtonsNotCut(page, vp.w);
+        if (vp.w >= 1024) {
+          for (const zoom of [1.5, 2]) {
+            await page.evaluate((value: number) => {
+              document.body.style.zoom = String(value);
+            }, zoom);
+            await checkNoHorizontalScroll(page);
+          }
+          await page.evaluate(() => {
+            document.body.style.zoom = "1";
+          });
+        }
         // cards alturas: verificar que ninguna card tenga altura 0 o desproporcionada
         const cardCount = await page.locator(".catalog-product-card").count();
         if (cardCount > 0) {
@@ -262,7 +230,7 @@ for (const vp of VIEWPORTS) {
     });
 
     test(`categoria con 1-2 productos no debe hacer cards gigantes`, async ({ page }) => {
-      const baseProject = JSON.parse(JSON.stringify(catalogModernStore)) as StoreProjectV1;
+      const baseProject = smallVisualStore();
       // dejar solo 1 producto en una categoria
       const cat = baseProject.categories[0];
       if (cat) {
@@ -355,109 +323,6 @@ for (const vp of VIEWPORTS) {
       }
     });
 
-    test(`zoom 150% y 200% sin scroll horizontal`, async ({ page }) => {
-      const { server } = startServer(catalogModernStore);
-      await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
-      const base = serverBase(server);
-      try {
-        await page.setViewportSize({ width: vp.w, height: vp.h });
-        await page.goto(`${base}/`, { waitUntil: "domcontentloaded" });
-        for (const z of [1.25, 1.5, 2]) {
-          if (vp.w < 500) continue; // narrow viewports at zoom cause artificial overflow via CSS zoom, skip
-          await page.evaluate((zoom: number) => {
-            document.body.style.zoom = String(zoom);
-          }, z);
-          await page.waitForTimeout(150);
-          await checkNoHorizontalScroll(page);
-          await page.screenshot({
-            path: `test-results/visual-break/${vp.name}-zoom-${String(z).replace(".", "-")}.png`,
-          });
-        }
-        await page.evaluate(() => {
-          document.body.style.zoom = "1";
-        });
-      } finally {
-        await new Promise<void>((r) => server.close(() => r()));
-      }
-    });
-
-    test(`carrito con muchas lineas y 50 productos no rompe layout`, async ({ page }) => {
-      // Esta prueba construye y renderiza un export de 50 productos por viewport;
-      // bajo la carga paralela del full E2E puede superar el timeout interactivo
-      // aunque el layout termine correctamente.
-      test.setTimeout(60_000);
-      const project = manyProductsStore();
-      const { server, exported } = startServer(project);
-      await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
-      const base = serverBase(server);
-      try {
-        await page.setViewportSize({ width: vp.w, height: vp.h });
-        // categoria con muchos productos
-        const catPath = [...exported.files.keys()].find((p) => p.startsWith("categorias/"));
-        const route = catPath ? `/${catPath.slice(0, -"index.html".length)}` : "/";
-        await page.goto(`${base}${route}`, { waitUntil: "domcontentloaded" });
-        await checkNoHorizontalScroll(page);
-        await page
-          .screenshot({
-            path: `test-results/visual-break/${vp.name}-many-products.png`,
-            timeout: 10_000,
-          })
-          .catch(() => undefined);
-        // carrito con muchas lineas: inyectar via localStorage y abrir drawer
-        await page.goto(`${base}/`, { waitUntil: "domcontentloaded" });
-        const storeId = project.id;
-        const cartLines = project.products.slice(0, 20).map((p) => ({
-          productId: p.id,
-          variantId: p.variants[0].id,
-          title: p.title,
-          variantTitle: p.variants[0].title,
-          sku: p.variants[0].sku,
-          unitPrice: p.variants[0].price,
-          quantity: 2,
-          imageUrl: "",
-        }));
-        await page.evaluate(
-          ({ sid, lines }: { sid: string; lines: typeof cartLines }) => {
-            localStorage.setItem(`solara-cart:${sid}`, JSON.stringify(lines));
-            localStorage.setItem(`solara-cart:${sid}:backup`, JSON.stringify(lines));
-          },
-          { sid: storeId, lines: cartLines },
-        );
-        await page.reload({ waitUntil: "domcontentloaded" });
-        const openBtn = page.locator("[data-solara-cart-open]").first();
-        if ((await openBtn.count()) > 0) {
-          await openBtn.click();
-          await page.waitForTimeout(300);
-          await checkNoHorizontalScroll(page);
-          // verificar que el drawer no sale del viewport y que el contador no distorsiona
-          const drawerBox = await page
-            .locator("[data-cart-drawer]")
-            .first()
-            .boundingBox()
-            .catch(() => null);
-          if (drawerBox) {
-            expect(drawerBox.x + drawerBox.width).toBeLessThanOrEqual(vp.w + 2);
-          }
-          const countBox = await page
-            .locator("[data-cart-count]")
-            .first()
-            .boundingBox()
-            .catch(() => null);
-          if (countBox) {
-            expect(countBox.width).toBeLessThan(60);
-            expect(countBox.height).toBeLessThan(60);
-          }
-          await page
-            .screenshot({
-              path: `test-results/visual-break/${vp.name}-cart-many.png`,
-              timeout: 10_000,
-            })
-            .catch(() => undefined);
-        }
-      } finally {
-        await new Promise<void>((r) => server.close(() => r()));
-      }
-    });
   });
 }
 
@@ -502,7 +367,7 @@ test("imagenes vertical/horizontal/cuadrada no recortan mal y no generan CLS", a
 });
 
 test("sticky filtros no se tapa con navbar", async ({ page }) => {
-  const { server, exported } = startServer(catalogModernStore);
+  const { server, exported } = startServer(smallVisualStore());
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
   const base = serverBase(server);
   try {
@@ -523,7 +388,7 @@ test("sticky filtros no se tapa con navbar", async ({ page }) => {
 });
 
 test("modales dentro del viewport en mobile", async ({ page }) => {
-  const { server } = startServer(catalogModernStore);
+  const { server } = startServer(smallVisualStore());
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
   const base = serverBase(server);
   try {

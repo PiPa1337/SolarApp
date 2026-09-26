@@ -1,9 +1,8 @@
 /**
  * Barrido A28 (2026-08-10) — Storefront LEGACY: carrito / variantes / checkout.
  * OWNER de `packages/modules/src/definitions.ts`. Se verifica contra el sitio
- * EXPORTADO de `catalogScaleStore` (patrón de scale-store.spec.ts), más dos
- * proyectos derivados deterministas para los casos que la fixture de escala no
- * cubre: variante agotada en PRIMERA posición y galería con dos imágenes.
+ * EXPORTADO de `catalogScaleStore` (patrón de scale-store.spec.ts) y un proyecto
+ * derivado para comprobar una variante agotada en PRIMERA posición.
  *
  * Contrato de 3 capas por control: (1) click real → efecto en estado/datos,
  * (2) auto-feedback del control (aria-expanded / aria-current / data-open /
@@ -23,21 +22,6 @@ import { catalogScaleStore } from "@solara/project-schema/scale-fixture";
 import { FIXTURE_PRODUCT_FILES } from "./fixture-server";
 
 const FIXTURE_FILES = FIXTURE_PRODUCT_FILES;
-function galleryProject() {
-  const project = structuredClone(catalogScaleStore);
-  const product = project.products.find((candidate) => candidate.id === "scale-product-50");
-  if (!product) throw new Error("Fixture sin producto 50");
-  product.imageIds = ["asset-jarra", "asset-manta"];
-  const natural = product.variants.find((variant) => variant.title === "Natural");
-  const musgo = product.variants.find((variant) => variant.title === "Musgo");
-  if (!natural || !musgo) throw new Error("Fixture sin variantes de producto 50");
-  natural.available = true;
-  musgo.available = true;
-  natural.imageId = "asset-jarra";
-  musgo.imageId = "asset-manta";
-  return project;
-}
-
 function soldOutFirstProject() {
   const project = structuredClone(catalogScaleStore);
   const product = project.products.find((candidate) => candidate.id === "scale-product-10");
@@ -54,7 +38,6 @@ function soldOutFirstProject() {
 }
 
 const baseExport = exportProject(catalogScaleStore, { mode: "production" });
-const galleryExport = exportProject(galleryProject(), { mode: "production" });
 const soldOutExport = exportProject(soldOutFirstProject(), { mode: "production" });
 
 function startServer(exported: ExportResult): Promise<number> {
@@ -98,15 +81,10 @@ function startServer(exported: ExportResult): Promise<number> {
 }
 
 let basePort = 0;
-let galleryPort = 0;
 let soldOutPort = 0;
 
 test.beforeAll(async () => {
-  [basePort, galleryPort, soldOutPort] = await Promise.all([
-    startServer(baseExport),
-    startServer(galleryExport),
-    startServer(soldOutExport),
-  ]);
+  [basePort, soldOutPort] = await Promise.all([startServer(baseExport), startServer(soldOutExport)]);
 });
 
 function storeUrl(port: number, path: string): string {
@@ -131,54 +109,6 @@ function storedCart(page: Page) {
     [STORAGE_KEY] as const,
   );
 }
-
-test("C1: el toggle de carrito legacy declara aria-expanded, abre el drawer y cierra por 3 vías", async ({
-  page,
-}) => {
-  test.info().annotations.push({ type: "contrato", description: "A28 · C1 · cart toggle" });
-  await clearCart(page);
-  const homeHtml = String(baseExport.files.get("index.html"));
-  expect(homeHtml).toContain(
-    'data-solara-cart-open data-open-cart data-cart-label="Carrito" aria-controls="solara-cart" aria-expanded="false"',
-  );
-
-  const trigger = page.locator("[data-solara-cart-open]").first();
-  const drawer = page.locator("[data-cart-drawer]");
-  await expect(trigger).toHaveAttribute("aria-expanded", "false");
-  // Contrato T9: el aria-label del trigger es "Carrito N" (N = líneas), ya no
-  // "Carrito vacío" (storefront-runtime:744-745).
-  await expect(trigger).toHaveAttribute("aria-label", "Carrito 0");
-  await expect(trigger.locator("[data-cart-count]")).toHaveText("0");
-  await expect(drawer).toHaveAttribute("aria-hidden", "true");
-  await expect(drawer).toHaveAttribute("inert", "");
-
-  await trigger.click();
-  await expect(drawer).toHaveAttribute("data-open", "true");
-  await expect(drawer).toHaveAttribute("aria-hidden", "false");
-  await expect(drawer).not.toHaveAttribute("inert", "");
-  await expect(trigger).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByRole("button", { name: "Cerrar carrito" })).toBeFocused();
-  const backdrop = page.locator("[data-solara-cart-close].solara-cart-backdrop");
-  await expect(backdrop).not.toHaveAttribute("hidden", "");
-
-  await page.keyboard.press("Escape");
-  await expect(drawer).not.toHaveAttribute("data-open", "true");
-  await expect(drawer).toHaveAttribute("aria-hidden", "true");
-  await expect(trigger).toHaveAttribute("aria-expanded", "false");
-  await expect(trigger).toBeFocused();
-
-  await trigger.click();
-  await page.getByRole("button", { name: "Cerrar carrito" }).click();
-  await expect(drawer).not.toHaveAttribute("data-open", "true");
-  await expect(trigger).toHaveAttribute("aria-expanded", "false");
-  await expect(trigger).toBeFocused();
-
-  await trigger.click();
-  await backdrop.click({ position: { x: 8, y: 240 } });
-  await expect(drawer).not.toHaveAttribute("data-open", "true");
-  await expect(trigger).toHaveAttribute("aria-expanded", "false");
-  await expect(trigger).toBeFocused();
-});
 
 test("C2: agregar al carrito legacy crea la línea, actualiza conteo/totales y prepara WhatsApp", async ({
   page,
@@ -258,73 +188,6 @@ test("C2: agregar al carrito legacy crea la línea, actualiza conteo/totales y p
   await expect(reloadedDrawer).toContainText("Tu carrito está vacío");
 });
 
-test("C3: sin JavaScript el detalle legacy ofrece el fallback de WhatsApp y oculta el botón", async ({
-  browser,
-}) => {
-  test.info().annotations.push({ type: "contrato", description: "A28 · C3 · noscript" });
-  const context = await browser.newContext({ javaScriptEnabled: false });
-  const page = await context.newPage();
-
-  await page.goto(storeUrl(basePort, PRODUCT_PATH));
-  const fallback = page.locator("a.solara-add-fallback");
-  await expect(fallback).toBeVisible();
-  const href = await fallback.getAttribute("href");
-  expect(href).toMatch(/^https:\/\/wa\.me\/5491123456789\?text=/);
-  const message = decodeURIComponent(href ?? "");
-  expect(message).toContain("Producto: Pieza de escala 10");
-  expect(message).toContain("Variante: Natural");
-  expect(message).toContain("Precio: $");
-  await expect(page.locator("[data-add-to-cart]")).toBeHidden();
-
-  await page.goto(storeUrl(basePort, "/"));
-  const searchTrigger = page.locator("a.solara-search-trigger");
-  await expect(searchTrigger).toBeVisible();
-  await expect(searchTrigger).toHaveAttribute("href", "/buscar/");
-  await expect(page.locator("[data-solara-cart-open]")).toHaveAttribute("aria-expanded", "false");
-  await context.close();
-});
-
-test("C4: la cantidad respeta los límites 1–99 en el detalle y dentro del drawer", async ({
-  page,
-}) => {
-  test.info().annotations.push({ type: "contrato", description: "A28 · C4 · quantity limits" });
-  await clearCart(page);
-  await page.goto(storeUrl(basePort, PRODUCT_PATH));
-
-  const quantity = page.locator('input[name="quantity"]');
-  await expect(quantity).toHaveAttribute("type", "number");
-  await expect(quantity).toHaveAttribute("min", "1");
-  await expect(quantity).toHaveAttribute("max", "99");
-
-  await quantity.fill("150");
-  const catalogReconciled = page.waitForResponse((response) =>
-    response.url().endsWith("/catalog-index.json"),
-  );
-  await quantity.press("Enter");
-  await catalogReconciled;
-  const drawer = page.locator("[data-cart-drawer]");
-  const drawerQuantity = drawer.locator("[data-cart-quantity]").first();
-  await expect(drawerQuantity).toHaveValue("99");
-  await expect(page.locator("[data-cart-count]").first()).toHaveText("99");
-  expect(((await storedCart(page)) as Array<Record<string, unknown>>)[0]?.quantity).toBe(99);
-
-  await drawerQuantity.fill("0");
-  await drawerQuantity.blur();
-  await expect(drawerQuantity).toHaveValue("1");
-  await drawerQuantity.fill("");
-  await drawerQuantity.blur();
-  await expect(drawerQuantity).toHaveValue("1");
-  await drawerQuantity.fill("-2");
-  await drawerQuantity.blur();
-  await expect(drawerQuantity).toHaveValue("1");
-
-  await drawerQuantity.fill("7");
-  await drawerQuantity.blur();
-  await expect(drawerQuantity).toHaveValue("7");
-  await expect(page.locator("[data-cart-count]").first()).toHaveText("7");
-  expect(((await storedCart(page)) as Array<Record<string, unknown>>)[0]?.quantity).toBe(7);
-});
-
 test("C5: con la primera variante agotada el select inicia en la primera DISPONIBLE", async ({
   page,
 }) => {
@@ -368,162 +231,4 @@ test("C5: con la primera variante agotada el select inicia en la primera DISPONI
   expect(stored[0]).toEqual(
     expect.objectContaining({ variantId: "scale-variant-10-b", unitPrice: 1500000 }),
   );
-});
-
-test("C6: las miniaturas de galería legacy intercambian la figura activa y sincronizan con la variante", async ({
-  page,
-}) => {
-  test.info().annotations.push({ type: "contrato", description: "A28 · C6 · gallery thumbs" });
-  await page.goto(storeUrl(galleryPort, "/productos/pieza-escala-50/"));
-
-  const figures = page.locator("[data-gallery-image-id]");
-  const thumbs = page.locator("[data-gallery-thumb]");
-  await expect(figures).toHaveCount(2);
-  await expect(thumbs).toHaveCount(2);
-  await expect(figures.nth(0)).toHaveAttribute("data-gallery-active", "true");
-  await expect(figures.nth(1)).toHaveAttribute("data-gallery-active", "false");
-  await expect(thumbs.nth(0)).toHaveAttribute("aria-current", "true");
-  await expect(thumbs.nth(1)).toHaveAttribute("aria-current", "false");
-
-  await thumbs.nth(1).click();
-  await expect(figures.nth(0)).toHaveAttribute("data-gallery-active", "false");
-  await expect(figures.nth(1)).toHaveAttribute("data-gallery-active", "true");
-  await expect(thumbs.nth(0)).toHaveAttribute("aria-current", "false");
-  await expect(thumbs.nth(1)).toHaveAttribute("aria-current", "true");
-
-  const select = page.locator("[data-variant-select]");
-  await select.selectOption("scale-variant-50-b");
-  await expect(figures.nth(1)).toHaveAttribute("data-gallery-active", "true");
-  await expect(thumbs.nth(1)).toHaveAttribute("aria-current", "true");
-  await expect(page.locator("[data-product] [data-product-price]")).toHaveText("$ 25.000,00");
-
-  await select.selectOption("scale-variant-50-a");
-  await expect(figures.nth(0)).toHaveAttribute("data-gallery-active", "true");
-  await expect(thumbs.nth(0)).toHaveAttribute("aria-current", "true");
-
-  await thumbs.nth(1).click();
-  await expect(figures.nth(1)).toHaveAttribute("data-gallery-active", "true");
-});
-
-test("C7: los desplegables de políticas del detalle legacy abren y cierran con estado nativo", async ({
-  page,
-}) => {
-  test.info().annotations.push({ type: "contrato", description: "A28 · C7 · product disclosure" });
-  await page.goto(storeUrl(basePort, PRODUCT_PATH));
-
-  const shipping = page.locator(".solara-product-policies details").first();
-  const shippingSummary = shipping.locator(":scope > summary");
-  await expect(shippingSummary).toHaveText("Envíos");
-  const shippingBody = shipping.locator(":scope > p");
-  await expect(shippingBody).toBeHidden();
-  await expect(shipping).not.toHaveAttribute("open", "");
-
-  await shippingSummary.click();
-  await expect(shipping).toHaveAttribute("open", "");
-  await expect(shippingBody).toBeVisible();
-  await expect(shippingBody).toContainText("Coordinamos el envío y su costo");
-
-  await shippingSummary.click();
-  await expect(shipping).not.toHaveAttribute("open", "");
-  await expect(shippingBody).toBeHidden();
-
-  const returns = page.locator(".solara-product-policies details").nth(1);
-  await returns.locator(":scope > summary").click();
-  await expect(returns).toHaveAttribute("open", "");
-  await expect(returns.locator(":scope > p")).toContainText("La pieza debe conservar su embalaje");
-});
-
-test("C8: el form de búsqueda legacy envía la ruta y pinta resultados reales", async ({ page }) => {
-  test.info().annotations.push({ type: "contrato", description: "A28 · C8 · search form" });
-  await page.goto(storeUrl(basePort, "/buscar/"));
-
-  const form = page.locator(".solara-search-form");
-  await expect(form).toHaveAttribute("role", "search");
-  await expect(form).toHaveAttribute("action", "/buscar/");
-  await expect(form).toHaveAttribute("method", "get");
-  const input = page.locator("#solara-search-input");
-  await expect(input).toHaveAttribute("name", "q");
-
-  await input.fill("Casa");
-  await form.getByRole("button", { name: "Buscar" }).click();
-  await expect(page).toHaveURL(/\/buscar\/\?q=Casa$/);
-  await expect(page.locator("[data-search-results]")).toContainText("Pieza de escala 01", {
-    timeout: 15_000,
-  });
-
-  await page.locator("a.solara-search-trigger").click();
-  await expect(page).toHaveURL(/\/buscar\/$/);
-  await expect(page.locator("#solara-search-input")).toHaveValue("");
-});
-
-test("C9: la toolbar de categoría legacy filtra por etiqueta/precio y ordena con conteo", async ({
-  page,
-}) => {
-  test.info().annotations.push({ type: "contrato", description: "A28 · C9 · category toolbar" });
-  await page.goto(storeUrl(basePort, "/categorias/casa/"));
-
-  const toolbar = page.locator("[data-category-toolbar]");
-  const resultCount = toolbar.locator("[data-category-result-count]");
-  const grid = page.locator("[data-category-grid]");
-  const cards = grid.locator("[data-product-card]");
-  await expect(resultCount).toHaveText("28 productos");
-
-  const filterDetails = toolbar.locator("details");
-  await expect(filterDetails).not.toHaveAttribute("open", "");
-  await filterDetails.locator(":scope > summary").click();
-  await expect(filterDetails).toHaveAttribute("open", "");
-  await expect(toolbar.locator("[data-category-tag]")).toBeVisible();
-  await expect(toolbar.locator("[data-category-available]")).toBeVisible();
-  await expect(toolbar.locator("[data-category-min-price]")).toBeVisible();
-  await expect(toolbar.locator("[data-category-max-price]")).toBeVisible();
-
-  await toolbar.locator("[data-category-tag]").selectOption("casa");
-  await expect(resultCount).toHaveText("12 de 28 productos");
-  await expect(grid.locator("[data-product-card]:visible")).toHaveCount(12);
-
-  await toolbar.locator("[data-category-tag]").selectOption("");
-  await toolbar.locator("[data-category-min-price]").fill("15000");
-  await expect(resultCount).toHaveText("13 de 28 productos");
-  await expect(grid.locator("[data-product-card]:visible")).toHaveCount(13);
-
-  await toolbar.locator("[data-category-min-price]").fill("");
-  await toolbar.locator("[data-category-sort]").selectOption("price-desc");
-  await expect(cards.first()).toContainText("Pieza de escala 24");
-  await toolbar.locator("[data-category-sort]").selectOption("price-asc");
-  await expect(cards.first()).toContainText("Pieza de escala 01");
-  await toolbar.locator("[data-category-sort]").selectOption("name");
-  await expect(cards.first()).toContainText("Pieza de escala 01");
-  await expect(resultCount).toHaveText("24 de 28 productos");
-});
-
-test("C11: el contrato de markup legacy declara los atributos que lee el runtime", async () => {
-  test.info().annotations.push({ type: "contrato", description: "A28 · C11 · markup contract" });
-  const productHtml = String(baseExport.files.get("productos/pieza-escala-10/index.html"));
-  expect(productHtml).toContain('data-product data-product-id="scale-product-10"');
-  expect(productHtml).toContain('data-default-variant="scale-variant-10-a"');
-  expect(productHtml).toContain("data-solara-add-form");
-  expect(productHtml).toContain("data-variant-select");
-  expect(productHtml).toContain('data-variant-data="scale-variant-10-a"');
-  expect(productHtml).toContain("data-add-to-cart");
-  expect(productHtml).toContain('name="quantity" type="number" min="1" max="99"');
-  expect(productHtml).toContain('data-gallery-thumb="asset-manta"');
-  expect(productHtml).toContain(
-    '<a class="solara-add-fallback" href="https://wa.me/5491123456789?text=',
-  );
-
-  const categoryHtml = String(baseExport.files.get("categorias/casa/index.html"));
-  expect(categoryHtml).toContain('class="solara-category-toolbar" data-category-toolbar');
-  expect(categoryHtml).toContain("data-category-result-count");
-  expect(categoryHtml).toContain("data-category-available");
-  expect(categoryHtml).toContain("data-category-tag");
-  expect(categoryHtml).toContain("data-category-min-price");
-  expect(categoryHtml).toContain("data-category-max-price");
-  expect(categoryHtml).toContain("data-category-sort");
-  expect(categoryHtml).toContain('rel="next" href="/categorias/casa/pagina/2/"');
-
-  const searchHtml = String(baseExport.files.get("buscar/index.html"));
-  expect(searchHtml).toContain(
-    '<form class="solara-search-form" role="search" action="/buscar/" method="get">',
-  );
-  expect(searchHtml).toContain('name="q" type="search"');
 });

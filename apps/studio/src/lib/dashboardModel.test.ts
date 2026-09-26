@@ -95,14 +95,14 @@ describe("modelo del dashboard", () => {
     expect(metrics.billableProducts).toBe(metrics.activeProducts);
   });
 
-  it("convierte 164 productos con dos grupos de cinco variantes en 172 facturables", () => {
+  it("convierte 100 productos con dos grupos de cinco variantes en 108 facturables", () => {
     const multiVariant = catalogModernStore.products[0];
     const singleVariant = catalogModernStore.products[1];
     if (!multiVariant || !singleVariant) throw new Error("Fixture sin productos suficientes");
 
     const project = {
       ...catalogModernStore,
-      products: Array.from({ length: 164 }, (_, index) => ({
+      products: Array.from({ length: 100 }, (_, index) => ({
         ...(index < 2 ? multiVariant : singleVariant),
         id: `product-billable-${index}`,
         status: "active" as const,
@@ -112,8 +112,8 @@ describe("modelo del dashboard", () => {
     };
 
     expect(getProjectMetrics(project)).toMatchObject({
-      activeProducts: 164,
-      billableProducts: 172,
+      activeProducts: 100,
+      billableProducts: 108,
       variantExtras: 8,
     });
   });

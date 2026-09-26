@@ -174,8 +174,7 @@ hero/video y motion. El carrito usa `localStorage` con clave
 `solara-cart:{storeId}` y reconcilia datos contra `catalog-index.json`.
 
 En páginas grandes el atributo de copy del runtime se reduce a los grupos que
-esa ruta necesita; así el benchmark de 2.000 productos conserva el comportamiento
-dinámico y evita repetir todo el copy público en cada HTML.
+esa ruta necesita, para evitar repetir todo el copy público en cada HTML.
 
 ### `packages/site-optimizer`
 

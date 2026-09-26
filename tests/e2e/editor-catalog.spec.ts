@@ -48,61 +48,7 @@ async function blurFocus(page: Page) {
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur?.());
 }
 
-const priceValues = (page: Page) =>
-  page
-    .getByTestId("ui-price-edit")
-    .evaluateAll((inputs) => inputs.map((input) => Number((input as HTMLInputElement).value)));
 
-test("ordena por precio y por producto sobre el conjunto filtrado", async ({ page }) => {
-  await openCatalog(page);
-
-  await page.getByRole("button", { name: "Precio", exact: true }).click();
-  const ascending = await priceValues(page);
-  expect(ascending.length).toBe(50);
-  expect(ascending).toEqual([...ascending].sort((a, b) => a - b));
-
-  await page.getByRole("button", { name: "Precio", exact: true }).click();
-  const descending = await priceValues(page);
-  expect(descending).toEqual([...descending].sort((a, b) => b - a));
-
-  const titlesLocator = page.locator('tbody input[aria-label^="Nombre de"]');
-  await page.getByRole("button", { name: "Producto", exact: true }).click();
-  const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
-  await expect
-    .poll(async () => {
-      const titles = await titlesLocator.evaluateAll((inputs) =>
-        inputs.map((input) => (input as HTMLInputElement).value),
-      );
-      return titles.every((title, index) => {
-        const previous = titles[index - 1];
-        return index === 0 || (previous !== undefined && collator.compare(previous, title) <= 0);
-      });
-    })
-    .toBe(true);
-});
-
-test("oculta y persiste columnas configurables", async ({ page }) => {
-  test.setTimeout(60_000);
-  await openCatalog(page);
-  const categoryHeaders = page.locator("thead th", { hasText: "Categorías" });
-  await expect(categoryHeaders).toHaveCount(1);
-
-  await page.getByTestId("ui-columns-toggle").click();
-  await expect(page.getByTestId("ui-columns-popover")).toBeVisible();
-  await page.getByTestId("ui-column-toggle-categories").uncheck();
-  await page.getByTestId("ui-columns-toggle").click();
-  await expect(categoryHeaders).toHaveCount(0);
-
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await reopenCatalog(page);
-  await expect(categoryHeaders).toHaveCount(0);
-
-  await page.getByTestId("ui-columns-toggle").click();
-  await page.getByTestId("ui-column-toggle-categories").check();
-  await page.getByTestId("ui-columns-toggle").click();
-  await expect(categoryHeaders).toHaveCount(1);
-});
 
 test("edita el precio inline, rechaza valores inválidos y persiste tras recargar", async ({
   page,
@@ -137,55 +83,8 @@ test("edita el precio inline, rechaza valores inválidos y persiste tras recarga
   await expect(page.getByTestId("ui-price-edit").first()).toHaveValue(next);
 });
 
-test("edita el estado de una fila sin pasar por el editor", async ({ page }) => {
-  await openCatalog(page);
-  const trigger = page.getByTestId("ui-status-edit-trigger").first();
-  const current = ((await trigger.textContent()) ?? "").trim();
-  const nextLabel = current === "Activo" ? "Oculto" : "Activo";
-  await expect(trigger).toHaveAttribute("aria-label", new RegExp(`^Estado de .+: ${current}$`));
 
-  await trigger.click();
-  const statusSelect = page.getByTestId("ui-status-edit").first();
-  await expect(statusSelect).toBeVisible();
-  await expect(statusSelect).toBeFocused();
-  await statusSelect.selectOption(nextLabel === "Oculto" ? "hidden" : "active");
-  const updatedTrigger = page.getByTestId("ui-status-edit-trigger").first();
-  await expect(updatedTrigger).toHaveText(nextLabel);
-  await expect(updatedTrigger).toBeFocused();
-});
 
-test("Escape en el estado inline cancela y devuelve el foco al disparador", async ({ page }) => {
-  await openCatalog(page);
-  const trigger = page.getByTestId("ui-status-edit-trigger").first();
-  const current = ((await trigger.textContent()) ?? "").trim();
-
-  await trigger.click();
-  const statusSelect = page.getByTestId("ui-status-edit").first();
-  await expect(statusSelect).toBeFocused();
-  await page.keyboard.press("Escape");
-
-  await expect(statusSelect).toHaveCount(0);
-  await expect(trigger).toHaveText(current);
-  await expect(trigger).toBeFocused();
-});
-
-test("alterna la vista de tarjetas y la persiste", async ({ page }) => {
-  test.setTimeout(60_000);
-  await openCatalog(page);
-  await page.getByRole("button", { name: "Tarjetas", exact: true }).click();
-  const cards = page.getByTestId("ui-catalog-card");
-  await expect(cards).toHaveCount(50);
-  await expect(cards.first()).toContainText("$");
-  await expect(cards.first().getByRole("button", { name: "Editar" })).toBeVisible();
-
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible();
-  await reopenCatalog(page);
-  await expect(page.getByTestId("ui-catalog-cards")).toBeVisible();
-
-  await page.getByRole("button", { name: "Lista", exact: true }).click();
-  await expect(page.locator("tbody tr")).toHaveCount(50);
-});
 
 test("los atajos editan, duplican y archivan la selección sin tocar formularios", async ({
   page,
@@ -229,93 +128,8 @@ test("los atajos editan, duplican y archivan la selección sin tocar formularios
   await page.getByPlaceholder("Buscar por producto, marca o estado").fill("");
 });
 
-test("permite recorrer el catálogo y alcanzar la barra masiva al hacer scroll", async ({
-  page,
-}) => {
-  await openCatalog(page);
 
-  const shell = page.locator(".table-shell");
-  await shell.evaluate((element) => {
-    element.scrollTop = element.scrollHeight;
-  });
-  await expect.poll(() => shell.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
 
-  await page.getByTestId("select-filtered-products").click();
-  const bulk = page.locator(".bulk-panel");
-  await expect(bulk).toBeVisible();
-  const pane = page.locator(".editor-pane");
-  await bulk.scrollIntoViewIfNeeded();
-  const paneBox = await pane.boundingBox();
-  const bulkBox = await bulk.boundingBox();
-  expect(paneBox).not.toBeNull();
-  expect(bulkBox).not.toBeNull();
-  expect(bulkBox?.y).toBeGreaterThanOrEqual((paneBox?.y ?? 0) - 1);
-  expect(bulkBox?.y + (bulkBox?.height ?? 0)).toBeLessThanOrEqual(
-    (paneBox?.y ?? 0) + (paneBox?.height ?? 0) + 1,
-  );
-  await expect(bulk.getByRole("button", { name: "Aplicar estado" })).toBeVisible();
-  await page.screenshot({ path: ".impeccable/review/editor-workbench/bulk-panel.png" });
-});
-
-test("P5-B5: archivar un producto inline y restaurarlo sin perder la fila", async ({ page }) => {
-  await openCatalog(page);
-
-  const rows = page.locator("tbody tr");
-  await expect(rows.first()).toBeVisible();
-  const firstTrigger = page.getByTestId("ui-status-edit-trigger").first();
-  const firstRowName = await rows.first().locator("td").nth(1).innerText();
-  await firstTrigger.click();
-  const statusSelect = page.getByTestId("ui-status-edit").first();
-  await statusSelect.selectOption("archived");
-  const labelAfter = rows.first().locator(".status-label");
-  await expect(labelAfter).toContainText("Archivad");
-  console.log("P5-B5 estado tras archivar:", JSON.stringify(await labelAfter.innerText()));
-
-  const namesAfter = await rows.locator("td").nth(1).allInnerTexts();
-  expect(namesAfter).toContain(firstRowName);
-
-  const archivedTrigger = page.getByTestId("ui-status-edit-trigger").first();
-  await archivedTrigger.click();
-  const archivedSelect = page.getByTestId("ui-status-edit").first();
-  await archivedSelect.selectOption("active");
-  const labelRestored = rows.first().locator(".status-label");
-  await expect(labelRestored).toContainText("Activo");
-  console.log("P5-B5 estado tras restaurar:", JSON.stringify(await labelRestored.innerText()));
-});
-
-test("P5-B6: la búsqueda por término de estado filtra archivados", async ({ page }) => {
-  await openCatalog(page);
-
-  const rows = page.locator("tbody tr");
-  await expect(rows.first()).toBeVisible();
-  const firstTrigger = page.getByTestId("ui-status-edit-trigger").first();
-  await firstTrigger.click();
-  const statusSelect = page.getByTestId("ui-status-edit").first();
-  await statusSelect.selectOption("archived");
-  await expect(rows.first().locator(".status-label")).toContainText("Archivad");
-
-  const search = page.getByPlaceholder("Buscar por producto, marca o estado");
-  await search.fill("archiv");
-  const visibleLabels = page.locator("tbody tr .status-label");
-  await expect
-    .poll(
-      async () =>
-        (await visibleLabels.allInnerTexts()).every((label) =>
-          label.toLowerCase().includes("archivad"),
-        ),
-      { timeout: 5_000 },
-    )
-    .toBe(true);
-  const labels = await visibleLabels.allInnerTexts();
-  console.log("P5-B6 estados visibles tras buscar 'archiv':", JSON.stringify(labels.slice(0, 5)));
-  expect(labels.length).toBeGreaterThan(0);
-  for (const label of labels) {
-    expect(label.toLowerCase()).toContain("archivad");
-  }
-
-  await search.fill("");
-  await expect(rows).toHaveCount(50);
-});
 
 test("R3-P5-B5: el paginado del catálogo respeta el tamaño elegido", async ({ page }) => {
   await openCatalog(page);

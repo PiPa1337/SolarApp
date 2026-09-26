@@ -17,7 +17,7 @@ describe("test impact", () => {
 
   test("un cambio de Studio reduce el smoke quick a specs relevantes más sentinel", () => {
     expect(selectQuickSmokeSpecs(["apps/studio/src/App.tsx"], ["fallback.spec.ts"])).toEqual([
-      "tests/e2e/interacciones.spec.ts",
+      "tests/e2e/editor-smoke.spec.ts",
       "tests/e2e/focus-visible.spec.ts",
       "tests/e2e/exporter-sentinel.spec.ts",
     ]);

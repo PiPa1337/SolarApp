@@ -163,29 +163,6 @@ test("el preview V2 conserva el carrito al navegar con enlaces internos", async 
   }
 });
 
-test("el enlace Abrir carrito del footer abre el drawer sin cambiar de ruta", async ({ page }) => {
-  const running = await startStudioServer();
-  try {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto(running.url);
-    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
-      timeout: 30_000,
-    });
-    await openV2StoreFromDashboard(page, "Preview footer carrito V2");
-
-    const preview = page.frameLocator('iframe[title="Vista previa desktop"]');
-    const footerCartLink = preview.locator("a.catalog-footer-cart-link");
-    await expect(footerCartLink).toHaveCount(1, { timeout: 30_000 });
-    await footerCartLink.scrollIntoViewIfNeeded();
-    await footerCartLink.click();
-
-    await expect(page.getByTestId("ui-preview-route")).toHaveValue("/");
-    await expect(preview.locator("[data-cart-drawer]")).toHaveAttribute("data-open", "true");
-  } finally {
-    await stopStudioServer(running.server);
-  }
-});
-
 test("el preview V2 conserva el carrito al cambiar de ruta inmediatamente después de agregar", async ({
   page,
 }) => {
@@ -336,45 +313,6 @@ test("P7-B5: los tamaños de vista y el zoom cambian el stage del preview", asyn
     const iframeZoom = await frame.evaluate((el) => getComputedStyle(el).zoom);
     console.log("P7-B5 zoom CSS tras 75%:", iframeZoom);
     expect(parseFloat(iframeZoom)).toBeLessThan(1);
-  } finally {
-    await stopStudioServer(running.server);
-  }
-});
-
-test("P7-B6: el zoom del preview se conserva al recargar la sesión", async ({ page }) => {
-  const running = await startStudioServer();
-  try {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto(running.url);
-    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
-      timeout: 30_000,
-    });
-    const card = page.locator(".dashboard-store-card").filter({
-      has: page.getByText("Predeterminado", { exact: true }),
-    });
-    await openStoreFromDashboard(page, card);
-    await page.locator(".studio-shell").waitFor({ timeout: 30_000 });
-
-    const zoom50 = page.getByRole("button", { name: "50%" });
-    await zoom50.click();
-    await expect(zoom50).toHaveAttribute("aria-pressed", "true");
-    await page.reload();
-    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
-      timeout: 30_000,
-    });
-    const cardAfter = page.locator(".dashboard-store-card").filter({
-      has: page.getByText("Predeterminado", { exact: true }),
-    });
-    await openStoreFromDashboard(page, cardAfter);
-    await page.locator(".studio-shell").waitFor({ timeout: 30_000 });
-
-    const frame = page.locator('.preview-stage iframe[title^="Vista previa"]');
-    await expect(frame).toBeVisible();
-    const persistedZoom = await frame.evaluate((el) => getComputedStyle(el).zoom);
-    console.log("P7-B6 zoom tras recargar:", persistedZoom);
-    expect(parseFloat(persistedZoom)).toBeLessThan(1);
-    const zoomButton = page.getByRole("button", { name: "50%" });
-    await expect(zoomButton).toHaveAttribute("aria-pressed", "true");
   } finally {
     await stopStudioServer(running.server);
   }

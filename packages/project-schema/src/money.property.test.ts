@@ -43,9 +43,4 @@ describe("formatPrice properties", () => {
     }
   });
 
-  it("rechaza valores que no son enteros seguros", () => {
-    for (const value of [Number.NaN, Number.POSITIVE_INFINITY, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
-      expect(() => formatPrice(value), `value=${String(value)}`).toThrow(/entero en centavos/i);
-    }
-  });
 });

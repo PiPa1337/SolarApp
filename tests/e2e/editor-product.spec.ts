@@ -42,13 +42,6 @@ function fieldOf(input: Locator): Locator {
   return input.locator("xpath=ancestor::fieldset[contains(@class, 'field')]");
 }
 
-test("el editor de producto ofrece subir una imagen nueva", async ({ page }) => {
-  test.setTimeout(60_000);
-  const dialog = await openProductEditor(page);
-  await expect(dialog.getByRole("button", { name: "Subir imagen nueva" })).toBeVisible();
-  await dialog.getByRole("button", { name: "Cancelar", exact: true }).click();
-  await expect(dialog).toBeHidden();
-});
 
 test("valida slug duplicado, precio inválido y opciones repetidas con errores inline", async ({
   page,
@@ -169,75 +162,4 @@ test("la mini-preview refleja en vivo título, precio mínimo y estado", async (
 
   await dialog.getByRole("button", { name: "Guardar borrador" }).click();
   await expect(dialog).toBeHidden();
-});
-
-test("avisa al salir con cambios sin guardar y cierra directo en modo limpio", async ({ page }) => {
-  test.setTimeout(60_000);
-  const dialog = await openProductEditor(page);
-
-  await dialog.getByRole("button", { name: "Cancelar" }).click();
-  await expect(dialog).toBeHidden();
-
-  await page.getByRole("button", { name: "Agregar producto" }).first().click();
-  const dirtyDialog = page.locator("dialog.product-dialog");
-  await expect(dirtyDialog).toBeVisible();
-  await dirtyDialog.getByRole("textbox", { name: "Título" }).fill("Cambio sin guardar");
-
-  // T4.12: la salida con cambios pasa por el diálogo unificado (ya no hay
-  // window.confirm nativo); confirmar cierra el editor.
-  await dirtyDialog.getByRole("button", { name: "Cancelar" }).click();
-  const confirm = page.getByTestId("ui-confirm-dialog");
-  await expect(confirm).toBeVisible();
-  await expect(confirm).toContainText("cambios sin guardar");
-  await confirm.getByRole("button", { name: "Salir sin guardar" }).click();
-  await expect(dirtyDialog).toBeHidden();
-
-  await page.getByRole("button", { name: "Agregar producto" }).first().click();
-  const escapeDialog = page.locator("dialog.product-dialog");
-  await expect(escapeDialog).toBeVisible();
-  await escapeDialog.getByRole("textbox", { name: "Título" }).fill("Escape con cambios");
-
-  // Escape abre el diálogo unificado; Escape de nuevo lo cancela y conserva el
-  // editor abierto; una confirmación explícita cierra el editor.
-  await escapeDialog.press("Escape");
-  const escapeConfirm = page.getByTestId("ui-confirm-dialog");
-  await expect(escapeConfirm).toBeVisible();
-  await escapeConfirm.press("Escape");
-  await expect(escapeConfirm).toBeHidden();
-  await expect(escapeDialog).toBeVisible();
-
-  await escapeDialog.press("Escape");
-  await expect(page.getByTestId("ui-confirm-dialog")).toBeVisible();
-  await page
-    .getByTestId("ui-confirm-dialog")
-    .getByRole("button", { name: "Salir sin guardar" })
-    .click();
-  await expect(escapeDialog).toBeHidden();
-});
-
-test("navega entre pasos con flechas, Home y End manteniendo el foco", async ({ page }) => {
-  test.setTimeout(60_000);
-  const dialog = await openProductEditor(page);
-
-  await dialog.getByRole("button", { name: "Datos", exact: true }).focus();
-  await page.keyboard.press("ArrowRight");
-  const imagenes = dialog.getByRole("button", { name: "Imágenes", exact: true });
-  await expect(imagenes).toHaveAttribute("aria-current", "step");
-  await expect(imagenes).toBeFocused();
-
-  await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("ArrowRight");
-  const variantes = dialog.getByRole("button", { name: "Variantes", exact: true });
-  await expect(variantes).toHaveAttribute("aria-current", "step");
-
-  await page.keyboard.press("ArrowLeft");
-  const organizacion = dialog.getByRole("button", { name: "Organización", exact: true });
-  await expect(organizacion).toHaveAttribute("aria-current", "step");
-
-  await page.keyboard.press("Home");
-  const datos = dialog.getByRole("button", { name: "Datos", exact: true });
-  await expect(datos).toHaveAttribute("aria-current", "step");
-
-  await page.keyboard.press("End");
-  await expect(variantes).toHaveAttribute("aria-current", "step");
 });

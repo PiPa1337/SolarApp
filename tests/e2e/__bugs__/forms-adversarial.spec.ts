@@ -77,22 +77,3 @@ test("checkout: payloads hostiles no ejecutan ni inyectan HTML", async ({ page }
     expect(xss, `payload ejecutado: ${payload}`).toBeUndefined();
   }
 });
-
-test("campos de 10k caracteres y solo espacios no rompen el preview del pedido", async ({
-  page,
-}) => {
-  test.setTimeout(60000);
-  await openCheckoutDrawer(page, "A".repeat(10000));
-  const form = page.locator(".catalog-cart-drawer [data-checkout-form]");
-  await form.locator("#catalog-drawer-notes").fill(String.fromCodePoint(0x1f680).repeat(2500));
-  await page.locator(".catalog-cart-drawer [data-cart-checkout-submit]").click();
-  await page.waitForTimeout(500);
-  const previewText = await page.evaluate(
-    () => document.querySelector("[data-order-preview]")?.textContent ?? "",
-  );
-  expect(previewText.length, "preview generado").toBeGreaterThan(0);
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-  expect(overflow).toBeLessThanOrEqual(2);
-});

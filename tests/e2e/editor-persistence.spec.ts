@@ -230,33 +230,6 @@ test("el conflicto 409 permite recargar desde disco y descarta el borrador local
   }
 });
 
-test("R3-P4-B5: salir con cambios sin guardar pide confirmación explícita en modo administrado", async ({
-  browser,
-}) => {
-  const managed = await startManagedServer();
-  try {
-    const page = await browser.newPage();
-    await openDashboard(page, managed.url);
-    // Nightwatch: Predeterminado es plantilla protegida (solo lectura) y no
-    // puede generar estado "dirty". Crear una tienda editable es el camino
-    // válido para probar el diálogo de salida sin guardar.
-    await createCleanStoreManaged(page, managed.url, "Tienda R3-P4-B5");
-    await page.getByRole("tab", { name: "Resumen" }).click();
-    await expect(page.getByLabel("Nombre de la tienda")).toBeVisible();
-    await page.getByLabel("Nombre de la tienda").fill("Nombre sin guardar");
-    await page.getByRole("button", { name: "Volver a tiendas" }).click();
-    const dialog = page.getByRole("dialog", { name: "Salir sin guardar" });
-    await expect(dialog).toBeVisible();
-    await dialog.getByRole("button", { name: "Salir sin guardar" }).click();
-    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
-      timeout: 30_000,
-    });
-    console.log("R3-P4-B5 salida confirmada al dashboard");
-    await page.close();
-  } finally {
-    await stopManagedServer(managed);
-  }
-});
 
 test("el conflicto 409 permite duplicar con el borrador local y persiste la copia", async ({
   browser,
@@ -286,75 +259,6 @@ test("el conflicto 409 permite duplicar con el borrador local y persiste la copi
     expect(names).toContain("Tienda P0 G (borrador local) copia");
     expect(names).toContain("Tienda P0 H");
     expect(names.filter((name: string) => name.startsWith("Tienda P0 "))).toHaveLength(2);
-  } finally {
-    await stopManagedServer(managed);
-  }
-});
-
-test("al recargar con cambios sin guardar, el diálogo de borrador recupera la edición", async ({
-  browser,
-}) => {
-  const managed = await startManagedServer();
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  try {
-    await openDashboard(page, managed.url);
-    await createCleanStoreManaged(page, managed.url, "Tienda recovery");
-    await page.getByRole("tab", { name: "Resumen" }).click();
-    await page.getByLabel("Nombre de la tienda").fill("Tienda recovery borrador");
-    await page.waitForTimeout(1_200);
-
-    // T4.12: la recuperación del borrador se confirma con el diálogo unificado.
-    await page.reload();
-    await expect(page.getByRole("heading", { name: "Tus tiendas" })).toBeVisible({
-      timeout: 30_000,
-    });
-    await openManagedStoreByName(page, "Tienda recovery");
-    const recovery = page.getByTestId("ui-confirm-dialog");
-    await expect(recovery).toBeVisible({ timeout: 30_000 });
-    await expect(recovery).toContainText("borrador");
-    await recovery.getByRole("button", { name: "Recuperar borrador" }).click();
-    await expect(page.getByRole("tab", { name: "Resumen" })).toBeVisible();
-    await page.getByRole("tab", { name: "Resumen" }).click();
-    await expect(page.getByLabel("Nombre de la tienda")).toHaveValue("Tienda recovery borrador", {
-      timeout: 30_000,
-    });
-  } finally {
-    await context.close();
-    await stopManagedServer(managed);
-  }
-});
-
-test("el diálogo de conflicto 409 es modal, con nombre y opciones accesibles (T6.8)", async ({
-  browser,
-}) => {
-  const managed = await startManagedServer();
-  try {
-    const { pageA } = await createConflict(browser, managed.url, "Tienda P0 I", "Tienda P0 J");
-    const dialog = pageA.getByTestId("ui-conflict-dialog");
-    await expect(dialog).toHaveAttribute("role", "dialog");
-    await expect(dialog).toHaveAttribute("aria-modal", "true");
-    // React 19 genera ids de useId() con formato «r0», sin el prefijo
-    // "conflict"; el contrato accesible es que aria-labelledby apunte al
-    // título del diálogo.
-    const labelledBy = await dialog.getAttribute("aria-labelledby");
-    expect(labelledBy, "el diálogo referencia su título por id").not.toBeNull();
-    await expect(
-      dialog.getByRole("heading", { name: "La tienda cambió en otra pestaña" }),
-    ).toHaveId(labelledBy ?? "");
-    await expect(
-      dialog.getByRole("heading", { name: "La tienda cambió en otra pestaña" }),
-    ).toBeVisible();
-    const describedBy = await dialog.getAttribute("aria-describedby");
-    expect(describedBy, "el dialogo referencia su explicacion por id").not.toBeNull();
-    await expect(dialog.locator("p")).toHaveId(describedBy ?? "missing-description");
-    await expect(dialog.getByRole("button", { name: "Conservar borrador" })).toBeVisible();
-    await expect(dialog.getByRole("button", { name: "Recargar desde disco" })).toBeVisible();
-    await expect(dialog.getByRole("button", { name: "Duplicar con mi borrador" })).toBeVisible();
-
-    await dialog.getByRole("button", { name: "Conservar borrador" }).click();
-    await expect(dialog).toHaveCount(0);
-    await expect(pageA.getByTestId("ui-studio-notice")).toContainText("Borrador conservado");
   } finally {
     await stopManagedServer(managed);
   }

@@ -48,7 +48,7 @@ que consumen decenas de segundos o cientos de MiB mantienen cobertura explícita
 
 ```powershell
 corepack pnpm test:fuzz       # carreras/fuzz de Core + navegación de Studio
-corepack pnpm test:stress     # serialización/hash >536 MB; sólo manual
+corepack pnpm test:stress     # streaming JSON >536 MB; sólo manual
 corepack pnpm test:qa         # 3 tiendas representativas por el canal oficial
 corepack pnpm test:extended   # mutation + fuzz reducido + QA; incluido en check:full
 corepack pnpm test:diagnostic # dump manual de placeholders; no corre en cierre
@@ -57,8 +57,9 @@ corepack pnpm test:postbuild  # verifica lazy fixture contra dist de Studio
 
 Core excluye de `test` los cuatro archivos fuzz y los ejecuta mediante
 `test:fuzz`. Studio usa 8 workers locales y 2 en `test:ci`. Exporter también
-usa 2 workers en `test:ci`; el caso JSON de más de 536 MB y el hash de snapshot
-sobre un payload equivalente se reservan a `test:stress` manual.
+usa 2 workers en `test:ci`; sólo el caso JSON de más de 536 MB se reserva a
+`test:stress` manual. El hash del optimizer se comprueba con una fixture de 4 MB
+en su suite normal.
 `fixture-lazy.test.ts` queda fuera de la suite unitaria y se ejecuta después de
 `build` dentro de `check:full`.
 
@@ -102,13 +103,14 @@ considerarse segura.
 
 ### Playwright
 
-`test:e2e` compila Studio y ejecuta la suite funcional de Chromium (74 specs y
-450 casos enumerados el 26/09/2026; 3 workers por defecto en local,
-override con `PLAYWRIGHT_WORKERS=8` en máquinas 8C/16T) contra
-un servidor local. Las cinco auditorías manuales retenidas se
-separan en `test:e2e:audit`. El comando `test:e2e:ci` sigue disponible para uso
-manual; GitHub Actions no ejecuta sus cinco specs smoke ni valida el producto.
-La suite funcional completa sigue disponible localmente con `test:e2e`.
+`test:e2e` comprueba/reutiliza el build de Studio y ejecuta Chromium. El árbol
+actual proyecta 52 specs y 120 casos funcionales después de las podas del
+26/09/2026; es una diferencia estática sobre el inventario enumerado antes de
+podar, no una enumeración nueva de Playwright. Usa 3 workers por defecto en local (override con
+`PLAYWRIGHT_WORKERS=8` en máquinas 8C/16T). Las cinco auditorías manuales se
+separan en `test:e2e:audit`. `test:e2e:ci` selecciona 4 specs / 7 casos según la
+misma proyección y sigue siendo manual; GitHub Actions no ejecuta tests de
+producto.
 
 El recorte del 2026-09-25 retiró 81 de 161 specs E2E activos (50,3%). El inventario
 completo, los criterios y el conjunto retenido están en
@@ -122,16 +124,20 @@ corepack pnpm test:e2e:smoke       # smoke quick + build cacheado
 corepack pnpm test:e2e:smoke:full  # smoke completo + build cacheado (cierre)
 corepack pnpm test:e2e             # suite funcional Chromium
 corepack pnpm test:e2e:audit       # cinco auditorías manuales, sin gate diario
-corepack pnpm test:e2e:ci     # cinco specs / 13 casos, sin build
+corepack pnpm test:e2e:ci     # cuatro specs / 7 casos proyectados, sin build
 ```
 
-La enumeración del 26/09/2026 registró smoke quick con 13 casos en 5 specs,
-smoke full con 109 casos en 15 specs y auditoría manual con 33 casos en 5 specs.
-La matriz release enumera 505 casos en local (483 Chromium y 11 en cada uno de
-Firefox y WebKit) y 479 con `CI=true` (457 Chromium y 11 por navegador). CI omite
-`__vision__/alignment`, `__vision__/storefront-alignment` y `visual-break`.
-Playwright puede repetir intentos fallidos con el retry configurado en CI. El
-desglose y la fecha de enumeración están en
+La lista previa del 26/09/2026 enumeró smoke quick con 13 casos en 5 specs,
+smoke full con 109 casos en 15 specs y auditoría manual con 27 casos en 5 specs.
+Con los recortes actuales, quick proyecta 6/4 y full 28/13; la auditoría queda
+en 26/5. `--full` sólo comprueba o construye el `dist` cacheado antes de
+Playwright; no repite casos de smoke. Release proyecta 146 casos Chromium
+(120 funcionales + 26 de auditoría) y 3 por navegador adicional, 152 total.
+Con `CI=true` se omiten
+`__vision__/alignment`, `__vision__/storefront-alignment` y los 12 casos de
+`visual-break`: 126 en Chromium y 132 con Firefox/WebKit. Son diferencias
+estáticas, sin `playwright --list` ni ejecución desde esta poda. Playwright puede
+repetir intentos fallidos con el retry configurado en CI. El desglose está en
 [`TEST_SUITE_SCOPE_2026-09-26.md`](TEST_SUITE_SCOPE_2026-09-26.md).
 
 La auditoría manual actual contiene `calculator-visual-audit`, `__vision__/alignment`,
@@ -142,8 +148,9 @@ del árbol activo en el recorte del 2026-09-25.
 contrato actual de smoke full.
 
 El contrato responsive del storefront usa tres checkpoints visuales: 390×844,
-1024×900 y 1440×900. Las fronteras 767/768 y 1199/1200 se prueban de ambos
-lados, incluyendo capturas en 762/773 y 1194/1205 para revisión visual real.
+1024×900 y 1440×900. Los límites exactos 767/768 y 1199/1200 se prueban en
+Home para V1 y V2; las cuatro rutas críticas se recorren a 390px para evitar
+repetir la matriz completa en todos los anchos.
 Las pruebas deben conservar exactamente los tres modos unificados Mobile,
 Tablet y Desktop; un cuarto breakpoint de layout o tuning visual intermedio es
 una regresión del contrato.
@@ -160,9 +167,9 @@ ajustes de composición y revisiones visuales rutinarias del Studio deben priori
 del Studio salvo requerimiento explícito o regresión funcional. Esta prioridad no
 reduce la cobertura responsive del storefront ni cambia sus tres checkpoints.
 
-Smoke quick cubre: exported-store, storefront-nojs, catalog, assets, interacciones.
+Smoke quick cubre: exported-store, storefront-nojs, catalog y assets.
 Smoke full agrega: catalog-modern-v2, exporter-sentinel, scale-store,
-ui-sweep-a27..30, release-a11y, nojs-coverage y focus-visible.
+ui-sweep-a27..30, nojs-coverage y focus-visible.
 El smoke full no incluye visual sweep (`VISUAL_REVIEW_STAGE`) ni LCP pesado.
 
 La matriz de release instala Chromium, Firefox y WebKit mediante
@@ -294,8 +301,8 @@ del draft lo requiere (la validación actual exige sólo la marca DEBUG).
 - `tests/e2e/nojs-coverage.spec.ts`: 6 rutas × 2 fixtures × con/sin JS, con
   contenido útil y 0 errores de consola/red.
 - `tests/e2e/focus-visible.spec.ts`: el foco del teclado es visible.
-- `tests/e2e/interacciones.spec.ts`: agregar al carrito → carrito → checkout
-  sin errores de consola.
+- `tests/e2e/exported-store.spec.ts`: variante → carrito → WhatsApp, captura de
+  errores de consola/página y respuestas 404.
 - La lista completa de E2E manuales retirados y retenidos figura en
   [`TEST_SUITE_REDUCTION_2026-09-25.md`](TEST_SUITE_REDUCTION_2026-09-25.md).
 - `scripts/dedup-studio-css.mjs`: elimina reglas duplicadas exactas del CSS

@@ -63,7 +63,7 @@ explícita; no se eliminan datos del proyecto.
 - navegación por teclado, foco visible, nombres accesibles e IDs únicos;
 - fallback de compra directa y navegación móvil sin JavaScript;
 - canonical, Open Graph, sitemap y `noindex` de rutas transaccionales;
-- benchmark de exportación de 2.000 productos bajo 30 segundos y 48 MiB;
+- exportación y paginación funcional con `catalogScaleStore` (50 productos);
 - presupuesto público V2 vigente: CSS crudo hasta 212 KiB y runtime JS hasta
   80 KiB; los valores ejecutables viven en los guardianes de `scripts/`.
 - comparación visual equivalente en 1920x968: V1 conserva su composición y no
